@@ -1,9 +1,8 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
 import AgentSidebar from './AgentSidebar';
 import AgentContent from './AgentContent';
-import DemoConsole from './DemoConsole';
+import BottomControlBar from './BottomControlBar';
 import HistoryPanel from './HistoryPanel';
 import { runAgent } from '../lib/agentEngine';
 import { saveHistory } from '../lib/storage';
@@ -21,31 +20,48 @@ const STEPS = [
 
 /**
  * demoPhase state machine:
- *   'idle'        — landing panel, not started
- *   'stepByStep'  — running in step-by-step mode (agent executing)
+ *   'idle'        — not started, showing step 0 input form
+ *   'stepByStep'  — running step-by-step (agent executing)
  *   'waiting'     — step-by-step paused, waiting for user click
- *   'autoRun'     — auto run all steps
- *   'done'        — all steps finished
+ *   'autoRun'     — auto running all steps
+ *   'done'        — all complete, free navigation
  */
 
 export default function Workbench() {
   const navigate = useNavigate();
 
   // ---- Core state ----
-  const [formData] = useState(() => ({ ...DEMO_CASE, siteFiles: [{ name: '欢乐谷社区公园现状图.jpg', size: '2.4 MB', type: 'image/jpeg' }] }));
+  const [formData, setFormData] = useState(() => ({ ...DEMO_CASE }));
   const [isGenerating, setIsGenerating] = useState(false);
   const [currentStep, setCurrentStep] = useState(-1);
+  const [viewedStep, setViewedStep] = useState(0); // Which step user is viewing (for canvas)
   const [stepStatus, setStepStatus] = useState({});
   const [stepData, setStepData] = useState({});
   const [projectName, setProjectName] = useState('');
   const [historyOpen, setHistoryOpen] = useState(false);
 
-  // ---- Demo phase (replaces old isDemoMode + isWaitingForUser) ----
+  // ---- Demo phase ----
   const [demoPhase, setDemoPhase] = useState('idle');
-  // Track if user wants autorun from within stepByStep
   const autoRunRemainingRef = useRef(false);
-
   const nextResolver = useRef(null);
+
+  // Auto-track viewedStep during execution
+  useEffect(() => {
+    if ((demoPhase === 'stepByStep' || demoPhase === 'autoRun') && currentStep >= 0) {
+      setViewedStep(currentStep);
+    }
+  }, [currentStep, demoPhase]);
+
+  // ---- Form update ----
+  const handleFormUpdate = useCallback((key, value) => {
+    setFormData((prev) => ({ ...prev, [key]: value }));
+  }, []);
+
+  // ---- Fill demo case ----
+  const handleFillDemo = useCallback(() => {
+    setFormData({ ...DEMO_CASE });
+    setProjectName('北京欢乐谷社区公园景观概念设计');
+  }, []);
 
   // ---- waitForUser: called by agentEngine in step-by-step mode ----
   const waitForUser = useCallback(() => {
@@ -55,7 +71,7 @@ export default function Workbench() {
     });
   }, []);
 
-  // ---- handleNextStep: user clicks "执行下一步" in console ----
+  // ---- handleNextStep: user clicks "执行下一步" ----
   const handleNextStep = useCallback(() => {
     setDemoPhase('stepByStep');
     if (nextResolver.current) {
@@ -64,7 +80,7 @@ export default function Workbench() {
     }
   }, []);
 
-  // ---- handleAutoRunRemaining: from waiting, switch to autoRun ----
+  // ---- handleAutoRunRemaining ----
   const handleAutoRunRemaining = useCallback(() => {
     autoRunRemainingRef.current = true;
     setDemoPhase('autoRun');
@@ -90,17 +106,13 @@ export default function Workbench() {
     setStepStatus({});
     setStepData({});
     setCurrentStep(-1);
-    setProjectName('北京欢乐谷社区公园景观概念设计');
+    setProjectName(formData.projectName || '北京欢乐谷社区公园景观概念设计');
     setDemoPhase('stepByStep');
     setIsGenerating(true);
 
-    // waitForUser is injected — engine will pause after each step
     try {
       const result = await runAgent(formData, handleStepUpdate, () => {
-        // If user switched to autoRun, skip waiting
-        if (autoRunRemainingRef.current) {
-          return Promise.resolve();
-        }
+        if (autoRunRemainingRef.current) return Promise.resolve();
         return waitForUser();
       });
       saveHistory(result);
@@ -112,19 +124,18 @@ export default function Workbench() {
     }
   }, [isGenerating, formData, handleStepUpdate, waitForUser]);
 
-  // ---- Start auto run (no wait) ----
+  // ---- Start auto run ----
   const handleStartAutoRun = useCallback(async () => {
     if (isGenerating) return;
     autoRunRemainingRef.current = false;
     setStepStatus({});
     setStepData({});
     setCurrentStep(-1);
-    setProjectName('北京欢乐谷社区公园景观概念设计');
+    setProjectName(formData.projectName || '北京欢乐谷社区公园景观概念设计');
     setDemoPhase('autoRun');
     setIsGenerating(true);
 
     try {
-      // Pass null for waitForUser — engine will auto-continue with 1s delay
       const result = await runAgent(formData, handleStepUpdate, null);
       saveHistory(result);
     } catch (err) {
@@ -141,16 +152,20 @@ export default function Workbench() {
     setStepStatus({});
     setStepData({});
     setCurrentStep(-1);
+    setViewedStep(0);
     setProjectName('');
     autoRunRemainingRef.current = false;
-    // If a resolver is pending, reject it gracefully
     if (nextResolver.current) {
       nextResolver.current();
       nextResolver.current = null;
     }
   }, []);
 
-  // ---- Stop auto run ----
+  // ---- Pause / Stop ----
+  const handlePause = useCallback(() => {
+    setDemoPhase('waiting');
+  }, []);
+
   const handleStop = useCallback(() => {
     setDemoPhase('idle');
     setIsGenerating(false);
@@ -163,6 +178,20 @@ export default function Workbench() {
     }
   }, [stepData, projectName]);
 
+  // ---- Navigation ----
+  const handlePrevStep = useCallback(() => {
+    setViewedStep((prev) => Math.max(0, prev - 1));
+  }, []);
+
+  const handleNextStepNav = useCallback(() => {
+    setViewedStep((prev) => Math.min(5, prev + 1));
+  }, []);
+
+  const handleStepClick = useCallback((index) => {
+    // Allow clicking to view any step (navigates canvas, doesn't trigger execution)
+    setViewedStep(index);
+  }, []);
+
   // ---- Load history ----
   const handleLoadHistory = (record) => {
     if (!record?.data) return;
@@ -174,6 +203,7 @@ export default function Workbench() {
     });
     setStepStatus({ step1: 'done', step2: 'done', step3: 'done', step4: 'done', step5: 'done', step6: 'done' });
     setCurrentStep(5);
+    setViewedStep(5);
     setDemoPhase('done');
     setHistoryOpen(false);
   };
@@ -188,12 +218,11 @@ export default function Workbench() {
     if (demoPhase === 'done') return { mode: '方案完成', stage: '全部 Agent', progress: '6 / 6' };
     const label = currentStep >= 0 ? STEPS[currentStep]?.label : '初始化';
     const modeLabel = demoPhase === 'autoRun' ? '一键自动' : '分步演示';
-    return {
-      mode: modeLabel,
-      stage: label,
-      progress: `${Math.max(0, currentStep + 1)} / 6`,
-    };
+    return { mode: modeLabel, stage: label, progress: `${Math.max(0, currentStep + 1)} / 6` };
   })();
+
+  const headerHeight = '48px';
+  const bottomBarHeight = '56px';
 
   return (
     <div className="h-screen flex flex-col" style={{ background: '#080908' }}>
@@ -202,8 +231,8 @@ export default function Workbench() {
       {/* HEADER — lightweight, no "下一步" */}
       {/* ============================================ */}
       <header
-        className="flex items-center justify-between px-5 py-3 flex-shrink-0 border-b z-20"
-        style={{ background: '#0D0F0E', borderColor: 'rgba(255,255,255,0.06)' }}
+        className="flex items-center justify-between px-5 flex-shrink-0 border-b z-20"
+        style={{ height: headerHeight, background: '#0D0F0E', borderColor: 'rgba(255,255,255,0.06)' }}
       >
         {/* Left: Logo */}
         <button onClick={() => navigate('/')} className="flex items-center gap-2.5 group flex-shrink-0">
@@ -214,36 +243,32 @@ export default function Workbench() {
             <span className="text-sm font-serif font-bold text-gradient">L</span>
           </div>
           <div className="leading-tight hidden sm:block">
-            <div className="text-sm font-medium text-[#F5F1E8] group-hover:text-gradient transition-all">
+            <div className="text-xs font-medium text-[#F5F1E8] group-hover:text-gradient transition-all">
               景观方案总监 Agent 应用
             </div>
-            <div className="text-[10px] tracking-wide" style={{ color: '#555955' }}>LandscapeFlow AI</div>
+            <div className="text-[9px] tracking-wide" style={{ color: '#555955' }}>LandscapeFlow AI</div>
           </div>
         </button>
 
-        {/* Center: Mode + Stage + Progress — only when running */}
+        {/* Center: Mode + Stage + Progress */}
         {headerCenter && (
-          <div className="hidden md:flex items-center gap-4 text-xs">
-            <div className="flex items-center gap-1.5">
+          <div className="hidden md:flex items-center gap-3 text-[10px]">
+            <div className="flex items-center gap-1">
               <span style={{ color: '#555955' }}>模式</span>
-              <span
-                className="px-2 py-0.5 rounded-full"
-                style={{
-                  background: demoPhase === 'autoRun' ? 'rgba(34,197,94,0.1)' : 'rgba(214,181,109,0.1)',
-                  color: demoPhase === 'autoRun' ? '#22C55E' : '#D6B56D',
-                  border: demoPhase === 'autoRun' ? '1px solid rgba(34,197,94,0.2)' : '1px solid rgba(214,181,109,0.2)',
-                }}
-              >
+              <span className="px-1.5 py-0.5 rounded-full" style={{
+                background: demoPhase === 'autoRun' ? 'rgba(34,197,94,0.08)' : 'rgba(214,181,109,0.08)',
+                color: demoPhase === 'autoRun' ? '#22C55E' : '#D6B56D',
+              }}>
                 {headerCenter.mode}
               </span>
             </div>
-            <div className="h-3 w-px" style={{ background: 'rgba(255,255,255,0.08)' }} />
-            <div className="flex items-center gap-1.5">
+            <div className="h-2.5 w-px" style={{ background: 'rgba(255,255,255,0.08)' }} />
+            <div className="flex items-center gap-1">
               <span style={{ color: '#555955' }}>阶段</span>
               <span style={{ color: '#A8A29A' }}>{headerCenter.stage}</span>
             </div>
-            <div className="h-3 w-px" style={{ background: 'rgba(255,255,255,0.08)' }} />
-            <div className="flex items-center gap-1.5">
+            <div className="h-2.5 w-px" style={{ background: 'rgba(255,255,255,0.08)' }} />
+            <div className="flex items-center gap-1">
               <span style={{ color: '#555955' }}>进度</span>
               <span style={{ color: '#A8A29A' }}>{headerCenter.progress}</span>
             </div>
@@ -251,11 +276,11 @@ export default function Workbench() {
         )}
 
         {/* Right: Actions — NO 下一步 */}
-        <div className="flex items-center gap-2">
-          <button className="btn-secondary text-xs">使用指南</button>
-          <button className="btn-gold text-xs">分享方案</button>
-          <button className="btn-secondary text-xs">设计总监</button>
-          <button onClick={() => setHistoryOpen(true)} className="btn-secondary text-xs">
+        <div className="flex items-center gap-1.5">
+          <button className="text-[10px] px-2.5 py-1.5 rounded-lg" style={{ color: '#555955', border: '1px solid rgba(255,255,255,0.05)' }}>使用指南</button>
+          <button className="text-[10px] px-2.5 py-1.5 rounded-lg" style={{ color: '#D6B56D', border: '1px solid rgba(214,181,109,0.15)' }}>分享方案</button>
+          <button className="text-[10px] px-2.5 py-1.5 rounded-lg" style={{ color: '#555955', border: '1px solid rgba(255,255,255,0.05)' }}>设计总监</button>
+          <button onClick={() => setHistoryOpen(true)} className="text-[10px] px-2.5 py-1.5 rounded-lg" style={{ color: '#555955', border: '1px solid rgba(255,255,255,0.05)' }}>
             历史记录
           </button>
         </div>
@@ -264,9 +289,8 @@ export default function Workbench() {
       {/* ============================================ */}
       {/* MAIN LAYOUT */}
       {/* ============================================ */}
-      <div className="flex-1 flex overflow-hidden">
-
-        {/* Left Sidebar: agent workflow status only */}
+      <div className="flex-1 flex overflow-hidden" style={{ paddingBottom: bottomBarHeight }}>
+        {/* Left Sidebar: agent workflow + clickable nav */}
         <aside
           className="w-[280px] flex-shrink-0 border-r flex flex-col overflow-hidden"
           style={{ background: '#0D0F0E', borderColor: 'rgba(255,255,255,0.05)' }}
@@ -274,62 +298,71 @@ export default function Workbench() {
           <AgentSidebar
             stepStatus={stepStatus}
             currentStep={currentStep}
+            viewedStep={viewedStep}
             isGenerating={isGenerating}
             demoPhase={demoPhase}
             stepData={stepData}
             projectName={projectName}
+            onStepClick={handleStepClick}
           />
         </aside>
 
-        {/* Right: Main content */}
-        <main className="flex-1 overflow-y-auto">
-          <div className="max-w-4xl mx-auto px-6 py-6">
-
-            {/* ---- DEMO CONSOLE — unique control area ---- */}
-            <div className="mb-6">
-              <DemoConsole
-                demoPhase={demoPhase}
-                currentStep={currentStep}
-                isGenerating={isGenerating}
-                onStartStepByStep={handleStartStepByStep}
-                onStartAutoRun={handleStartAutoRun}
-                onNextStep={handleNextStep}
-                onAutoRunRemaining={handleAutoRunRemaining}
-                onReset={handleReset}
-                onPause={() => setDemoPhase('waiting')}
-                onStop={handleStop}
-                onExport={handleExport}
-                stepData={stepData}
-              />
+        {/* Right: Main content — step canvas */}
+        <main className="flex-1 overflow-hidden" style={{ background: '#080908' }}>
+          {/* Idle loading: spinner when nothing */}
+          {!hasAnyOutput && demoPhase !== 'idle' && isGenerating && (
+            <div className="flex flex-col items-center justify-center h-full">
+              <svg className="animate-spin mb-4" width="32" height="32" viewBox="0 0 24 24" fill="none">
+                <circle cx="12" cy="12" r="10" stroke="rgba(34,197,94,0.15)" strokeWidth="2" />
+                <path d="M12 2a10 10 0 0 1 10 10" stroke="#22C55E" strokeWidth="2" strokeLinecap="round" />
+              </svg>
+              <p className="text-sm" style={{ color: '#A8A29A' }}>
+                {STEPS[currentStep]?.label ?? 'Agent 工作流初始化中…'}
+              </p>
             </div>
+          )}
 
-            {/* ---- AGENT CONTENT (only when there's output) ---- */}
-            {hasAnyOutput && (
-              <AgentContent
-                stepStatus={stepStatus}
-                stepData={stepData}
-                currentStep={currentStep}
-                isGenerating={isGenerating}
-                projectName={projectName}
-                demoPhase={demoPhase}
-              />
-            )}
-
-            {/* Minimal loading state for first step */}
-            {!hasAnyOutput && isGenerating && (
-              <div className="flex flex-col items-center justify-center py-24">
-                <svg className="animate-spin mb-4" width="32" height="32" viewBox="0 0 24 24" fill="none">
-                  <circle cx="12" cy="12" r="10" stroke="rgba(34,197,94,0.15)" strokeWidth="2" />
-                  <path d="M12 2a10 10 0 0 1 10 10" stroke="#22C55E" strokeWidth="2" strokeLinecap="round" />
-                </svg>
-                <p className="text-sm" style={{ color: '#A8A29A' }}>
-                  {STEPS[currentStep]?.label ?? 'Agent 工作流初始化中…'}
-                </p>
-              </div>
-            )}
-          </div>
+          {/* Agent Content: single step view */}
+          {(hasAnyOutput || demoPhase === 'idle') && (
+            <AgentContent
+              stepStatus={stepStatus}
+              stepData={stepData}
+              viewedStep={viewedStep}
+              currentStep={currentStep}
+              isGenerating={isGenerating}
+              projectName={projectName}
+              demoPhase={demoPhase}
+              formData={formData}
+              onFormUpdate={handleFormUpdate}
+              onFillDemo={handleFillDemo}
+              onStartStepByStep={handleStartStepByStep}
+              onStartAutoRun={handleStartAutoRun}
+              onExport={handleExport}
+            />
+          )}
         </main>
       </div>
+
+      {/* ============================================ */}
+      {/* BOTTOM CONTROL BAR — fixed */}
+      {/* ============================================ */}
+      <BottomControlBar
+        demoPhase={demoPhase}
+        viewedStep={viewedStep}
+        currentStep={currentStep}
+        isGenerating={isGenerating}
+        onStartStepByStep={handleStartStepByStep}
+        onStartAutoRun={handleStartAutoRun}
+        onNextStep={handleNextStep}
+        onAutoRunRemaining={handleAutoRunRemaining}
+        onPause={handlePause}
+        onStop={handleStop}
+        onReset={handleReset}
+        onExport={handleExport}
+        onPrevStep={handlePrevStep}
+        onNextStepNav={handleNextStepNav}
+        stepData={stepData}
+      />
 
       {/* History Panel */}
       <HistoryPanel

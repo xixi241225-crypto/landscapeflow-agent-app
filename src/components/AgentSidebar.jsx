@@ -1,11 +1,12 @@
 /**
- * AgentSidebar — 纯状态展示
+ * AgentSidebar — 可点击导航 + 纯状态展示
  *
  * 职责：
  *   · 显示 6 个 Agent 流程状态（待执行 / 执行中 / 完成）
+ *   · 点击切换查看对应阶段（不触发执行）
  *   · 显示项目信息卡片
  *
- * 不负责任何操作按钮。"执行下一步"唯一在 DemoConsole 中。
+ * 不负责任何操作按钮。"执行下一步"唯一在底部控制栏中。
  */
 
 const STEPS = [
@@ -20,10 +21,12 @@ const STEPS = [
 export default function AgentSidebar({
   stepStatus,
   currentStep,
+  viewedStep,
   isGenerating,
   demoPhase,
   stepData,
   projectName,
+  onStepClick,
 }) {
   const hasAnyOutput = Object.keys(stepData || {}).length > 0;
   const schemeName = stepData?.step4?.recommendedScheme?.name || '欢乐草坪 · 邻里活力客厅';
@@ -46,6 +49,7 @@ export default function AgentSidebar({
           {STEPS.map((step, index) => {
             const status = stepStatus?.[step.key] || 'pending';
             const isCurrent = currentStep === index;
+            const isViewed = viewedStep === index;
             const isLast = index === STEPS.length - 1;
 
             return (
@@ -101,7 +105,9 @@ export default function AgentSidebar({
                         <path d="M12 2a10 10 0 0 1 10 10" stroke="#22C55E" strokeWidth="2.5" strokeLinecap="round" />
                       </svg>
                     ) : (
-                      <span style={{ fontSize: '9px', color: '#3D403C', fontWeight: '600' }}>{step.key.replace('step', '0')}</span>
+                      <span style={{ fontSize: '9px', color: '#3D403C', fontWeight: '600' }}>
+                        {String(index + 1).padStart(2, '0')}
+                      </span>
                     )}
                   </div>
 
@@ -119,12 +125,18 @@ export default function AgentSidebar({
                   )}
                 </div>
 
-                {/* Step info */}
-                <div className={`flex-1 min-w-0 pb-4 ${isLast ? 'pb-0' : ''}`} style={{ paddingTop: index > 0 ? '1px' : '0' }}>
+                {/* Step info — clickable to view */}
+                <button
+                  onClick={() => onStepClick?.(index)}
+                  className={`flex-1 min-w-0 text-left pb-4 ${isLast ? 'pb-0' : ''}`}
+                  style={{ paddingTop: index > 0 ? '1px' : '0' }}
+                >
                   <div
                     className="text-xs font-medium transition-colors duration-300"
                     style={{
-                      color: status === 'done'
+                      color: isViewed
+                        ? '#F5F1E8'
+                        : status === 'done'
                         ? '#A8A29A'
                         : status === 'working'
                         ? '#F5F1E8'
@@ -162,7 +174,20 @@ export default function AgentSidebar({
                       完成
                     </span>
                   )}
-                </div>
+                  {/* Viewed indicator */}
+                  {isViewed && status !== 'working' && status !== 'done' && (
+                    <span
+                      className="inline-block text-[9px] px-1.5 py-0.5 rounded-full mt-1"
+                      style={{
+                        background: 'rgba(214,181,109,0.06)',
+                        color: '#D6B56D',
+                        border: '1px solid rgba(214,181,109,0.15)',
+                      }}
+                    >
+                      当前查看
+                    </span>
+                  )}
+                </button>
               </div>
             );
           })}

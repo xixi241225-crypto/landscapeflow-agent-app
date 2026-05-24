@@ -64,7 +64,7 @@ export default function DemoConsole({
             </div>
 
             {/* Two mode cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
               {/* Step-by-step card */}
               <motion.div
                 className="rounded-2xl p-6 flex flex-col gap-4 cursor-pointer group transition-all duration-300"
@@ -147,6 +147,17 @@ export default function DemoConsole({
                   一键生成完整方案
                 </button>
               </motion.div>
+            </div>
+
+            {/* Reset button — tertiary */}
+            <div className="flex justify-center mb-8">
+              <button
+                onClick={onReset}
+                className="text-xs px-6 py-2 rounded-lg transition-colors"
+                style={{ color: '#555955', background: 'transparent', border: '1px solid rgba(255,255,255,0.06)' }}
+              >
+                重置案例
+              </button>
             </div>
 
             {/* Demo case summary */}
