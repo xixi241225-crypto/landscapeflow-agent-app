@@ -575,7 +575,7 @@ function buildDeepenedPlan(data, schemes, comparison) {
   return {
     recommendedScheme: scheme,
     totalScore: recommended.total,
-    planImage: { title: '总平面图 / 空间策略图', url: '/demo-images/plan.jpg', note: '展示一心一环多点空间结构、功能分区与游线组织' },
+    planImage: { title: '总平面图 / 空间策略图', url: './demo-images/plan.jpg', note: '展示一心一环多点空间结构、功能分区与游线组织' },
     designPhilosophy: `基于${city}欢乐谷片区的社区条件与城市活力需求，推荐「${scheme.name}」。该方案在甲方汇报表现力和在地性（欢乐谷片区活力气质）方面得分最高，能够兼顾美学品质、落地可行性与社区多元使用需求。${isNorthern ? '针对北方气候特征，方案已纳入冬季专项设计策略与四季植物配置。' : ''}"${scheme.name === '欢乐草坪 · 邻里活力客厅' ? '欢乐草坪' : scheme.name === '城市绿环 · 全龄共享公园' ? '城市绿环' : '森氧游园'}"主题与欢乐谷片区高度契合，适合汇报传播，是方案核心亮点。`,
     functionalZones: generateZones(scheme),
     circulation: generateCirculation(scheme),
@@ -741,8 +741,8 @@ function buildOutputs(data, schemes, deepenedPlan, visualData) {
     visualResults: visualData || buildVisualExpression(data, schemes, deepenedPlan),
 
     // 空间推演 & 输出成果共用的关键成果图
-    planImage: deepenedPlan?.planImage || { title: '总平面图 / 空间策略图', url: '/demo-images/plan.jpg', note: '展示一心一环多点空间结构' },
-    awnImage: { title: '中央草坪区效果图', url: '/demo-images/awn.jpg', note: '展示中央共享草坪与周边功能区关系' },
+    planImage: deepenedPlan?.planImage || { title: '总平面图 / 空间策略图', url: './demo-images/plan.jpg', note: '展示一心一环多点空间结构' },
+    awnImage: { title: '中央草坪区效果图', url: './demo-images/awn.jpg', note: '展示中央共享草坪与周边功能区关系' },
   };
 }
 
@@ -876,8 +876,8 @@ function generatePPTOutline(data, schemes, deepenedPlan) {
         `核心概念：${scheme.concept?.substring(0, 80) || ''}`,
         `设计创新：${scheme.id === 'A' ? '一心一环多点——以绿环串联全龄共享空间，结构清晰、可复制、可扩展' : scheme.id === 'B' ? '一心五区——以欢乐草坪为核心，五区环抱，弹性适应日常与节假日多场景使用' : '森林基底+亲子探索——自然友好型社区公园范式，差异化突出'}`,
       ],
-      suggestedImage: '/demo-images/plan.jpg',
-      planImage: '/demo-images/plan.jpg',
+      suggestedImage: './demo-images/plan.jpg',
+      planImage: './demo-images/plan.jpg',
       keyPoints: '总平是方案的"定海神针"。使用总平面图 / 空间策略图展示一心一环多点（或一心五区/森林基底）的整体空间结构、功能分区与游线组织，让甲方一目了然地看到：主入口如何与欢乐谷方向呼应，中央草坪如何串联各功能节点。',
     },
     {
@@ -890,8 +890,8 @@ function generatePPTOutline(data, schemes, deepenedPlan) {
         '邻里会客空间——大乔木遮荫下的半围合空间，适合邻里闲聊与小型聚会',
         ...(deepenedPlan.functionalZones || []).slice(0, 3).map((z) => `${z.name}（${z.area}）：${z.function}`),
       ],
-      suggestedImage: '/demo-images/awn.jpg',
-      awnImage: '/demo-images/awn.jpg',
+      suggestedImage: './demo-images/awn.jpg',
+      awnImage: './demo-images/awn.jpg',
       keyPoints: '中央草坪是方案的"心脏"——让甲方看到草坪兼容日常与节假日的弹性使用场景：平日居民休憩野餐、老人散步、儿童玩耍；周末社区市集、露天电影、邻里聚会。效果图需体现全龄同框的社区氛围。',
     },
     {
@@ -1082,14 +1082,14 @@ function buildVisualExpression(data, schemes, deepenedPlan) {
 
   // Track 2: 精选成果库（8 张本地景观模板精选成果图）
   const curatedImages = [
-    { id: 'c1', title: '鸟瞰总览效果图', type: 'curated', source: '精选成果库', url: '/demo-images/aerial.jpg' },
-    { id: 'c2', title: '主入口人视效果图', type: 'curated', source: '精选成果库', url: '/demo-images/entrance.jpg' },
-    { id: 'c3', title: '儿童活动区效果图', type: 'curated', source: '精选成果库', url: '/demo-images/children.jpg' },
-    { id: 'c4', title: '老人休憩花园效果图', type: 'curated', source: '精选成果库', url: '/demo-images/elderly.jpg' },
-    { id: 'c5', title: '夜景灯光效果图', type: 'curated', source: '精选成果库', url: '/demo-images/night.jpg' },
-    { id: 'c6', title: '四季植物配置图', type: 'curated', source: '精选成果库', url: '/demo-images/planting.jpg' },
-    { id: 'c7', title: '中央草坪区效果图', type: 'curated', source: '精选成果库', url: '/demo-images/awn.jpg' },
-    { id: 'c8', title: '总平面图 / 空间策略图', type: 'curated', source: '精选成果库', url: '/demo-images/plan.jpg' },
+    { id: 'c1', title: '鸟瞰总览效果图', type: 'curated', source: '精选成果库', url: './demo-images/aerial.jpg' },
+    { id: 'c2', title: '主入口人视效果图', type: 'curated', source: '精选成果库', url: './demo-images/entrance.jpg' },
+    { id: 'c3', title: '儿童活动区效果图', type: 'curated', source: '精选成果库', url: './demo-images/children.jpg' },
+    { id: 'c4', title: '老人休憩花园效果图', type: 'curated', source: '精选成果库', url: './demo-images/elderly.jpg' },
+    { id: 'c5', title: '夜景灯光效果图', type: 'curated', source: '精选成果库', url: './demo-images/night.jpg' },
+    { id: 'c6', title: '四季植物配置图', type: 'curated', source: '精选成果库', url: './demo-images/planting.jpg' },
+    { id: 'c7', title: '中央草坪区效果图', type: 'curated', source: '精选成果库', url: './demo-images/awn.jpg' },
+    { id: 'c8', title: '总平面图 / 空间策略图', type: 'curated', source: '精选成果库', url: './demo-images/plan.jpg' },
   ];
 
   // Track 3: 效果图 Prompt 指令包

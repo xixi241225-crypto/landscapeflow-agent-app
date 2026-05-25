@@ -3,9 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const HERO_IMAGES = [
-  { src: '/demo-images/aerial.jpg', alt: '鸟瞰总览效果图' },
-  { src: '/demo-images/awn.jpg', alt: '中央草坪区效果图' },
-  { src: '/demo-images/night.jpg', alt: '夜景灯光效果图' },
+  { src: './demo-images/aerial.jpg', alt: '鸟瞰总览效果图' },
+  { src: './demo-images/awn.jpg', alt: '中央草坪区效果图' },
+  { src: './demo-images/night.jpg', alt: '夜景灯光效果图' },
 ];
 
 const AGENTS = [

@@ -198,10 +198,10 @@ export default function AgentContent({
                 <div
                   className="w-32 h-24 rounded-xl overflow-hidden flex-shrink-0 cursor-pointer"
                   style={{ background: '#F3F4F6', border: '1px solid #E5E7EB' }}
-                  onClick={() => setModalImage({ src: '/demo-images/aerial.jpg', title: '方案推荐 · 鸟瞰总览图' })}
+                  onClick={() => setModalImage({ src: './demo-images/aerial.jpg', title: '方案推荐 · 鸟瞰总览图' })}
                 >
                   <img
-                    src="/demo-images/aerial.jpg"
+                    src="./demo-images/aerial.jpg"
                     alt="方案缩略图"
                     className="w-full h-full object-cover hover:opacity-80 transition-opacity"
                   />
