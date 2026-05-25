@@ -51,8 +51,8 @@ export default function ProjectForm({ formData, onChange, onGenerate, isGenerati
       {/* Header */}
       <div className="flex items-center justify-between mb-5">
         <div>
-          <h2 className="text-lg font-serif font-bold text-[#F5F1E8]">项目条件</h2>
-          <p className="text-xs mt-0.5" style={{ color: '#78716C' }}>填写后 Agent 将自动生成方案</p>
+          <h2 className="text-lg font-serif font-bold text-[#111827]">项目条件</h2>
+          <p className="text-xs mt-0.5" style={{ color: '#6B7280' }}>填写后 Agent 将自动生成方案</p>
         </div>
         <button
           onClick={fillDemo}
@@ -60,7 +60,7 @@ export default function ProjectForm({ formData, onChange, onGenerate, isGenerati
           style={{
             background: 'rgba(214,181,109,0.08)',
             border: '1px solid rgba(214,181,109,0.25)',
-            color: '#D6B56D',
+            color: '#D6A84F',
           }}
           onMouseEnter={(e) => {
             e.currentTarget.style.background = 'rgba(214,181,109,0.12)';
@@ -130,24 +130,26 @@ export default function ProjectForm({ formData, onChange, onGenerate, isGenerati
                 style={
                   formData.projectType === type
                     ? {
-                        background: 'rgba(34,197,94,0.08)',
-                        borderColor: 'rgba(34,197,94,0.35)',
-                        color: '#22C55E',
+                        background: 'rgba(22,163,74,0.08)',
+                        borderColor: 'rgba(22,163,74,0.35)',
+                        color: '#16A34A',
                       }
                     : {
-                        background: 'transparent',
-                        borderColor: '#2B2E2A',
-                        color: '#A8A29A',
+                        background: '#FFFFFF',
+                        borderColor: '#E5E7EB',
+                        color: '#6B7280',
                       }
                 }
                 onMouseEnter={(e) => {
                   if (formData.projectType !== type) {
-                    e.currentTarget.style.borderColor = '#3D403C';
+                    e.currentTarget.style.borderColor = '#16A34A';
+                    e.currentTarget.style.color = '#374151';
                   }
                 }}
                 onMouseLeave={(e) => {
                   if (formData.projectType !== type) {
-                    e.currentTarget.style.borderColor = '#2B2E2A';
+                    e.currentTarget.style.borderColor = '#E5E7EB';
+                    e.currentTarget.style.color = '#6B7280';
                   }
                 }}
               >
@@ -167,19 +169,19 @@ export default function ProjectForm({ formData, onChange, onGenerate, isGenerati
               </span>
             )}
           </label>
-          <p className="text-[11px] mb-2" style={{ color: '#555955' }}>
+          <p className="text-[11px] mb-2" style={{ color: '#9CA3AF' }}>
             可上传场地照片、总平截图、红线图或现状分析图
           </p>
           {formData.siteFiles?.length > 0 && (
             <div className="mb-2 space-y-1.5">
               {formData.siteFiles.map((file, i) => (
                 <div key={i} className="flex items-center justify-between rounded-lg px-3 py-2 text-xs"
-                  style={{ background: '#101211', border: '1px solid #2B2E2A' }}>
+                  style={{ background: '#F9FAFB', border: '1px solid #E5E7EB' }}>
                   <div className="flex items-center gap-2 min-w-0">
                     <span>📎</span>
                     <div className="min-w-0">
-                      <p className="truncate text-[#F5F1E8]">{file.name}</p>
-                      <p className="text-[10px]" style={{ color: '#555955' }}>{file.type} · {file.size}</p>
+                      <p className="truncate text-[#111827]">{file.name}</p>
+                      <p className="text-[10px]" style={{ color: '#9CA3AF' }}>{file.type} · {file.size}</p>
                     </div>
                   </div>
                   <button
@@ -211,19 +213,18 @@ export default function ProjectForm({ formData, onChange, onGenerate, isGenerati
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            className="w-full py-2.5 rounded-lg text-xs transition-all duration-200"
+            className="w-full py-2.5 rounded-lg text-xs transition-all duration-200 bg-white"
             style={{
-              border: '1px dashed #2B2E2A',
-              color: '#78716C',
-              background: 'transparent',
+              border: '1px dashed #D1D5DB',
+              color: '#9CA3AF',
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.borderColor = 'rgba(34,197,94,0.3)';
-              e.currentTarget.style.color = '#22C55E';
+              e.currentTarget.style.borderColor = '#16A34A';
+              e.currentTarget.style.color = '#16A34A';
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.borderColor = '#2B2E2A';
-              e.currentTarget.style.color = '#78716C';
+              e.currentTarget.style.borderColor = '#D1D5DB';
+              e.currentTarget.style.color = '#9CA3AF';
             }}
           >
             + 点击上传场地现状图（支持 JPG / PNG / PDF，可多选）
@@ -256,11 +257,11 @@ export default function ProjectForm({ formData, onChange, onGenerate, isGenerati
       </div>
 
       {/* Generate button */}
-      <div className="mt-4 pt-4 border-t" style={{ borderColor: '#2B2E2A' }}>
+      <div className="mt-4 pt-4 border-t" style={{ borderColor: '#E5E7EB' }}>
         {showErrors && !isGenerating && (
           <div className="mb-3 text-xs rounded-lg p-2" style={{
-            background: 'rgba(239,68,68,0.08)',
-            border: '1px solid rgba(239,68,68,0.2)',
+            background: 'rgba(239,68,68,0.04)',
+            border: '1px solid rgba(239,68,68,0.15)',
             color: '#EF4444',
           }}>
             请填写必填项：项目名称、项目地点、项目类型
@@ -273,18 +274,18 @@ export default function ProjectForm({ formData, onChange, onGenerate, isGenerati
           style={
             isGenerating
               ? {
-                  background: '#151716',
-                  color: '#555955',
+                  background: '#E5E7EB',
+                  color: '#9CA3AF',
                   cursor: 'not-allowed',
                 }
               : {
                   background: 'linear-gradient(135deg, #16A34A, #22C55E)',
-                  color: '#050F08',
+                  color: '#FFFFFF',
                 }
           }
           onMouseEnter={(e) => {
             if (!isGenerating) {
-              e.currentTarget.style.boxShadow = '0 0 20px rgba(34,197,94,0.35)';
+              e.currentTarget.style.boxShadow = '0 4px 16px rgba(22,163,74,0.35)';
             }
           }}
           onMouseLeave={(e) => {
@@ -305,7 +306,7 @@ export default function ProjectForm({ formData, onChange, onGenerate, isGenerati
             '⚡ 一键生成完整方案'
           )}
         </button>
-        <p className="text-[10px] text-center mt-2" style={{ color: '#555955' }}>
+        <p className="text-[10px] text-center mt-2" style={{ color: '#9CA3AF' }}>
           六个 Agent 将依次执行，预计耗时约 30 秒
         </p>
       </div>

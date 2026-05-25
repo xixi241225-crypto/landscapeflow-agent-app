@@ -29,23 +29,23 @@ export default function Hero() {
   }, []);
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#080908]">
+    <div className="min-h-screen flex flex-col" style={{ background: 'linear-gradient(165deg, #FFFFFF 0%, #F7F8F6 40%, #ECFDF5 100%)' }}>
 
       {/* ============================================ */}
-      {/* LIGHTWEIGHT HEADER */}
+      {/* LIGHTWEIGHT HEADER — Bright theme */}
       {/* ============================================ */}
       <header className="relative z-30 flex items-center justify-between px-8 py-5">
         {/* Left: Logo */}
         <div className="flex items-center gap-3">
           <div
-            className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
-            style={{ background: 'rgba(214,181,109,0.1)', border: '1px solid rgba(214,181,109,0.22)' }}
+            className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
+            style={{ background: 'linear-gradient(135deg, #16A34A, #22C55E)', boxShadow: '0 2px 8px rgba(22,163,74,0.25)' }}
           >
-            <span className="text-sm font-serif font-bold text-gradient">L</span>
+            <span className="text-base font-serif font-bold text-white">L</span>
           </div>
           <div className="leading-tight">
-            <div className="text-xs font-medium" style={{ color: '#A8A29A' }}>景观方案总监 Agent 应用</div>
-            <div className="text-[11px] font-serif text-gradient tracking-wide">LandscapeFlow AI</div>
+            <div className="text-xs font-medium" style={{ color: '#6B7280' }}>景观方案总监 Agent 应用</div>
+            <div className="text-[11px] font-serif tracking-wide" style={{ color: '#16A34A', fontWeight: 600 }}>LandscapeFlow AI</div>
           </div>
         </div>
 
@@ -53,13 +53,13 @@ export default function Hero() {
         <div className="flex items-center gap-3">
           <button
             onClick={() => navigate('/workbench')}
-            className="btn-gold text-xs px-5 py-2"
+            className="btn-primary text-xs px-5 py-2"
           >
             进入工作台
           </button>
           <button
-            className="btn-secondary text-xs px-5 py-2"
             onClick={() => navigate('/workbench')}
+            className="btn-secondary text-xs px-5 py-2"
           >
             观看演示
           </button>
@@ -67,18 +67,18 @@ export default function Hero() {
       </header>
 
       {/* ============================================ */}
-      {/* HERO SECTION */}
+      {/* HERO SECTION — Bright theme with green accents */}
       {/* ============================================ */}
       <div className="relative flex-1 flex flex-col items-center justify-center overflow-hidden min-h-[calc(100vh-72px)]">
 
-        {/* Background image — very subtle */}
+        {/* Background image — very subtle on light bg */}
         <div className="absolute inset-0 overflow-hidden">
           <AnimatePresence mode="wait">
             <motion.div
               key={currentImage}
               className="absolute inset-0"
               initial={{ opacity: 0 }}
-              animate={{ opacity: 0.10 }}
+              animate={{ opacity: 0.06 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 1.5, ease: 'easeInOut' }}
             >
@@ -89,51 +89,52 @@ export default function Hero() {
               />
             </motion.div>
           </AnimatePresence>
-          {/* Gradient overlays */}
-          <div className="absolute inset-0 bg-gradient-to-b from-[#080908] via-[#080908]/60 to-[#080908]" />
-          <div className="absolute inset-0 bg-gradient-to-r from-[#080908]/50 via-transparent to-[#080908]/50" />
+          {/* Light gradient overlays — white-based */}
+          <div className="absolute inset-0 bg-gradient-to-b from-white/80 via-[#F7F8F6]/60 to-[#F7F8F6]" />
+          <div className="absolute inset-0 bg-gradient-to-r from-white/40 via-transparent to-white/40" />
         </div>
 
-        {/* Subtle dot grid */}
+        {/* Subtle dot grid — light gold dots */}
         <div
-          className="absolute inset-0 opacity-[0.02]"
+          className="absolute inset-0 opacity-[0.03]"
           style={{
-            backgroundImage: `radial-gradient(circle, #D6B56D 1px, transparent 1px)`,
+            backgroundImage: `radial-gradient(circle, #16A34A 1px, transparent 1px)`,
             backgroundSize: '48px 48px',
           }}
         />
 
-        {/* Ambient glows */}
-        <div className="absolute top-1/3 left-1/3 w-[600px] h-[600px] bg-[#22C55E]/[0.025] rounded-full blur-[160px]" />
-        <div className="absolute bottom-1/3 right-1/3 w-[500px] h-[500px] bg-[#D6B56D]/[0.025] rounded-full blur-[140px]" />
+        {/* Ambient glows — soft green and gold on light bg */}
+        <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-[#16A34A]/[0.06] rounded-full blur-[160px]" />
+        <div className="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] bg-[#D6A84F]/[0.04] rounded-full blur-[140px]" />
 
-        {/* ---- Hero Text ---- */}
+        {/* ---- Hero Text — Dark text for bright bg ---- */}
         <motion.div
           className="relative z-10 text-center px-6 max-w-4xl"
           initial={{ opacity: 0, y: 40 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, ease: 'easeOut' }}
         >
-          {/* Hackathon badge */}
+          {/* Hackathon badge — green accent */}
           <motion.div
             className="inline-flex items-center gap-2 rounded-full px-4 py-1.5 mb-10"
             style={{
-              background: 'rgba(214, 181, 109, 0.07)',
-              border: '1px solid rgba(214, 181, 109, 0.2)',
+              background: 'rgba(22, 163, 74, 0.06)',
+              border: '1px solid rgba(22, 163, 74, 0.15)',
             }}
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.2, duration: 0.5 }}
           >
-            <span className="w-1.5 h-1.5 rounded-full bg-[#D6B56D] animate-pulse-glow" />
-            <span className="text-xs font-medium" style={{ color: '#D6B56D' }}>
+            <span className="w-1.5 h-1.5 rounded-full animate-pulse-glow" style={{ background: '#16A34A' }} />
+            <span className="text-xs font-medium" style={{ color: '#16A34A' }}>
               腾讯云黑客松 · AI 智能体争霸赛
             </span>
           </motion.div>
 
-          {/* Main title */}
+          {/* Main title — dark serif */}
           <motion.h1
-            className="font-serif text-5xl md:text-7xl font-bold mb-5 tracking-tight text-[#F5F1E8] leading-tight"
+            className="font-serif text-5xl md:text-7xl font-bold mb-5 tracking-tight leading-tight"
+            style={{ color: '#111827' }}
             initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3, duration: 0.7 }}
@@ -143,7 +144,7 @@ export default function Hero() {
             <span className="text-gradient">Agent 应用</span>
           </motion.h1>
 
-          {/* English subtitle */}
+          {/* English subtitle — green gradient */}
           <motion.p
             className="text-xl md:text-2xl font-serif text-gradient mb-8 tracking-widest"
             initial={{ opacity: 0, y: 20 }}
@@ -153,10 +154,10 @@ export default function Hero() {
             LandscapeFlow AI
           </motion.p>
 
-          {/* Main desc */}
+          {/* Main description — medium gray */}
           <motion.p
             className="text-base md:text-lg mb-3 leading-relaxed"
-            style={{ color: '#A8A29A' }}
+            style={{ color: '#4B5563' }}
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.55, duration: 0.6 }}
@@ -165,7 +166,7 @@ export default function Hero() {
           </motion.p>
           <motion.p
             className="text-sm md:text-base mb-12"
-            style={{ color: '#78716C' }}
+            style={{ color: '#9CA3AF' }}
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.65, duration: 0.6 }}
@@ -182,7 +183,7 @@ export default function Hero() {
           >
             <motion.button
               onClick={() => navigate('/workbench')}
-              className="btn-gold text-base px-10 py-3.5"
+              className="btn-primary text-base px-10 py-3.5"
               whileHover={{ scale: 1.03 }}
               whileTap={{ scale: 0.97 }}
             >
@@ -199,7 +200,7 @@ export default function Hero() {
           </motion.div>
         </motion.div>
 
-        {/* ---- 6 Agent Cards ---- */}
+        {/* ---- 6 Agent Cards — Bright white cards ---- */}
         <motion.div
           className="relative z-10 w-full max-w-5xl px-6 mt-20 pb-16"
           initial={{ opacity: 0, y: 32 }}
@@ -208,14 +209,14 @@ export default function Hero() {
         >
           {/* Section label */}
           <div className="flex items-center gap-4 mb-6 justify-center">
-            <div className="h-px flex-1 max-w-20" style={{ background: 'rgba(255,255,255,0.06)' }} />
-            <span className="text-xs tracking-widest uppercase" style={{ color: '#555955' }}>
+            <div className="h-px flex-1 max-w-20" style={{ background: 'rgba(0,0,0,0.06)' }} />
+            <span className="text-xs tracking-widest uppercase font-medium" style={{ color: '#9CA3AF' }}>
               六个 Agent 完整工作流
             </span>
-            <div className="h-px flex-1 max-w-20" style={{ background: 'rgba(255,255,255,0.06)' }} />
+            <div className="h-px flex-1 max-w-20" style={{ background: 'rgba(0,0,0,0.06)' }} />
           </div>
 
-          {/* 2×3 static grid — NO carousel, NO nav dots */}
+          {/* 2×3 static grid — bright cards */}
           <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
             {AGENTS.map((agent, i) => (
               <motion.div
@@ -227,19 +228,22 @@ export default function Hero() {
               >
                 <div
                   className="text-xs font-bold mb-3 font-serif"
-                  style={{ color: '#D6B56D' }}
+                  style={{ color: '#D6A84F' }}
                 >
                   {agent.num}
                 </div>
-                <h3 className="text-sm font-semibold text-[#F5F1E8] mb-1.5">{agent.title}</h3>
-                <p className="text-xs leading-relaxed" style={{ color: '#78716C' }}>{agent.desc}</p>
+                <h3 className="text-sm font-semibold mb-1.5" style={{ color: '#111827' }}>{agent.title}</h3>
+                <p className="text-xs leading-relaxed" style={{ color: '#6B7280' }}>{agent.desc}</p>
               </motion.div>
             ))}
           </div>
         </motion.div>
 
-        {/* Bottom gradient */}
-        <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-[#080908] to-transparent" />
+        {/* Bottom gradient — fade to base color (not black!) */}
+        <div
+          className="absolute bottom-0 left-0 right-0 h-24"
+          style={{ background: 'linear-gradient(to top, #F7F8F6, transparent)' }}
+        />
       </div>
     </div>
   );

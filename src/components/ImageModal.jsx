@@ -52,7 +52,7 @@ export default function ImageModal({ src, title, onClose }) {
             }}
             onMouseEnter={(e) => {
               e.currentTarget.style.background = 'rgba(255,255,255,0.15)';
-              e.currentTarget.style.color = '#F5F1E8';
+              e.currentTarget.style.color = '#FFFFFF';
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.background = 'rgba(255,255,255,0.08)';
@@ -73,7 +73,7 @@ export default function ImageModal({ src, title, onClose }) {
               src={src}
               alt={title || '查看大图'}
               className="max-w-[90vw] max-h-[85vh] object-contain"
-              style={{ background: '#0B0C0B' }}
+              style={{ background: '#1a1a1a' }}
             />
           </div>
 

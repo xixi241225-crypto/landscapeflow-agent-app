@@ -1,12 +1,10 @@
 /**
- * AgentSidebar — 可点击导航 + 纯状态展示
+ * AgentSidebar — 可点击导航 + 纯状态展示（明亮风格）
  *
  * 职责：
  *   · 显示 6 个 Agent 流程状态（待执行 / 执行中 / 完成）
  *   · 点击切换查看对应阶段（不触发执行）
  *   · 显示项目信息卡片
- *
- * 不负责任何操作按钮。"执行下一步"唯一在底部控制栏中。
  */
 
 const STEPS = [
@@ -33,14 +31,17 @@ export default function AgentSidebar({
   const completedCount = Object.values(stepStatus || {}).filter((s) => s === 'done').length;
 
   return (
-    <div className="h-full flex flex-col overflow-hidden">
+    <div className="h-full flex flex-col overflow-hidden" style={{ background: '#FAFAFA' }}>
 
       {/* ---- Sidebar Header ---- */}
-      <div className="px-5 py-4 border-b flex-shrink-0" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
-        <h3 className="text-[11px] font-semibold tracking-widest uppercase mb-0.5" style={{ color: '#555955' }}>
+      <div
+        className="px-5 py-4 border-b flex-shrink-0"
+        style={{ borderColor: '#E5E5E5', background: '#FFFFFF' }}
+      >
+        <h3 className="text-[11px] font-bold tracking-widest uppercase mb-0.5" style={{ color: '#374151' }}>
           Agent 工作流
         </h3>
-        <p className="text-[10px]" style={{ color: '#3D403C' }}>6 步自动生成完整方案</p>
+        <p className="text-[10px]" style={{ color: '#9CA3AF' }}>6 步自动生成完整方案</p>
       </div>
 
       {/* ---- Steps ---- */}
@@ -63,8 +64,8 @@ export default function AgentSidebar({
                       style={{
                         height: '14px',
                         background: stepStatus?.[STEPS[index - 1].key] === 'done'
-                          ? 'rgba(34,197,94,0.2)'
-                          : 'rgba(255,255,255,0.04)',
+                          ? '#16A34A'
+                          : '#E5E7EB',
                       }}
                     />
                   )}
@@ -81,31 +82,35 @@ export default function AgentSidebar({
                       flexShrink: 0,
                       transition: 'all 0.4s ease',
                       background: status === 'done'
-                        ? 'rgba(34,197,94,0.08)'
+                        ? '#16A34A'
                         : status === 'working'
-                        ? 'rgba(34,197,94,0.12)'
-                        : '#111312',
+                        ? '#F0FDF4'
+                        : isViewed ? '#FFFFFF' : '#F3F4F6',
                       border: status === 'done'
-                        ? '1px solid rgba(34,197,94,0.25)'
+                        ? 'none'
                         : status === 'working'
-                        ? '1.5px solid rgba(34,197,94,0.5)'
-                        : '1px solid rgba(255,255,255,0.06)',
+                        ? '1.5px solid #16A34A'
+                        : isViewed
+                        ? '1.5px solid #D6A84F'
+                        : '1px solid #E5E7EB',
                       boxShadow: status === 'working'
-                        ? '0 0 10px rgba(34,197,94,0.2)'
-                        : 'none',
+                        ? '0 0 10px rgba(22,163,74,0.25)'
+                        : status === 'done'
+                        ? 'none'
+                        : '0 1px 2px rgba(0,0,0,0.04)',
                     }}
                   >
                     {status === 'done' ? (
-                      <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-                        <path d="M2 5L4.5 7.5L8 3" stroke="#22C55E" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                      <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                        <path d="M2.5 6L5 8.5L9.5 3.5" stroke="#FFF" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
                       </svg>
                     ) : status === 'working' ? (
                       <svg className="animate-spin" width="13" height="13" viewBox="0 0 24 24" fill="none">
-                        <circle cx="12" cy="12" r="10" stroke="rgba(34,197,94,0.15)" strokeWidth="2.5" />
-                        <path d="M12 2a10 10 0 0 1 10 10" stroke="#22C55E" strokeWidth="2.5" strokeLinecap="round" />
+                        <circle cx="12" cy="12" r="10" stroke="#16A34A" strokeWidth="2.5" opacity="0.2" />
+                        <path d="M12 2a10 10 0 0 1 10 10" stroke="#16A34A" strokeWidth="2.5" strokeLinecap="round" />
                       </svg>
                     ) : (
-                      <span style={{ fontSize: '9px', color: '#3D403C', fontWeight: '600' }}>
+                      <span style={{ fontSize: '9px', color: isViewed ? '#D6A84F' : '#9CA3AF', fontWeight: '700' }}>
                         {String(index + 1).padStart(2, '0')}
                       </span>
                     )}
@@ -118,8 +123,8 @@ export default function AgentSidebar({
                       style={{
                         minHeight: '16px',
                         background: status === 'done'
-                          ? 'rgba(34,197,94,0.2)'
-                          : 'rgba(255,255,255,0.04)',
+                          ? '#16A34A'
+                          : '#E5E7EB',
                       }}
                     />
                   )}
@@ -134,57 +139,41 @@ export default function AgentSidebar({
                   <div
                     className="text-xs font-medium transition-colors duration-300"
                     style={{
-                      color: isViewed
-                        ? '#F5F1E8'
+                      color: isViewed || status === 'working'
+                        ? '#1F2937'
                         : status === 'done'
-                        ? '#A8A29A'
-                        : status === 'working'
-                        ? '#F5F1E8'
-                        : '#555955',
+                        ? '#16A34A'
+                        : '#6B7280',
+                      fontWeight: isViewed || status === 'working' ? 600 : 500,
                     }}
                   >
                     {step.label}
                   </div>
-                  <div className="text-[10px] mt-0.5 leading-relaxed" style={{ color: '#3D403C' }}>
+                  <div className="text-[10px] mt-0.5 leading-relaxed" style={{ color: '#9CA3AF' }}>
                     {step.desc}
                   </div>
 
                   {/* Status pill — compact */}
                   {status === 'working' && (
                     <span
-                      className="inline-block text-[9px] px-1.5 py-0.5 rounded-full mt-1"
+                      className="inline-block text-[9px] px-2 py-0.5 rounded-full mt-1.5 font-medium"
                       style={{
-                        background: 'rgba(34,197,94,0.08)',
-                        color: '#22C55E',
-                        border: '1px solid rgba(34,197,94,0.2)',
+                        background: '#F0FDF4',
+                        color: '#16A34A',
                       }}
                     >
-                      执行中
+                      执行中...
                     </span>
                   )}
                   {status === 'done' && (
                     <span
-                      className="inline-block text-[9px] px-1.5 py-0.5 rounded-full mt-1"
+                      className="inline-block text-[9px] px-2 py-0.5 rounded-full mt-1.5 font-medium"
                       style={{
-                        background: 'rgba(61,64,60,0.25)',
-                        color: '#555955',
-                        border: '1px solid rgba(61,64,60,0.25)',
+                        background: '#F0FDF4',
+                        color: '#16A34A',
                       }}
                     >
-                      完成
-                    </span>
-                  )}
-                  {/* Viewed indicator */}
-                  {isViewed && status !== 'working' && status !== 'done' && (
-                    <span
-                      className="inline-block text-[9px] px-1.5 py-0.5 rounded-full mt-1"
-                      style={{
-                        background: 'rgba(214,181,109,0.06)',
-                        color: '#D6B56D',
-                        border: '1px solid rgba(214,181,109,0.15)',
-                      }}
-                    >
-                      当前查看
+                      ✓ 完成
                     </span>
                   )}
                 </button>
@@ -195,41 +184,44 @@ export default function AgentSidebar({
       </div>
 
       {/* ---- Project info card — bottom ---- */}
-      <div className="px-4 py-3 border-t flex-shrink-0" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
+      <div
+        className="px-4 py-3 border-t flex-shrink-0"
+        style={{ borderColor: '#E5E5E5', background: '#FFFFFF' }}
+      >
         <div
-          className="rounded-xl p-3"
+          className="rounded-xl p-3.5"
           style={{
-            background: '#101211',
-            border: '1px solid rgba(214,181,109,0.1)',
+            background: '#FAFAF9',
+            border: '1px solid #E5E5E3',
           }}
         >
-          <div className="text-[9px] font-semibold tracking-widest uppercase mb-2" style={{ color: '#3D403C' }}>
+          <div className="text-[9px] font-bold tracking-widest uppercase mb-2.5" style={{ color: '#9CA3AF' }}>
             方案信息
           </div>
 
           {hasAnyOutput ? (
             <>
-              <div className="text-xs font-medium mb-0.5 text-[#F5F1E8] leading-tight">{schemeName}</div>
-              <div className="text-[10px] mb-0.5" style={{ color: '#78716C' }}>北京 · 朝阳区 · 欢乐谷</div>
-              <div className="text-[10px]" style={{ color: '#555955' }}>
+              <div className="text-xs font-bold mb-0.5 leading-tight" style={{ color: '#1F2937' }}>{schemeName}</div>
+              <div className="text-[10px] mb-0.5" style={{ color: '#6B7280' }}>北京 · 朝阳区 · 欢乐谷</div>
+              <div className="text-[10px]" style={{ color: '#9CA3AF' }}>
                 {projectName || '北京欢乐谷社区公园'}
               </div>
               {/* Progress */}
-              <div className="mt-2 h-1 rounded-full overflow-hidden" style={{ background: '#1D1F1E' }}>
+              <div className="mt-2.5 h-1.5 rounded-full overflow-hidden" style={{ background: '#E5E7EB' }}>
                 <div
                   className="h-full rounded-full transition-all duration-500"
                   style={{
                     width: `${(completedCount / 6) * 100}%`,
-                    background: 'linear-gradient(90deg, rgba(34,197,94,0.6), rgba(34,197,94,0.4))',
+                    background: 'linear-gradient(90deg, #16A34A, #22C55E)',
                   }}
                 />
               </div>
-              <div className="text-[9px] mt-1" style={{ color: '#3D403C' }}>
+              <div className="text-[9px] mt-1.5 font-medium" style={{ color: '#16A34A' }}>
                 {completedCount} / 6 Agent 完成
               </div>
             </>
           ) : (
-            <div className="text-[10px] leading-relaxed" style={{ color: '#3D403C' }}>
+            <div className="text-[10px] leading-relaxed py-1 text-center" style={{ color: '#9CA3AF' }}>
               选择演示模式后开始生成方案
             </div>
           )}

@@ -225,62 +225,62 @@ export default function Workbench() {
   const bottomBarHeight = '56px';
 
   return (
-    <div className="h-screen flex flex-col" style={{ background: '#080908' }}>
+    <div className="h-screen flex flex-col" style={{ background: '#F7F8F6' }}>
 
       {/* ============================================ */}
-      {/* HEADER — lightweight, no "下一步" */}
+      {/* HEADER — 明亮专业风格 */}
       {/* ============================================ */}
       <header
         className="flex items-center justify-between px-5 flex-shrink-0 border-b z-20"
-        style={{ height: headerHeight, background: '#0D0F0E', borderColor: 'rgba(255,255,255,0.06)' }}
+        style={{ height: headerHeight, background: '#FFFFFF', borderColor: '#E5E7EB' }}
       >
         {/* Left: Logo */}
         <button onClick={() => navigate('/')} className="flex items-center gap-2.5 group flex-shrink-0">
           <div
-            className="w-7 h-7 rounded-md flex items-center justify-center"
-            style={{ background: 'rgba(214,181,109,0.1)', border: '1px solid rgba(214,181,109,0.2)' }}
+            className="w-7 h-7 rounded-lg flex items-center justify-center"
+            style={{ background: '#16A34A', boxShadow: '0 1px 3px rgba(22,163,74,0.25)' }}
           >
-            <span className="text-sm font-serif font-bold text-gradient">L</span>
+            <span className="text-sm font-serif font-bold text-white">L</span>
           </div>
           <div className="leading-tight hidden sm:block">
-            <div className="text-xs font-medium text-[#F5F1E8] group-hover:text-gradient transition-all">
+            <div className="text-xs font-bold group-hover:text-[#16A34A] transition-all" style={{ color: '#1F2937' }}>
               景观方案总监 Agent 应用
             </div>
-            <div className="text-[9px] tracking-wide" style={{ color: '#555955' }}>LandscapeFlow AI</div>
+            <div className="text-[9px] tracking-wide" style={{ color: '#9CA3AF' }}>LandscapeFlow AI</div>
           </div>
         </button>
 
         {/* Center: Mode + Stage + Progress */}
         {headerCenter && (
           <div className="hidden md:flex items-center gap-3 text-[10px]">
-            <div className="flex items-center gap-1">
-              <span style={{ color: '#555955' }}>模式</span>
-              <span className="px-1.5 py-0.5 rounded-full" style={{
-                background: demoPhase === 'autoRun' ? 'rgba(34,197,94,0.08)' : 'rgba(214,181,109,0.08)',
-                color: demoPhase === 'autoRun' ? '#22C55E' : '#D6B56D',
+            <div className="flex items-center gap-1.5">
+              <span style={{ color: '#9CA3AF' }}>模式</span>
+              <span className="px-2 py-0.5 rounded-full font-medium" style={{
+                background: demoPhase === 'autoRun' ? '#F0FDF4' : '#FFFBEB',
+                color: demoPhase === 'autoRun' ? '#16A34A' : '#D6A84F',
               }}>
                 {headerCenter.mode}
               </span>
             </div>
-            <div className="h-2.5 w-px" style={{ background: 'rgba(255,255,255,0.08)' }} />
+            <div className="h-3 w-px" style={{ background: '#E5E7EB' }} />
             <div className="flex items-center gap-1">
-              <span style={{ color: '#555955' }}>阶段</span>
-              <span style={{ color: '#A8A29A' }}>{headerCenter.stage}</span>
+              <span style={{ color: '#9CA3AF' }}>阶段</span>
+              <span className="font-medium" style={{ color: '#374151' }}>{headerCenter.stage}</span>
             </div>
-            <div className="h-2.5 w-px" style={{ background: 'rgba(255,255,255,0.08)' }} />
+            <div className="h-3 w-px" style={{ background: '#E5E7EB' }} />
             <div className="flex items-center gap-1">
-              <span style={{ color: '#555955' }}>进度</span>
-              <span style={{ color: '#A8A29A' }}>{headerCenter.progress}</span>
+              <span style={{ color: '#9CA3AF' }}>进度</span>
+              <span className="font-medium" style={{ color: '#16A34A' }}>{headerCenter.progress}</span>
             </div>
           </div>
         )}
 
-        {/* Right: Actions — NO 下一步 */}
+        {/* Right: Actions */}
         <div className="flex items-center gap-1.5">
-          <button className="text-[10px] px-2.5 py-1.5 rounded-lg" style={{ color: '#555955', border: '1px solid rgba(255,255,255,0.05)' }}>使用指南</button>
-          <button className="text-[10px] px-2.5 py-1.5 rounded-lg" style={{ color: '#D6B56D', border: '1px solid rgba(214,181,109,0.15)' }}>分享方案</button>
-          <button className="text-[10px] px-2.5 py-1.5 rounded-lg" style={{ color: '#555955', border: '1px solid rgba(255,255,255,0.05)' }}>设计总监</button>
-          <button onClick={() => setHistoryOpen(true)} className="text-[10px] px-2.5 py-1.5 rounded-lg" style={{ color: '#555955', border: '1px solid rgba(255,255,255,0.05)' }}>
+          <button className="text-[10px] px-2.5 py-1.5 rounded-lg transition-colors hover:bg-gray-50" style={{ color: '#6B7280', border: '1px solid #E5E7EB' }}>使用指南</button>
+          <button className="text-[10px] px-2.5 py-1.5 rounded-lg transition-colors" style={{ color: '#B8922F', border: '1px solid rgba(214,168,79,0.3)', background: '#FFFBEB' }}>分享方案</button>
+          <button className="text-[10px] px-2.5 py-1.5 rounded-lg transition-colors hover:bg-gray-50" style={{ color: '#6B7280', border: '1px solid #E5E7EB' }}>设计总监</button>
+          <button onClick={() => setHistoryOpen(true)} className="text-[10px] px-2.5 py-1.5 rounded-lg transition-colors hover:bg-gray-50" style={{ color: '#6B7280', border: '1px solid #E5E7EB' }}>
             历史记录
           </button>
         </div>
@@ -293,7 +293,7 @@ export default function Workbench() {
         {/* Left Sidebar: agent workflow + clickable nav */}
         <aside
           className="w-[280px] flex-shrink-0 border-r flex flex-col overflow-hidden"
-          style={{ background: '#0D0F0E', borderColor: 'rgba(255,255,255,0.05)' }}
+          style={{ borderColor: '#E5E7EB' }}
         >
           <AgentSidebar
             stepStatus={stepStatus}
@@ -308,13 +308,13 @@ export default function Workbench() {
         </aside>
 
         {/* Right: Main content — step canvas */}
-        <main className="flex-1 overflow-hidden" style={{ background: '#080908' }}>
+        <main className="flex-1 overflow-hidden" style={{ background: '#FFFFFF' }}>
           {/* Idle loading: spinner when nothing */}
           {!hasAnyOutput && demoPhase !== 'idle' && isGenerating && (
             <div className="flex flex-col items-center justify-center h-full">
               <svg className="animate-spin mb-4" width="32" height="32" viewBox="0 0 24 24" fill="none">
-                <circle cx="12" cy="12" r="10" stroke="rgba(34,197,94,0.15)" strokeWidth="2" />
-                <path d="M12 2a10 10 0 0 1 10 10" stroke="#22C55E" strokeWidth="2" strokeLinecap="round" />
+                <circle cx="12" cy="12" r="10" stroke="rgba(22,163,74,0.15)" strokeWidth="2" />
+                <path d="M12 2a10 10 0 0 1 10 10" stroke="#16A34A" strokeWidth="2" strokeLinecap="round" />
               </svg>
               <p className="text-sm" style={{ color: '#A8A29A' }}>
                 {STEPS[currentStep]?.label ?? 'Agent 工作流初始化中…'}
