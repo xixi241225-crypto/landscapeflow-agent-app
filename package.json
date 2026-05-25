@@ -3,7 +3,7 @@
   "homepage": "https://xixi241225-crypto.github.io/landscapeflow-agent-app/",
   "private": true,
   "version": "1.0.0",
-  "description": "LandscapeFlow AI - 景观设计师的全流程 AI 方案总监 Agent 应用",
+  "description": "LandscapeFlow AI · 景观方案总监智能体 — 六个AI Agent协作，输入场地条件即可完成景观设计方案全流程工作",
   "type": "module",
   "scripts": {
     "dev": "vite",

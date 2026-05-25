@@ -44,7 +44,7 @@ export default function Hero() {
             <span className="text-base font-serif font-bold text-white">L</span>
           </div>
           <div className="leading-tight">
-            <div className="text-xs font-medium" style={{ color: '#6B7280' }}>景观方案总监 Agent 应用</div>
+            <div className="text-xs font-medium" style={{ color: '#6B7280' }}>景观方案总监智能体</div>
             <div className="text-[11px] font-serif tracking-wide" style={{ color: '#16A34A', fontWeight: 600 }}>LandscapeFlow AI</div>
           </div>
         </div>
@@ -139,9 +139,7 @@ export default function Hero() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3, duration: 0.7 }}
           >
-            景观方案总监
-            <br />
-            <span className="text-gradient">Agent 应用</span>
+            LandscapeFlow AI · 景观方案总监智能体
           </motion.h1>
 
           {/* English subtitle — green gradient */}
@@ -151,7 +149,7 @@ export default function Hero() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.45, duration: 0.7 }}
           >
-            LandscapeFlow AI
+            六个AI Agent协作，输入场地条件即可完成景观设计方案全流程工作。
           </motion.p>
 
           {/* Main description — medium gray */}
@@ -162,16 +160,7 @@ export default function Hero() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.55, duration: 0.6 }}
           >
-            从场地现状到汇报成果，六个 AI Agent 协作完成景观概念方案
-          </motion.p>
-          <motion.p
-            className="text-sm md:text-base mb-12"
-            style={{ color: '#9CA3AF' }}
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.65, duration: 0.6 }}
-          >
-            输入项目条件与场地现状图，自动完成项目定义、概念生成、方案选择、空间推演、视觉表达与成果输出
+            从项目定义、概念生成、方案选择、空间推演、视觉表达到成果输出，帮助景观设计师快速完成概念方案初稿、汇报大纲和视觉表达素材。
           </motion.p>
 
           {/* CTA buttons */}
@@ -195,7 +184,7 @@ export default function Hero() {
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.97 }}
             >
-              观看 3 分钟演示流程
+              观看演示流程
             </motion.button>
           </motion.div>
         </motion.div>

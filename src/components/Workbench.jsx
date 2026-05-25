@@ -244,9 +244,9 @@ export default function Workbench() {
           </div>
           <div className="leading-tight hidden sm:block">
             <div className="text-xs font-bold group-hover:text-[#16A34A] transition-all" style={{ color: '#1F2937' }}>
-              景观方案总监 Agent 应用
+              LandscapeFlow AI
             </div>
-            <div className="text-[9px] tracking-wide" style={{ color: '#9CA3AF' }}>LandscapeFlow AI</div>
+            <div className="text-[9px] tracking-wide" style={{ color: '#9CA3AF' }}>景观方案总监智能体</div>
           </div>
         </button>
 
