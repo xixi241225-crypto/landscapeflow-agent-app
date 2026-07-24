@@ -5,6 +5,9 @@
  */
 import {
   BLUEPRINT_STATUS_LABELS,
+  selectConceptCandidate,
+  selectConceptCandidates,
+  selectConceptGeneration,
   selectProjectDefinitionDetails,
   selectProjectInputForAgents,
 } from '../blueprint/blueprintSelectors.js';
@@ -39,7 +42,9 @@ export function downloadBlueprintJSON(blueprint) {
 export function generateBlueprintMarkdown(blueprint) {
   const project = selectProjectInputForAgents(blueprint);
   const definition = selectProjectDefinitionDetails(blueprint);
-  const concept = blueprint?.conceptCandidates?.find((item) => item.id === blueprint?.designerDecision?.selectedConceptId);
+  const concept = selectConceptCandidate(blueprint, blueprint?.designerDecision?.selectedConceptId);
+  const conceptGeneration = selectConceptGeneration(blueprint);
+  const conceptCandidates = selectConceptCandidates(blueprint);
   const value = (record, fallback = '—') => record?.value ?? record ?? fallback;
   const list = (items, formatter) => (items?.length ? items.map(formatter).join('\n') : '- 暂无');
   const strategy = blueprint?.professionalStrategies || {};
@@ -69,7 +74,26 @@ export function generateBlueprintMarkdown(blueprint) {
   report += `\n## 版本记录\n\n${list(blueprint.changeLog, (item) => `- ${item.milestoneVersion || `r${item.version}`}｜${item.sourceAgent}｜${item.reason}｜${new Date(item.modifiedAt).toLocaleString('zh-CN')}`)}\n`;
 
   report += `\n---\n\n# 后续章节\n\n`;
-  report += `## 概念生成\n\n${list(blueprint.conceptCandidates, (item) => `- **方案 ${item.id}｜${item.name}**：${item.concept}`)}\n`;
+  report += `## 概念生成\n\n`;
+  if (conceptGeneration) {
+    report += `### 生成基线\n\n- Blueprint ${conceptGeneration.generatedFromVersion || 'v2'}\n- Agent 2｜概念生成\n- 生成时间：${conceptGeneration.generatedAt ? new Date(conceptGeneration.generatedAt).toLocaleString('zh-CN') : '—'}\n- 设计师补充要求：${conceptGeneration.generationRequest?.value || '无'}\n\n`;
+    conceptCandidates.forEach((candidate) => {
+      report += `### 方向 ${candidate.code || candidate.id}｜${candidate.name}\n\n`;
+      report += `- **一句话命题**：${candidate.proposition || '—'}\n`;
+      report += `- **概念叙事**：${candidate.narrative || '—'}\n`;
+      report += `- **核心策略**：${candidate.strategicFocus || '—'}\n`;
+      report += `- **概念级空间组织假设**：${candidate.spatialHypothesis || '—'}\n`;
+      report += `- **关键场景**：${candidate.keyScenes?.join('、') || '—'}\n`;
+      report += `- **优势**：${candidate.advantages?.join('；') || '—'}\n`;
+      report += `- **风险**：${candidate.risks?.join('；') || '—'}\n`;
+      report += `- **适用条件**：${candidate.applicableConditions?.join('；') || '—'}\n`;
+      report += `- **蓝本对应关系**：${candidate.responseMappings?.map((mapping) => `${mapping.sourceLabel} → ${mapping.response}`).join('；') || '待补充'}\n`;
+      report += `- **待复核资料**：${candidate.dependencies?.map((item) => item.value).join('；') || '无'}\n\n`;
+    });
+    report += `> 三个方向均为候选，尚未经过 Agent 3 比选及设计师最终确认。\n`;
+  } else {
+    report += `等待 Agent 2 写入。\n`;
+  }
   report += `\n## 方案选择\n\n- Agent 推荐：${blueprint.agentRecommendation?.conceptId || '等待 Agent 3 写入'}\n- 设计师选择：${concept ? `${concept.id}｜${concept.name}` : '待确认'}\n`;
   report += `\n## 空间推演\n\n- 核心叙事：${value(blueprint.coreNarrative)}\n- 空间结构：${value(blueprint.spatialStructure)}\n- 动线策略：${value(blueprint.circulationStrategy)}\n`;
   report += `\n### 功能分区\n\n${list(blueprint.functionalZones, (item) => `- ${item.name}：${item.function}`)}\n`;

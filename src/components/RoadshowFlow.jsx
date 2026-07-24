@@ -2,6 +2,7 @@ import { roadshowProject } from '../data/roadshowProject';
 import {
   BLUEPRINT_STATUS_LABELS,
   selectAgent1ExecutionSummary,
+  selectAgent2ExecutionSummary,
   selectCoreConstraints,
   selectDesignPrinciples,
   selectProjectDefinitionDetails,
@@ -133,7 +134,7 @@ export function RoadshowAgentTrack({ states, blueprint }) {
       <div className="roadshow-track-list">
         {roadshowProject.agentExecution.map((agent, index) => {
           const status = states[index] || '等待';
-          const result = agent.id === 1 ? selectAgent1ExecutionSummary(blueprint) : agent.result;
+          const result = agent.id === 1 ? selectAgent1ExecutionSummary(blueprint) : agent.id === 2 ? selectAgent2ExecutionSummary(blueprint) : agent.result;
           return (
             <article key={agent.id} className={`roadshow-track-row ${status === '执行中' ? 'working' : ''} ${status === '已完成' ? 'done' : ''}`}>
               <span className="roadshow-track-number">0{agent.id}</span>

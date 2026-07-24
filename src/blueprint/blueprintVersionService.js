@@ -40,6 +40,7 @@ function stageForMilestone(milestoneVersion) {
   const value = Number(String(milestoneVersion || 'v0').replace('v', '')) || 0;
   if (value === 0) return 'project-input';
   if (value === 1) return 'project-definition';
+  if (value === 3) return 'concept-generation';
   if (value >= 7) return 'deliverables';
   return 'agent-collaboration';
 }

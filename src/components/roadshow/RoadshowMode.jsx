@@ -5,8 +5,17 @@ import { ROADSHOW_IMAGE_URLS, ROADSHOW_STAGES, roadshowProject } from '../../dat
 import { DEMO_CASE, DEMO_FILES } from '../../data/demoCase';
 import { createBlueprint } from '../../blueprint/blueprintModel';
 import { migrateBlueprintToV2 } from '../../blueprint/blueprintMigration';
-import { selectAgent1ExecutionSummary, selectCoreConstraints, selectDesignPrinciples, selectProjectGoals } from '../../blueprint/blueprintSelectors';
+import {
+  selectAgent1ExecutionSummary,
+  selectAgent2ExecutionSummary,
+  selectConceptCandidate,
+  selectConceptCandidates,
+  selectCoreConstraints,
+  selectDesignPrinciples,
+  selectProjectGoals,
+} from '../../blueprint/blueprintSelectors';
 import { confirmProjectDefinitionBlueprint, runProjectDefinitionAgent } from '../../agents/projectDefinitionAgent';
+import { runConceptGenerationAgent } from '../../agents/conceptGenerationAgent';
 import { loadActiveProject } from '../../lib/projectStorage';
 
 const STORAGE_KEY = 'landscapeflow_v2_roadshow_state';
@@ -312,7 +321,7 @@ function ExecutionPage({ agentStates, running, complete, onStart, onResults, blu
                   </span>
                 </div>
                 <h2>{agent.name}</h2>
-                <p>{status === '已完成' ? (agent.id === 1 ? selectAgent1ExecutionSummary(blueprint) : agent.result) : status === '执行中' ? `正在读取 Blueprint ${blueprint.milestoneVersion || 'v2'} 并执行专业任务…` : '等待景观设计总监智能体调度'}</p>
+                <p>{status === '已完成' ? (agent.id === 1 ? selectAgent1ExecutionSummary(blueprint) : agent.id === 2 ? selectAgent2ExecutionSummary(blueprint) : agent.result) : status === '执行中' ? `正在读取 Blueprint ${blueprint.milestoneVersion || 'v2'} 并执行专业任务…` : '等待景观设计总监智能体调度'}</p>
                 {status === '执行中' && <div className="mt-5 flex gap-1.5"><i /><i /><i /></div>}
               </motion.article>
             );
@@ -348,8 +357,9 @@ function ResultsTabs({ active, onChange }) {
   );
 }
 
-function DefinitionResult() {
+function DefinitionResult({ blueprint }) {
   const item = roadshowProject.deliverables.projectDefinition;
+  const concept = selectConceptCandidate(blueprint, blueprint.designerDecision?.selectedConceptId) || selectConceptCandidates(blueprint)[0];
   return (
     <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
       <article className="roadshow-result-panel p-7">
@@ -357,15 +367,15 @@ function DefinitionResult() {
         <h2 className="mt-2 text-3xl font-bold text-[var(--lf-brand-950)]">{item.positioning}</h2>
         <div className="mt-6 rounded-2xl bg-[var(--lf-brand-950)] p-6 text-white">
           <p className="text-sm font-semibold text-violet-200">核心概念</p>
-          <p className="mt-2 font-serif text-4xl font-bold">{item.concept}</p>
-          <p className="mt-3 text-base leading-7 text-violet-100">{item.statement}</p>
+          <p className="mt-2 font-serif text-4xl font-bold">{concept?.name || '概念方向待生成'}</p>
+          <p className="mt-3 text-base leading-7 text-violet-100">{concept?.proposition || concept?.narrative || '等待 Agent 2 写入概念章节'}</p>
         </div>
         <div className="mt-6 space-y-3">
-          {item.strategies.map((strategy, index) => <p key={strategy} className="flex gap-3 text-base leading-7"><span className="font-extrabold text-[var(--lf-brand-600)]">0{index + 1}</span><span>{strategy}</span></p>)}
+          {[concept?.strategicFocus, ...(concept?.keyScenes || []).slice(0, 3)].filter(Boolean).map((strategy, index) => <p key={strategy} className="flex gap-3 text-base leading-7"><span className="font-extrabold text-[var(--lf-brand-600)]">0{index + 1}</span><span>{strategy}</span></p>)}
         </div>
       </article>
       <div className="roadshow-result-panel overflow-hidden">
-        <RoadshowImage src={item.image} alt="林下邻里客厅概念示意" className="h-full min-h-[470px] w-full" />
+        <RoadshowImage src={concept?.referenceVisual?.url || item.image} alt={`${concept?.name || '概念方向'}演示意向`} className="h-full min-h-[470px] w-full" />
       </div>
     </div>
   );
@@ -414,8 +424,9 @@ function VisualResult() {
   );
 }
 
-function PptResult({ onDownload }) {
+function PptResult({ onDownload, blueprint }) {
   const ppt = roadshowProject.deliverables.editablePpt;
+  const concept = selectConceptCandidate(blueprint, blueprint.designerDecision?.selectedConceptId) || selectConceptCandidates(blueprint)[0];
   return (
     <div>
       <article className="roadshow-ppt-file">
@@ -436,26 +447,33 @@ function PptResult({ onDownload }) {
         <p className="hidden text-sm text-[var(--lf-muted)] md:block">演示缩略图使用本地素材 · 正式 PPTX 待接入指定路径</p>
       </div>
       <div className="roadshow-slide-grid">
-        {ppt.slides.map((slide) => (
+        {ppt.slides.map((slide) => {
+          const conceptSlide = slide.number === 5
+            ? { ...slide, kicker: concept?.name || '概念方向待生成', image: concept?.referenceVisual?.url || slide.image }
+            : slide.number === 6
+              ? { ...slide, kicker: concept?.strategicFocus || '概念策略待生成' }
+              : slide;
+          return (
           <article key={slide.number} className="roadshow-slide">
             <div className="roadshow-slide-visual">
-              <RoadshowImage src={slide.image} alt={slide.title} className="h-full w-full" fit={slide.number === 7 ? 'contain' : 'cover'} placeholder={`${slide.visual}｜待替换真实素材`} />
-              <span>{String(slide.number).padStart(2, '0')}</span>
+              <RoadshowImage src={conceptSlide.image} alt={conceptSlide.title} className="h-full w-full" fit={conceptSlide.number === 7 ? 'contain' : 'cover'} placeholder={`${conceptSlide.visual}｜待替换真实素材`} />
+              <span>{String(conceptSlide.number).padStart(2, '0')}</span>
               <i>LandscapeFlow AI</i>
             </div>
             <div className="p-3.5">
-              <h3>{slide.title}</h3>
-              <p>{slide.kicker}</p>
-              <small>建议视觉：{slide.visual}</small>
+              <h3>{conceptSlide.title}</h3>
+              <p>{conceptSlide.kicker}</p>
+              <small>建议视觉：{conceptSlide.visual}</small>
             </div>
           </article>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
 }
 
-function ResultsPage({ activeTab, onTabChange, onDownload }) {
+function ResultsPage({ activeTab, onTabChange, onDownload, blueprint }) {
   const { projectInfo, deliverables } = roadshowProject;
   return (
     <section className="roadshow-content roadshow-page-scroll">
@@ -476,10 +494,10 @@ function ResultsPage({ activeTab, onTabChange, onDownload }) {
         </div>
         <ResultsTabs active={activeTab} onChange={onTabChange} />
         <div className="mt-6">
-          {activeTab === 'definition' && <DefinitionResult />}
+          {activeTab === 'definition' && <DefinitionResult blueprint={blueprint} />}
           {activeTab === 'spatial' && <SpatialResult />}
           {activeTab === 'visual' && <VisualResult />}
-          {activeTab === 'ppt' && <PptResult onDownload={onDownload} />}
+          {activeTab === 'ppt' && <PptResult onDownload={onDownload} blueprint={blueprint} />}
         </div>
       </div>
     </section>
@@ -552,7 +570,6 @@ export default function RoadshowMode() {
     setLoading(false);
     setGeneratingBlueprint(false);
     setRunningAgents(false);
-    setBlueprint(demoDraftBlueprint());
     setAgentStates((states) => states.map((status) => status === '执行中' ? '等待' : status));
     setStage(nextStage);
     if (nextStage === 'results') setResultsTab('ppt');
@@ -619,17 +636,26 @@ export default function RoadshowMode() {
     setRunningAgents(true);
     setExecutionComplete(false);
     setAgentStates(defaultAgentStates());
+    let workingBlueprint = blueprint;
     for (let index = 0; index < roadshowProject.agentExecution.length; index += 1) {
       setAgentStates((states) => states.map((status, itemIndex) => itemIndex === index ? '执行中' : status));
       await delay(AGENT_DURATION);
       if (operationToken.current !== token) return;
+      if (index === 1) {
+        const result = runConceptGenerationAgent(workingBlueprint, { mode: 'demo', designerBrief: '' });
+        workingBlueprint = result.blueprint;
+        setBlueprint(workingBlueprint);
+        if (!workingBlueprint.chapters?.conceptGeneration || workingBlueprint.milestoneVersion !== 'v3' || !workingBlueprint.agentExecutions?.some((item) => item.agentId === 'agent-2')) {
+          throw new Error('Agent 2 未完成真实 Blueprint v3 写入');
+        }
+      }
       setAgentStates((states) => states.map((status, itemIndex) => itemIndex === index ? '已完成' : status));
     }
     await delay(450);
     if (operationToken.current !== token) return;
     setRunningAgents(false);
     setExecutionComplete(true);
-  }, [runningAgents]);
+  }, [blueprint, runningAgents]);
 
   useEffect(() => {
     if (stage !== 'agentExecuting' || !blueprintConfirmed || executionComplete || runningAgents) return undefined;
@@ -693,7 +719,7 @@ export default function RoadshowMode() {
           {stage === 'projectOverview' && <ProjectOverviewPage generating={generatingBlueprint} onGenerate={generateBlueprint} />}
           {stage === 'blueprintPending' && <BlueprintPage blueprint={blueprint} confirmed={blueprintConfirmed} onConfirm={confirmBlueprint} />}
           {stage === 'agentExecuting' && <ExecutionPage blueprint={blueprint} agentStates={agentStates} running={runningAgents} complete={executionComplete} onStart={executeAgents} onResults={() => goToStage('results')} />}
-          {stage === 'results' && <ResultsPage activeTab={resultsTab} onTabChange={setResultsTab} onDownload={handlePptDownload} />}
+          {stage === 'results' && <ResultsPage activeTab={resultsTab} onTabChange={setResultsTab} onDownload={handlePptDownload} blueprint={blueprint} />}
         </motion.main>
       </AnimatePresence>
 

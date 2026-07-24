@@ -24,6 +24,7 @@ const formRef = (field) => [{ fileId: 'project-form', fileName: '项目条件表
 function item(seed, id, defaultStatus = BLUEPRINT_ITEM_STATUS.CONFIRMED) {
   return {
     id,
+    ...(seed.key ? { key: seed.key } : {}),
     label: seed.label || '项目定义信息',
     value: String(seed.value || '').trim(),
     status: seed.status || defaultStatus,

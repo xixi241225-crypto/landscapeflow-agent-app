@@ -1,6 +1,11 @@
 import { AgentProvider, assertProviderPatch } from './agentProvider.js';
 import { CONTENT_STATUS, getRecordValue } from '../blueprint/blueprintModel.js';
-import { selectProjectDefinitionDetails, selectProjectInputForAgents } from '../blueprint/blueprintSelectors.js';
+import {
+  selectConceptCandidate,
+  selectConceptCandidates,
+  selectProjectDefinitionDetails,
+  selectProjectInputForAgents,
+} from '../blueprint/blueprintSelectors.js';
 
 const northernPattern = /北京|河北|天津|山西|内蒙古|辽宁|吉林|黑龙江/;
 
@@ -24,7 +29,7 @@ function getProject(blueprint) {
 
 function selectedConcept(blueprint) {
   const selectedId = blueprint.designerDecision?.selectedConceptId;
-  return blueprint.conceptCandidates?.find((item) => item.id === selectedId);
+  return selectConceptCandidate(blueprint, selectedId);
 }
 
 function abortableDelay(ms, signal) {
@@ -102,87 +107,6 @@ function projectDefinitionPatch(blueprint) {
   };
 }
 
-function conceptPatch(blueprint) {
-  const project = getProject(blueprint);
-  const city = compact(project.city, '项目所在地');
-  const type = compact(project.projectType, '景观空间');
-  const users = compact(project.targetUsers, '多元使用者');
-  const goals = compact(project.designGoals, '生态、体验与实施平衡');
-  const blueprintVersion = blueprint.currentVersion + 1;
-  return {
-    conceptCandidates: [
-      {
-        id: 'A',
-        name: '生态织补 · 共享绿环',
-        concept: `以连续绿色网络修复场地关系，在${city}构建服务${users}的共享日常。`,
-        spatialStructure: '一条复合绿环串联入口、活动、休憩与生态节点，形成清晰连续的慢行体验。',
-        sceneFeatures: ['林荫慢行', '邻里会客', '雨水花园'],
-        targetUsers: users,
-        advantages: ['结构清晰、分期实施友好', '慢行与生态系统可复合', '日常使用稳定'],
-        risks: ['环线尺度需依据真实红线复核', '节点均质化风险需通过场景差异控制'],
-        fit: `适合重视低维护、连续慢行和长期运营的${type}`,
-        visual: {
-          id: 'CA',
-          title: '生态织补 · 共享绿环概念图',
-          assetType: '概念氛围图',
-          url: './demo-images/aerial.jpg',
-          aspectRatio: '16:9',
-          status: '演示案例',
-          sourceAgent: 'Agent 2｜概念生成',
-          blueprintVersion,
-          isDemoAsset: true,
-        },
-      },
-      {
-        id: 'B',
-        name: '活力客厅 · 弹性核心',
-        concept: `以可切换使用的公共核心回应“${goals}”，把场地组织为具有聚合力的城市客厅。`,
-        spatialStructure: '一个弹性活动核心与若干主题功能区咬合，平日、周末与活动日可切换。',
-        sceneFeatures: ['弹性草坪', '全龄活力', '城市会客'],
-        targetUsers: users,
-        advantages: ['汇报识别度高', '复合使用效率高', '适合社区活动与公共事件'],
-        risks: ['核心空间需明确运营机制', '高峰使用对草坪或铺装耐久性提出要求'],
-        fit: `适合强调公共活力、展示性与多场景使用的${type}`,
-        visual: {
-          id: 'CB',
-          title: '活力客厅 · 弹性核心概念图',
-          assetType: '概念氛围图',
-          url: './demo-images/awn.jpg',
-          aspectRatio: '16:9',
-          status: '演示案例',
-          sourceAgent: 'Agent 2｜概念生成',
-          blueprintVersion,
-          isDemoAsset: true,
-        },
-      },
-      {
-        id: 'C',
-        name: '森氧漫游 · 自然探索',
-        concept: `以近自然群落作为空间基底，为${users}提供沉浸式游憩、自然教育与疗愈体验。`,
-        spatialStructure: '林下漫游主线穿行于自然探索、雨水花园、康养休憩和安静体验节点。',
-        sceneFeatures: ['森林漫游', '自然教育', '静谧康养'],
-        targetUsers: users,
-        advantages: ['生态价值和场所气质突出', '微气候改善潜力较高', '自然教育延展性强'],
-        risks: ['成景周期相对较长', '林下安全与通透性需要精细控制'],
-        fit: `适合强调生态修复、自然体验与环境教育的${type}`,
-        visual: {
-          id: 'CC',
-          title: '森氧漫游 · 自然探索概念图',
-          assetType: '概念氛围图',
-          url: './demo-images/elderly.jpg',
-          aspectRatio: '16:9',
-          status: '演示案例',
-          sourceAgent: 'Agent 2｜概念生成',
-          blueprintVersion,
-          isDemoAsset: true,
-        },
-      },
-    ],
-    risks: [{ title: '方案精度', value: '三个概念为演示案例推演结果，待正式项目资料接入后进一步校核。', status: CONTENT_STATUS.PENDING }],
-    nextTasks: [{ title: '专业比选', value: '由方案选择 Agent 按项目目标动态评分，不预设固定推荐。', status: CONTENT_STATUS.PENDING }],
-  };
-}
-
 function comparisonPatch(blueprint) {
   const project = getProject(blueprint);
   const text = `${project.designGoals || ''} ${project.constraints || ''} ${project.clientFocus || ''} ${project.maintenance || ''}`;
@@ -202,10 +126,11 @@ function comparisonPatch(blueprint) {
   if (/生态|自然|雨洪|生物/.test(text)) ['siteFit', 'ecology'].forEach((key) => { base.C[key] += 0.5; });
   if (/活力|活动|展示|汇报|传播/.test(text)) ['experience', 'presentation'].forEach((key) => { base.B[key] += 0.5; });
   if (/低维护|成本|分期|慢行/.test(text)) ['maintenance', 'feasibility'].forEach((key) => { base.A[key] += 0.5; });
-  const scored = blueprint.conceptCandidates.map((concept) => {
-    const scores = base[concept.id];
+  const scored = selectConceptCandidates(blueprint).map((concept) => {
+    const code = concept.code || concept.id;
+    const scores = base[code];
     const total = dimensions.reduce((sum, dim) => sum + scores[dim.key] * dim.weight, 0);
-    return { id: concept.id, name: concept.name, scores, total: Number(total.toFixed(2)) };
+    return { id: concept.id, code, name: concept.name, scores, total: Number(total.toFixed(2)) };
   }).sort((a, b) => b.total - a.total);
   const recommended = scored[0];
   return {
@@ -232,14 +157,15 @@ function spatialPatch(blueprint) {
     B: '弹性核心 + 主题分区 + 多向连接',
     C: '森林基底 + 漫游主线 + 生态节点',
   };
-  const structure = structureById[concept.id];
+  const conceptCode = concept.code || concept.id;
+  const structure = structureById[conceptCode];
   const zoneTemplates = {
     A: ['共享活动核心', '全龄活动节点', '林下会客节点', '安静康养节点', '生态雨水节点'],
     B: ['弹性活动核心', '亲子活力区', '邻里会客区', '林荫康养区', '形象展示区'],
     C: ['森氧体验区', '自然探索区', '雨水花园区', '林下康养区', '自然教育区'],
   };
   const ratios = [0.32, 0.2, 0.16, 0.17, 0.15];
-  const zones = zoneTemplates[concept.id].map((name, index) => ({
+  const zones = zoneTemplates[conceptCode].map((name, index) => ({
     name,
     area: `约 ${Math.round(area * ratios[index] / 10) * 10}㎡（演示估算）`,
     function: index === 0 ? '承载核心叙事与主要公共活动' : `回应${compact(project.targetUsers, '主要使用者')}的分层需求`,
@@ -262,7 +188,7 @@ function spatialPatch(blueprint) {
   return {
     coreNarrative: {
       title: concept.name,
-      value: `${concept.concept}${blueprint.designerDecision.fusionRequirements ? ` 融合要求：${blueprint.designerDecision.fusionRequirements}` : ''}`,
+      value: `${concept.proposition || concept.narrative}${blueprint.designerDecision.fusionRequirements ? ` 融合要求：${blueprint.designerDecision.fusionRequirements}` : ''}`,
     },
     spatialStructure: {
       title: structure,
@@ -278,16 +204,16 @@ function spatialPatch(blueprint) {
     },
     functionalZones: zones,
     circulationStrategy: {
-      title: concept.id === 'A' ? '连续慢行绿环' : concept.id === 'B' ? '核心放射 + 环向补充' : '林下漫游 + 生态观察支线',
+      title: conceptCode === 'A' ? '连续慢行绿环' : conceptCode === 'B' ? '核心放射 + 环向补充' : '林下漫游 + 生态观察支线',
       value: '主路径组织连续无障碍通行，次路径连接主题节点；入口数量、消防与竖向关系待真实图纸复核。',
     },
     professionalStrategies: {
       plant: `${northern ? '耐寒乡土骨架树种' : '适地乡土常绿与季相树种'} + 低维护多年生地被，建立四季层次。`,
       material: '主路径采用耐久防滑、可维护材料；节点材料服从概念主题并控制全生命周期成本。',
-      ecology: concept.id === 'C' ? '以近自然群落、雨水花园和生境连续性为重点。' : '以树荫覆盖、透水铺装和小微生境织补为重点。',
+      ecology: conceptCode === 'C' ? '以近自然群落、雨水花园和生境连续性为重点。' : '以树荫覆盖、透水铺装和小微生境织补为重点。',
       grading: '当前仅提出缓坡无障碍与场地排水方向，待现状标高和土方数据接入后计算。',
       drainage: '采用源头减排—过程滞蓄—安全溢流的海绵策略，具体指标待当地规范与降雨数据复核。',
-      operations: concept.id === 'B' ? '以平日休憩、周末亲子和社区活动三种模式组织弹性空间，建立低成本预约与维护机制。' : '以日常开放、主题活动和季节运营组织空间使用，明确分区维护责任。',
+      operations: conceptCode === 'B' ? '以平日休憩、周末亲子和社区活动三种模式组织弹性空间，建立低成本预约与维护机制。' : '以日常开放、主题活动和季节运营组织空间使用，明确分区维护责任。',
     },
     featureNodes: zones.slice(0, 4).map((zone, index) => ({ name: zone.name, value: `${concept.name}的特色节点 ${index + 1}，需在下一轮深化中落实尺度、活动与材料。` })),
     risks: [{ title: '空间成果精度', value: '当前总平面采用演示案例视觉素材，空间结论以项目设计蓝本文本为准。', status: CONTENT_STATUS.PENDING }],
@@ -365,7 +291,7 @@ function outputPatch(blueprint) {
     ['02', '项目背景与设计任务', `${compact(project.city, '项目地点待确认')}｜${compact(project.area, '面积待确认')}｜${compact(project.projectType, '项目类型待确认')}；设计目标：${compact(project.designGoals, '待确认')}`, '区位图 + 任务关键词', ['projectBasicInfo', 'informationSources']],
     ['03', '场地理解与核心问题', definition.coreQuestions.map((item) => item.value).join('；'), '现状照片 + 问题分析图', ['chapters.projectDefinition.siteConditions', 'chapters.projectDefinition.coreQuestions', 'chapters.projectDefinition.openItems']],
     ['04', '项目目标与设计约束', `${compact(project.designGoals, '目标待确认')}；核心约束：${definition.constraints.map((item) => item.value).join('、')}`, '目标与约束双栏信息图', ['chapters.projectDefinition.explicitGoals', 'chapters.projectDefinition.constraints']],
-    ['05', '核心设计概念', `${concept?.name || '待选择'}：${concept?.concept || '待生成'}；核心叙事：${blueprint.coreNarrative?.value || '待生成'}`, '概念主视觉 + 叙事关键词', ['conceptCandidates', 'coreNarrative']],
+    ['05', '核心设计概念', `${concept?.name || '待选择'}：${concept?.proposition || concept?.narrative || '待生成'}；核心叙事：${blueprint.coreNarrative?.value || '待生成'}`, '概念主视觉 + 叙事关键词', ['chapters.conceptGeneration.conceptCandidates', 'coreNarrative']],
     ['06', '方案比选与设计师决策', `A/B/C 多维度比选；Agent 推荐 ${blueprint.agentRecommendation?.conceptId || '—'}；设计师选择 ${concept?.id || '—'}；融合要求：${blueprint.designerDecision.fusionRequirements || '无'}`, '比选表 + 设计师决策高亮', ['comparison', 'agentRecommendation', 'designerDecision']],
     ['07', '总体空间结构', blueprint.spatialStructure?.value || '待生成', '总平面 + 结构示意', ['spatialStructure', 'coreNarrative']],
     ['08', '功能分区与游线组织', `功能分区：${zones || '待生成'}；动线：${blueprint.circulationStrategy?.value || '待生成'}`, '分区色块图 + 游线箭头', ['functionalZones', 'circulationStrategy']],
@@ -432,7 +358,6 @@ export class MockAgentProvider extends AgentProvider {
     if (context.signal?.aborted) throw new DOMException('任务已停止', 'AbortError');
     const builders = {
       1: projectDefinitionPatch,
-      2: conceptPatch,
       3: comparisonPatch,
       4: spatialPatch,
       5: visualPatch,

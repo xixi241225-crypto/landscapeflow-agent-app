@@ -23,6 +23,16 @@ const asArray = (value) => {
 };
 
 const text = (item) => String(item?.value ?? item?.label ?? item ?? '').trim();
+const FACT_KEYS_BY_LABEL = {
+  项目名称: 'projectName',
+  项目地点: 'location',
+  项目面积: 'area',
+  场地面积: 'area',
+  项目类型: 'projectType',
+  设计阶段: 'designStage',
+  预算条件: 'budgetCondition',
+  业主单位: 'owner',
+};
 
 export function selectProjectDefinition(blueprint) {
   return blueprint?.chapters?.projectDefinition || {
@@ -50,7 +60,27 @@ export function selectProjectDefinition(blueprint) {
 }
 
 export function selectProjectFacts(blueprint) {
-  return asArray(selectProjectDefinition(blueprint).facts);
+  const facts = selectProjectDefinition(blueprint).facts;
+  if (facts && !Array.isArray(facts) && typeof facts === 'object') {
+    return Object.entries(facts).map(([key, record]) => ({
+      ...record,
+      key: record?.key || key,
+    }));
+  }
+  return asArray(facts).map((record) => ({
+    ...record,
+    ...(record?.key || !FACT_KEYS_BY_LABEL[record?.label] ? {} : { key: FACT_KEYS_BY_LABEL[record.label] }),
+  }));
+}
+
+export function selectProjectFactsByKey(blueprint) {
+  return Object.fromEntries(selectProjectFacts(blueprint)
+    .filter((item) => item.key)
+    .map((item) => [item.key, item]));
+}
+
+export function selectProjectFactByKey(blueprint, key) {
+  return selectProjectFactsByKey(blueprint)[key] || null;
 }
 
 export function selectProjectGoals(blueprint) {
@@ -95,16 +125,17 @@ export function selectProjectDefinitionDetails(blueprint) {
 
 export function selectBlueprintProgress(blueprint) {
   const chapters = blueprint?.chapters || {};
-  const completed = BLUEPRINT_CHAPTERS.filter(([key]) => Boolean(chapters[key])).length;
+  const chapterStates = BLUEPRINT_CHAPTERS.map(([key, label], index) => ({
+    key,
+    label,
+    complete: Boolean(chapters[key]) && blueprint?.agentRuns?.[index + 1]?.status !== 'stale',
+  }));
+  const completed = chapterStates.filter((chapter) => chapter.complete).length;
   return {
     completed,
     total: BLUEPRINT_CHAPTERS.length,
     percentage: Math.round((completed / BLUEPRINT_CHAPTERS.length) * 100),
-    chapters: BLUEPRINT_CHAPTERS.map(([key, label]) => ({
-      key,
-      label,
-      complete: Boolean(chapters[key]),
-    })),
+    chapters: chapterStates,
   };
 }
 
@@ -132,6 +163,92 @@ export function selectProjectInputForAgents(blueprint) {
   };
 }
 
+export function selectConceptGeneration(blueprint) {
+  if (blueprint?.chapters?.conceptGeneration) return blueprint.chapters.conceptGeneration;
+  if (Array.isArray(blueprint?.conceptCandidates) && blueprint.conceptCandidates.length) {
+    return {
+      agentId: 'agent-2',
+      agentName: '概念生成',
+      generatedFromVersion: blueprint?.agentRuns?.[2]?.blueprintVersionRead || 'legacy',
+      conceptCandidates: blueprint.conceptCandidates,
+      unresolvedDependencies: [],
+      qualityChecks: null,
+      legacyFallback: true,
+    };
+  }
+  return null;
+}
+
+export function selectConceptCandidates(blueprint) {
+  return asArray(selectConceptGeneration(blueprint)?.conceptCandidates);
+}
+
+export function selectConceptCandidate(blueprint, conceptId) {
+  return selectConceptCandidates(blueprint).find((item) => item.id === conceptId || item.code === conceptId) || null;
+}
+
+export function selectConceptGenerationSummary(blueprint) {
+  const chapter = selectConceptGeneration(blueprint);
+  const candidates = selectConceptCandidates(blueprint);
+  return {
+    complete: Boolean(chapter && candidates.length),
+    candidateCount: candidates.length,
+    names: candidates.map((item) => `${item.code || item.id}｜${item.name}`),
+    generatedFromVersion: chapter?.generatedFromVersion || '',
+    generatedAt: chapter?.generatedAt || '',
+    generationRequest: chapter?.generationRequest?.value || '',
+    stageStatus: chapter?.status || (chapter ? 'completed' : 'pending'),
+  };
+}
+
+export function selectConceptResponseMappings(blueprint, conceptId) {
+  const candidates = conceptId ? [selectConceptCandidate(blueprint, conceptId)].filter(Boolean) : selectConceptCandidates(blueprint);
+  return candidates.flatMap((candidate) => (candidate.responseMappings || []).map((mapping) => ({
+    ...mapping,
+    conceptId: candidate.id,
+    conceptCode: candidate.code,
+    conceptName: candidate.name,
+  })));
+}
+
+export function selectConceptGenerationDependencies(blueprint) {
+  const chapter = selectConceptGeneration(blueprint);
+  return asArray(chapter?.unresolvedDependencies);
+}
+
+export function selectConceptGenerationInput(blueprint) {
+  const definition = selectProjectDefinition(blueprint);
+  const facts = selectProjectFactsByKey(blueprint);
+  const details = selectProjectDefinitionDetails(blueprint);
+  return {
+    schemaVersion: blueprint?.schemaVersion || '',
+    milestoneVersion: blueprint?.milestoneVersion || 'v0',
+    revision: blueprint?.revision ?? blueprint?.currentVersion ?? 0,
+    checkpointConfirmed: blueprint?.checkpoints?.find((item) => item.id === 'checkpoint-1')?.status === '已确认',
+    facts,
+    project: {
+      projectName: text(facts.projectName),
+      location: text(facts.location),
+      area: text(facts.area),
+      projectType: text(facts.projectType),
+      designStage: text(facts.designStage),
+      budgetCondition: text(facts.budgetCondition),
+      owner: text(facts.owner),
+    },
+    stakeholders: asArray(definition.stakeholders),
+    explicitGoals: asArray(definition.explicitGoals),
+    latentGoals: asArray(definition.latentGoals),
+    siteConditions: definition.siteConditions || {},
+    flattenedSiteConditions: details.siteConditions,
+    constraints: asArray(definition.constraints),
+    designPrinciples: asArray(definition.designPrinciples),
+    successCriteria: asArray(definition.successCriteria),
+    coreQuestions: asArray(definition.coreQuestions),
+    openItems: asArray(definition.openItems),
+    conflicts: asArray(definition.conflicts),
+  };
+}
+
 export function selectAgentExecution(blueprint, agentId) {
   return [...(blueprint?.agentExecutions || [])].reverse().find((item) => item.agentId === `agent-${agentId}` || item.agentId === Number(agentId)) || null;
 }
@@ -141,6 +258,13 @@ export function selectAgent1ExecutionSummary(blueprint) {
   if (!execution) return '等待整理项目资料';
   if (execution.openItemCount) return `已完成项目定义，并保留 ${execution.openItemCount} 项待补充信息`;
   return execution.summary || `已将项目资料整理为项目设计蓝本 ${execution.outputVersion || 'v1'}`;
+}
+
+export function selectAgent2ExecutionSummary(blueprint) {
+  const execution = selectAgentExecution(blueprint, 2);
+  if (!execution) return '等待生成概念方向';
+  if (execution.openItemCount) return `已生成 ${execution.candidateCount || 3} 个概念候选，其中 ${execution.openItemCount} 项场地条件需后续复核`;
+  return execution.summary || `已基于项目设计蓝本 ${execution.inputVersion || 'v2'} 生成 ${execution.candidateCount || 3} 个概念候选`;
 }
 
 export function deriveRoadshowStateFromBlueprint(blueprint) {

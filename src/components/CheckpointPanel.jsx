@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import VisualAssetFrame from './VisualAssetFrame';
+import { selectConceptCandidate, selectConceptCandidates } from '../blueprint/blueprintSelectors';
 
 const CONCEPT_VISUAL_FALLBACKS = {
   A: './demo-images/aerial.jpg',
@@ -8,16 +9,18 @@ const CONCEPT_VISUAL_FALLBACKS = {
 };
 
 function conceptVisual(concept, blueprint) {
+  const code = concept.code || concept.id;
+  const conceptVersion = String(blueprint.agentRuns?.[2]?.blueprintVersionWritten || blueprint.milestoneVersion || 'v3').replace(/^v/, '');
   return {
-    id: `C${concept.id}`,
+    id: `C${code}`,
     title: `${concept.name}概念图`,
     assetType: '概念氛围图',
-    url: CONCEPT_VISUAL_FALLBACKS[concept.id],
+    url: CONCEPT_VISUAL_FALLBACKS[code],
     aspectRatio: '16:9',
     sourceAgent: 'Agent 2｜概念生成',
-    blueprintVersion: concept._meta?.version || blueprint.currentVersion,
-    ...(concept.visual || {}),
-    status: blueprint.agentRuns?.[2]?.status === 'stale' ? '已失效' : concept.visual?.status || '演示案例',
+    blueprintVersion: concept._meta?.version || conceptVersion,
+    ...(concept.referenceVisual || concept.visual || {}),
+    status: blueprint.agentRuns?.[2]?.status === 'stale' ? '已失效' : '演示案例',
   };
 }
 
@@ -38,6 +41,7 @@ function planVisual(blueprint) {
 }
 
 export default function CheckpointPanel({ blueprint, checkpoint, onConfirm, onUpdateDecision, onAssumptionDecision, onSaveFacts, onRegenerate }) {
+  const conceptCandidates = selectConceptCandidates(blueprint);
   const [decisionDraft, setDecisionDraft] = useState(blueprint.designerDecision || {});
   const lastSavedDecision = useRef(JSON.stringify(blueprint.designerDecision || {}));
   const [error, setError] = useState('');
@@ -100,10 +104,10 @@ export default function CheckpointPanel({ blueprint, checkpoint, onConfirm, onUp
       {checkpoint.id === 'checkpoint-2' && (
         <div className="space-y-3">
           <div className="grid grid-cols-3 gap-2">
-            {blueprint.conceptCandidates.map((concept) => (
+            {conceptCandidates.map((concept) => (
               <button key={concept.id} onClick={() => setDecisionDraft((prev) => ({ ...prev, selectedConceptId: concept.id, acceptedRecommendation: concept.id === blueprint.agentRecommendation?.conceptId }))} className="rounded-xl border p-2 text-left transition-all" style={{ borderColor: decisionDraft.selectedConceptId === concept.id ? 'var(--lf-brand-500)' : 'var(--lf-border)', background: decisionDraft.selectedConceptId === concept.id ? 'var(--lf-brand-100)' : '#FFFFFF', boxShadow: decisionDraft.selectedConceptId === concept.id ? '0 6px 16px rgba(64,56,167,.10)' : 'none' }}>
                 <VisualAssetFrame asset={conceptVisual(concept, blueprint)} showMeta={false} allowZoom={false} />
-                <span className="mt-2 block text-xs font-bold text-[var(--lf-brand-700)]">方案 {concept.id}</span><p className="text-sm font-semibold text-[var(--lf-text)] mt-1">{concept.name}</p>
+                <span className="mt-2 block text-xs font-bold text-[var(--lf-brand-700)]">方案 {concept.code || concept.id}</span><p className="text-sm font-semibold text-[var(--lf-text)] mt-1">{concept.name}</p>
               </button>
             ))}
           </div>
@@ -125,7 +129,7 @@ export default function CheckpointPanel({ blueprint, checkpoint, onConfirm, onUp
       {checkpoint.id === 'checkpoint-3' && (
         <div>
           <div className="mb-4 flex items-center justify-between gap-3 rounded-xl border border-violet-200 bg-white p-3">
-            <div><p className="text-xs font-semibold text-[var(--lf-brand-600)]">当前项目设计蓝本 · v{blueprint.currentVersion}</p><p className="mt-1 text-sm font-bold text-[var(--lf-brand-950)]">人工选择概念：方案 {blueprint.designerDecision?.selectedConceptId || '待选择'}｜{blueprint.conceptCandidates.find((item) => item.id === blueprint.designerDecision?.selectedConceptId)?.name || '待确认'}</p></div>
+            <div><p className="text-xs font-semibold text-[var(--lf-brand-600)]">当前项目设计蓝本 · {blueprint.milestoneVersion}</p><p className="mt-1 text-sm font-bold text-[var(--lf-brand-950)]">人工选择概念：{selectConceptCandidate(blueprint, blueprint.designerDecision?.selectedConceptId)?.code || '待选择'}｜{selectConceptCandidate(blueprint, blueprint.designerDecision?.selectedConceptId)?.name || '待确认'}</p></div>
             <span className="rounded-full bg-cyan-50 px-3 py-1.5 text-xs font-semibold text-cyan-700">11 项空间及专业策略待确认</span>
           </div>
           <div className="grid gap-4 lg:grid-cols-[minmax(260px,2fr)_minmax(0,3fr)]">

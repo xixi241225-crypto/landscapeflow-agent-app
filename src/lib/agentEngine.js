@@ -14,6 +14,7 @@
  */
 import { applyAgentPatch, readBlueprint } from '../blueprint/blueprintService.js';
 import { mockAgentProvider } from '../providers/mockAgentProvider.js';
+import { runConceptGenerationAgent } from '../agents/conceptGenerationAgent.js';
 
 export async function generateWithLLM() {
   return null;
@@ -21,6 +22,12 @@ export async function generateWithLLM() {
 
 export async function runAgentStep(agentId, blueprint, options = {}) {
   const snapshot = readBlueprint(blueprint);
+  if (Number(agentId) === 2) {
+    return runConceptGenerationAgent(snapshot, {
+      designerBrief: options.designerBrief || '',
+      mode: options.mode || 'demo',
+    }).blueprint;
+  }
   const provider = options.provider || mockAgentProvider;
   const patch = await provider.runAgent(agentId, snapshot, options);
   return applyAgentPatch(snapshot, agentId, patch, options.reason || `Provider 完成 Agent ${agentId} Patch`);

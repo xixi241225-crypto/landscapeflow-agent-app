@@ -2,12 +2,16 @@ import { AnimatePresence, motion } from 'framer-motion';
 import {
   BLUEPRINT_CHAPTERS,
   BLUEPRINT_STATUS_LABELS,
+  selectAgentExecution,
+  selectConceptCandidates,
+  selectConceptGeneration,
   selectProjectDefinitionDetails,
 } from '../blueprint/blueprintSelectors';
 
 const stageLabels = {
   'project-input': '项目资料',
   'project-definition': '项目定义',
+  'concept-generation': '概念生成',
   'agent-collaboration': 'Agent 协作',
   deliverables: '成果输出',
 };
@@ -111,6 +115,54 @@ function ProjectDefinitionChapter({ blueprint }) {
   );
 }
 
+function ConceptGenerationChapter({ blueprint }) {
+  const chapter = selectConceptGeneration(blueprint);
+  const candidates = selectConceptCandidates(blueprint);
+  const execution = selectAgentExecution(blueprint, 2);
+  return (
+    <div className="py-5">
+      <div className="grid gap-3 md:grid-cols-3">
+        <div className="rounded-xl bg-[var(--lf-brand-50)] p-3"><p className="text-xs text-[var(--lf-muted)]">输入基线</p><p className="mt-1 text-sm font-bold text-[var(--lf-brand-950)]">{chapter.generatedFromVersion}</p></div>
+        <div className="rounded-xl bg-[var(--lf-brand-50)] p-3"><p className="text-xs text-[var(--lf-muted)]">概念候选</p><p className="mt-1 text-sm font-bold text-[var(--lf-brand-950)]">{candidates.length} 个 · 尚未比选</p></div>
+        <div className="rounded-xl bg-[var(--lf-brand-50)] p-3"><p className="text-xs text-[var(--lf-muted)]">生成时间</p><p className="mt-1 text-sm font-bold text-[var(--lf-brand-950)]">{chapter.generatedAt ? new Date(chapter.generatedAt).toLocaleString('zh-CN') : '—'}</p></div>
+      </div>
+      <section className="border-b border-violet-100 py-5">
+        <h4 className="text-base font-bold text-[var(--lf-brand-950)]">设计师补充要求</h4>
+        <p className="mt-2 rounded-xl border border-violet-100 bg-white p-3 text-sm text-[var(--lf-muted)]">{chapter.generationRequest?.value || '本轮未补充额外要求'}</p>
+      </section>
+      <div className="space-y-4 py-5">
+        {candidates.map((candidate) => (
+          <article key={candidate.id} className="rounded-2xl border border-violet-100 bg-white p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div><p className="text-xs font-bold text-[var(--lf-brand-600)]">方向 {candidate.code}</p><h4 className="mt-1 text-lg font-bold text-[var(--lf-brand-950)]">{candidate.name}</h4><p className="mt-2 text-sm font-semibold text-[var(--lf-brand-700)]">{candidate.proposition}</p></div>
+              <span className="rounded-full bg-amber-50 px-2 py-1 text-xs font-semibold text-amber-800">候选 · 未比选</span>
+            </div>
+            <p className="mt-3 text-sm leading-6 text-[var(--lf-muted)]">{candidate.narrative}</p>
+            <div className="mt-3 grid gap-3 md:grid-cols-2">
+              <div className="rounded-xl bg-violet-50/60 p-3"><p className="text-xs font-bold text-[var(--lf-brand-700)]">核心策略</p><p className="mt-1 text-xs leading-5 text-slate-600">{candidate.strategicFocus}</p></div>
+              <div className="rounded-xl bg-violet-50/60 p-3"><p className="text-xs font-bold text-[var(--lf-brand-700)]">空间组织假设</p><p className="mt-1 text-xs leading-5 text-slate-600">{candidate.spatialHypothesis}</p></div>
+            </div>
+            <details className="mt-3 rounded-xl border border-violet-100 p-3">
+              <summary className="cursor-pointer text-xs font-bold text-[var(--lf-brand-700)]">蓝本响应关系 · {candidate.responseMappings.length} 项</summary>
+              <div className="mt-3 space-y-2">{candidate.responseMappings.map((mapping) => <p key={`${candidate.id}-${mapping.sourceItemId}`} className="text-xs leading-5 text-slate-600"><b>{mapping.sourceLabel}</b>：{mapping.response}</p>)}</div>
+            </details>
+            <div className="mt-3 grid gap-2 text-xs leading-5 md:grid-cols-3">
+              <p className="text-emerald-700"><b>优势：</b>{candidate.advantages.join('；')}</p>
+              <p className="text-rose-700"><b>风险：</b>{candidate.risks.join('；')}</p>
+              <p className="text-violet-700"><b>适用条件：</b>{candidate.applicableConditions.join('；')}</p>
+            </div>
+          </article>
+        ))}
+      </div>
+      <section className="rounded-2xl border border-amber-100 bg-amber-50 p-4">
+        <h4 className="text-sm font-bold text-amber-900">待补充资料依赖</h4>
+        {(chapter.unresolvedDependencies || []).length ? chapter.unresolvedDependencies.map((item) => <p key={item.id} className="mt-2 text-xs text-amber-800">· {item.value}</p>) : <p className="mt-2 text-xs text-amber-800">当前没有阻塞性资料依赖</p>}
+      </section>
+      {execution && <section className="mt-4 rounded-2xl border border-cyan-100 bg-cyan-50 p-4"><h4 className="text-sm font-bold text-cyan-900">Agent 2 执行记录</h4><p className="mt-2 text-xs leading-5 text-cyan-800">{execution.summary}</p><p className="mt-1 text-xs text-cyan-700">读取 {execution.inputVersion} · 写入 {execution.outputVersion} · r{execution.inputRevision} → r{execution.outputRevision}</p></section>}
+    </div>
+  );
+}
+
 function VersionHistory({ versions, onRestore }) {
   return (
     <section className="mt-6 rounded-2xl border border-violet-100 bg-[var(--lf-brand-50)] p-4">
@@ -170,14 +222,15 @@ export default function BlueprintDrawer({ open, onClose, blueprint, versions, on
               {BLUEPRINT_CHAPTERS.map(([key, label], index) => {
                 const complete = Boolean(blueprint.chapters?.[key]);
                 return (
-                  <details key={key} open={index === 0} className="mb-3 rounded-2xl border border-violet-100 bg-white">
+                  <details key={key} open={blueprint.stage === 'concept-generation' ? index === 1 : index === 0} className="mb-3 rounded-2xl border border-violet-100 bg-white">
                     <summary className="flex cursor-pointer list-none items-center gap-3 px-5 py-4">
                       <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-[var(--lf-brand-100)] text-xs font-bold text-[var(--lf-brand-700)]">0{index + 1}</span>
                       <span className="min-w-0 flex-1 text-base font-bold text-[var(--lf-brand-950)]">第{index + 1}章｜{label}</span>
                       <span className={`rounded-full px-2 py-1 text-xs font-semibold ${complete ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-50 text-slate-500'}`}>{complete ? '已写入' : '等待相应 Agent 写入'}</span>
                     </summary>
                     {complete && key === 'projectDefinition' && <div className="border-t border-violet-100 px-5"><ProjectDefinitionChapter blueprint={blueprint} /></div>}
-                    {complete && key !== 'projectDefinition' && <div className="border-t border-violet-100 px-5 py-5 text-sm text-[var(--lf-muted)]">本章已由相应 Agent 写入；当前轮次不调整其专业内容。</div>}
+                    {complete && key === 'conceptGeneration' && <div className="border-t border-violet-100 px-5"><ConceptGenerationChapter blueprint={blueprint} /></div>}
+                    {complete && !['projectDefinition', 'conceptGeneration'].includes(key) && <div className="border-t border-violet-100 px-5 py-5 text-sm text-[var(--lf-muted)]">本章已由相应 Agent 写入；当前轮次不调整其专业内容。</div>}
                     {!complete && <div className="border-t border-violet-100 px-5 py-8 text-center text-sm text-slate-400">等待相应 Agent 写入</div>}
                   </details>
                 );

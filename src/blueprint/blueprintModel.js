@@ -101,7 +101,6 @@ export function createBlueprint(formData = {}, projectId = makeId('project')) {
     systemAssumptions: [],
     designConstraints: [],
     coreDesignQuestions: [],
-    conceptCandidates: [],
     comparison: null,
     agentRecommendation: null,
     designerDecision: {

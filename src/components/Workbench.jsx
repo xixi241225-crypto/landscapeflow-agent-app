@@ -10,6 +10,7 @@ import { DEMO_CASE, DEMO_FILES } from '../data/demoCase';
 import { createBlueprint } from '../blueprint/blueprintModel';
 import { deriveRoadshowStateFromBlueprint } from '../blueprint/blueprintSelectors';
 import { confirmProjectDefinitionBlueprint, runProjectDefinitionAgent } from '../agents/projectDefinitionAgent';
+import { runConceptGenerationAgent } from '../agents/conceptGenerationAgent';
 import {
   applyAgentPatch,
   applyDesignerPatch,
@@ -223,14 +224,14 @@ export default function Workbench() {
     setProjectInputStep(2);
   }, [projectInputLoading]);
 
-  const executeAgent = useCallback(async (agentId, mode = runMode) => {
+  const executeAgent = useCallback(async (agentId, mode = runMode, options = {}) => {
     const source = readBlueprint(blueprintRef.current);
     if (!canRunAgent(source, agentId)) {
       setNotice('前置确认节点尚未完成，当前 Agent 不能运行。');
       setRunState('checkpoint');
       return false;
     }
-    if (source.currentCheckpoint) {
+    if (source.currentCheckpoint && !options.allowActiveCheckpoint) {
       setNotice('请先完成当前设计师确认节点。');
       setRunState('checkpoint');
       return false;
@@ -253,7 +254,7 @@ export default function Workbench() {
     try {
       let next;
       let versionMetadata = {};
-      if (agentId === 1) {
+      if (agentId === 1 || agentId === 2) {
         await new Promise((resolve, reject) => {
           const timer = setTimeout(resolve, delayMs);
           controller.signal.addEventListener('abort', () => {
@@ -261,7 +262,12 @@ export default function Workbench() {
             reject(new DOMException('任务已停止', 'AbortError'));
           }, { once: true });
         });
-        const result = runProjectDefinitionAgent(source.projectBasicInfo, source);
+        const result = agentId === 1
+          ? runProjectDefinitionAgent(source.projectBasicInfo, source)
+          : runConceptGenerationAgent(source, {
+            designerBrief: conceptRequirement,
+            mode: 'demo',
+          });
         next = result.blueprint;
         versionMetadata = { ...result.version, changeSet: result.changeSet };
       } else {
@@ -278,6 +284,7 @@ export default function Workbench() {
         setNotice(agentId === 1 ? '已写入项目设计蓝本 v1，可查看本次更新并确认设计方向。' : `已到达确认节点：${checkpoint.name}`);
         return false;
       }
+      if (agentId === 2) setNotice('已写入项目设计蓝本 v3：三个概念候选、蓝本响应关系与资料依赖已更新。');
       if (agentId === 6 && !next.invalidatedOutputs.length) setRunState('done');
       else setRunState('ready');
       return true;
@@ -292,7 +299,7 @@ export default function Workbench() {
       setAgentProgress(null);
       if (controllerRef.current === controller) controllerRef.current = null;
     }
-  }, [commitBlueprint, runMode]);
+  }, [commitBlueprint, conceptRequirement, runMode]);
 
   const runRoadshowFlow = useCallback(async () => {
     if (autoLoopRef.current) return;
@@ -560,21 +567,9 @@ export default function Workbench() {
   }, [commitBlueprint]);
 
   const handleRegenerateConcepts = useCallback(() => {
-    let next = applyDesignerPatch(blueprintRef.current, { coreDesignQuestions: blueprintRef.current.coreDesignQuestions }, '设计师退回重新生成概念');
-    next.conceptCandidates = [];
-    next.comparison = null;
-    next.agentRecommendation = null;
-    next.designerDecision = { ...next.designerDecision, selectedConceptId: '', acceptedRecommendation: false, status: '待确认' };
-    next.currentCheckpoint = null;
-    next.checkpoints = next.checkpoints.map((item) => item.id === 'checkpoint-2' ? { ...item, status: '未到达', confirmedAt: null } : item);
-    next.agentRuns[2].status = 'stale';
-    next.agentRuns[3].status = 'stale';
-    commitBlueprint(next, '退回重新生成概念候选');
-    setRunState('ready');
     setViewedStep(1);
-    setConceptRequirement('');
-    setNotice('已退回概念生成，Agent 2 与下游成果需重新生成。');
-  }, [commitBlueprint]);
+    executeAgent(2, runMode, { allowActiveCheckpoint: true });
+  }, [executeAgent, runMode]);
 
   const handleRestore = useCallback((versionId) => {
     const next = restoreBlueprintVersion(versions, versionId, blueprintRef.current);

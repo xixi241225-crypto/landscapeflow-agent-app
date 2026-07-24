@@ -2,6 +2,9 @@ import VisualAssetFrame from './VisualAssetFrame';
 import { CONTENT_STATUS, getBlueprintStatusCounts } from '../blueprint/blueprintModel';
 import {
   selectBlueprintProgress,
+  selectConceptCandidate,
+  selectConceptCandidates,
+  selectConceptGenerationSummary,
   selectCoreConstraints,
   selectDesignPrinciples,
   selectProjectFacts,
@@ -28,7 +31,7 @@ function MiniList({ items, empty = '等待本阶段写入' }) {
       {items.slice(0, 5).map((item, index) => (
         <div key={item.id || item.title || item.name || index} className="border-l-2 border-violet-100 pl-2">
           <p className="text-xs font-semibold text-[var(--lf-text)]">{item.label || item.title || item.name || `条目 ${index + 1}`}</p>
-          <p className="mt-0.5 line-clamp-2 text-xs leading-5 text-[var(--lf-muted)]">{item.value || item.function || item.concept || item.prompt}</p>
+          <p className="mt-0.5 line-clamp-2 text-xs leading-5 text-[var(--lf-muted)]">{item.value || item.function || item.proposition || item.narrative || item.concept || item.prompt}</p>
         </div>
       ))}
     </div>
@@ -68,7 +71,9 @@ export default function BlueprintPanel({ blueprint, versions, viewedStep, onOpen
   const constraints = selectCoreConstraints(blueprint);
   const principles = selectDesignPrinciples(blueprint);
   const facts = selectProjectFacts(blueprint);
-  const concept = blueprint.conceptCandidates?.find((item) => item.id === blueprint.designerDecision?.selectedConceptId);
+  const candidates = selectConceptCandidates(blueprint);
+  const conceptSummary = selectConceptGenerationSummary(blueprint);
+  const concept = selectConceptCandidate(blueprint, blueprint.designerDecision?.selectedConceptId);
   const plan = blueprint.spatialStructure?.planAsset || (blueprint.spatialStructure?.planImage ? {
     id: 'SP01', title: '当前空间总平面', assetType: '总平面图', url: blueprint.spatialStructure.planImage,
     aspectRatio: '4:3', objectFit: 'contain', status: '演示案例', sourceAgent: 'Agent 4｜空间推演',
@@ -95,7 +100,7 @@ export default function BlueprintPanel({ blueprint, versions, viewedStep, onOpen
             <Pill tone="cyan">{blueprint.milestoneVersion || 'v0'} · r{blueprint.revision ?? blueprint.currentVersion}</Pill>
           </div>
           <div className="mt-4 flex items-center justify-between text-xs font-semibold">
-            <span className="text-[var(--lf-muted)]">当前阶段：{blueprint.stage === 'project-definition' ? '项目定义' : blueprint.stage === 'agent-collaboration' ? 'Agent 协作' : blueprint.stage === 'deliverables' ? '成果输出' : '项目资料'}</span>
+            <span className="text-[var(--lf-muted)]">当前阶段：{blueprint.stage === 'project-definition' ? '项目定义' : blueprint.stage === 'concept-generation' ? '概念生成' : blueprint.stage === 'agent-collaboration' ? 'Agent 协作' : blueprint.stage === 'deliverables' ? '成果输出' : '项目资料'}</span>
             <span className="text-[var(--lf-brand-700)]">{presentationCompleted}%</span>
           </div>
           <div className="mt-2 h-2 overflow-hidden rounded-full bg-violet-100">
@@ -123,6 +128,7 @@ export default function BlueprintPanel({ blueprint, versions, viewedStep, onOpen
             <summary className="cursor-pointer text-xs font-semibold text-[var(--lf-brand-700)]">六章完成度</summary>
             <p className="mt-3 text-xs leading-5 text-[var(--lf-muted)]">{chapterProgress.completed}/6 章已写入 · {versions.length} 个正式版本 · {blueprint.invalidatedOutputs.length} 项需更新</p>
           </details>
+          {candidates.length > 0 && <section className="mt-3 rounded-xl border border-cyan-100 bg-cyan-50 p-3"><p className="text-xs font-bold text-cyan-800">概念候选 · {conceptSummary.candidateCount} 个</p>{conceptSummary.names.map((name) => <p key={name} className="mt-1 text-xs text-cyan-800">· {name}</p>)}</section>}
         </div>
 
         <div className="grid grid-cols-2 gap-2 border-t border-violet-100 bg-white p-3">
@@ -190,15 +196,15 @@ export default function BlueprintPanel({ blueprint, versions, viewedStep, onOpen
         </BlueprintSection>
 
         <BlueprintSection number="02" title="候选概念" status={runStatus(blueprint, 2)} open={viewedStep === 1}>
-          <MiniList items={blueprint.conceptCandidates} />
-          {blueprint.conceptCandidates?.length > 0 && <p className="mt-2 text-xs text-amber-700">候选，尚未确认；最终判断在 Agent 3 完成。</p>}
+          <MiniList items={candidates} />
+          {candidates.length > 0 && <p className="mt-2 text-xs text-amber-700">{conceptSummary.candidateCount} 个候选 · 输入基线 {conceptSummary.generatedFromVersion} · 尚未评分或推荐。</p>}
         </BlueprintSection>
 
         <BlueprintSection number="03" title="方案决策" status={runStatus(blueprint, 3)} open={viewedStep === 2}>
           {concept ? (
             <div>
-              <VisualAssetFrame compact asset={{ ...concept.visual, url: concept.visual?.url || conceptFallbacks[concept.id], title: `${concept.id}｜${concept.name}`, assetType: '最终概念方向', status: blueprint.agentRuns?.[3]?.status === 'stale' ? '已失效' : '演示案例' }} />
-              <p className="mt-2 text-xs font-bold text-[var(--lf-brand-900)]">设计师选择：方案 {concept.id}</p>
+              <VisualAssetFrame compact asset={{ ...(concept.referenceVisual || concept.visual), url: concept.referenceVisual?.url || concept.visual?.url || conceptFallbacks[concept.code || concept.id], title: `${concept.code || concept.id}｜${concept.name}`, assetType: '最终概念方向', blueprintVersion: String(blueprint.agentRuns?.[2]?.blueprintVersionWritten || blueprint.milestoneVersion || 'v3').replace(/^v/, ''), status: blueprint.agentRuns?.[3]?.status === 'stale' ? '已失效' : '演示案例' }} />
+              <p className="mt-2 text-xs font-bold text-[var(--lf-brand-900)]">设计师选择：方案 {concept.code || concept.id}</p>
               <p className="mt-1 text-xs text-[var(--lf-muted)]">AI 推荐：方案 {blueprint.agentRecommendation?.conceptId || '—'}</p>
               <p className="mt-1 text-xs text-[var(--lf-gold)]">融合：{blueprint.designerDecision.fusionRequirements || '无'}</p>
             </div>

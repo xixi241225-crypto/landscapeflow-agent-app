@@ -7,7 +7,13 @@ import VisualAssetFrame from './VisualAssetFrame';
 import ProjectDefinitionWizard from './ProjectDefinitionWizard';
 import { RoadshowAgentTrack, RoadshowBlueprintDraft, RoadshowStageRail } from './RoadshowFlow';
 import { AGENTS, CONTENT_STATUS } from '../blueprint/blueprintModel';
-import { selectCoreConstraints, selectProjectGoals, selectProjectInputForAgents } from '../blueprint/blueprintSelectors';
+import {
+  selectConceptCandidate,
+  selectConceptCandidates,
+  selectConceptGenerationInput,
+  selectCoreConstraints,
+  selectProjectGoals,
+} from '../blueprint/blueprintSelectors';
 
 const stepGoals = [
   '提取事实、来源、缺口、假设、约束与核心设计问题',
@@ -26,17 +32,19 @@ const CONCEPT_VISUAL_FALLBACKS = {
 
 function getConceptVisual(concept, blueprint, statusOverride) {
   if (!concept) return {};
+  const code = concept.code || concept.id;
+  const conceptVersion = String(blueprint.agentRuns?.[2]?.blueprintVersionWritten || blueprint.milestoneVersion || 'v3').replace(/^v/, '');
   return {
-    id: `C${concept.id}`,
+    id: `C${code}`,
     title: `${concept.name}概念图`,
     assetType: '概念氛围图',
-    url: CONCEPT_VISUAL_FALLBACKS[concept.id],
+    url: CONCEPT_VISUAL_FALLBACKS[code],
     aspectRatio: '16:9',
-    status: '演示案例',
     sourceAgent: 'Agent 2｜概念生成',
-    blueprintVersion: concept._meta?.version || blueprint.currentVersion,
+    blueprintVersion: concept._meta?.version || conceptVersion,
     isDemoAsset: true,
-    ...(concept.visual || {}),
+    ...(concept.referenceVisual || concept.visual || {}),
+    status: concept.referenceVisual?.status === 'demo-reference' ? '演示案例' : concept.visual?.status || '演示案例',
     ...(statusOverride ? { status: statusOverride } : {}),
   };
 }
@@ -181,7 +189,7 @@ export default function AgentContent({
         ) : (
           <>
             <Badge tone={run.status === 'done' ? 'green' : run.status === 'stale' ? 'red' : run.status === 'working' ? 'blue' : 'gray'}>{run.status === 'done' ? '已完成' : run.status === 'stale' ? '需要重新生成' : run.status === 'working' ? '执行中' : '待执行'}</Badge>
-            {run.blueprintVersionRead && <span className="text-xs text-[var(--lf-muted)]">读取 v{run.blueprintVersionRead} → 写入 v{run.blueprintVersionWritten}</span>}
+            {run.blueprintVersionRead && <span className="text-xs text-[var(--lf-muted)]">读取 {run.blueprintVersionRead} → 写入 {run.blueprintVersionWritten}</span>}
           </>
         )}
       </div>
@@ -232,13 +240,13 @@ export default function AgentContent({
             <ProjectDefinition blueprint={blueprint} onOpenBlueprint={onOpenBlueprint} />
           ))}
 
-          {!presentationMode && viewedStep === 1 && <Concepts blueprint={blueprint} requirement={conceptRequirement} onRequirement={onConceptRequirement} onRun={() => onRunAgent(2)} onRegenerate={onRegenerateConcepts} onEnterComparison={() => { onNavigate(2); if (!blueprint.comparison) onRunAgent(3); }} />}
+          {!presentationMode && viewedStep === 1 && <Concepts blueprint={blueprint} requirement={conceptRequirement} onRequirement={onConceptRequirement} onRun={() => onRunAgent(2)} onRegenerate={onRegenerateConcepts} onEnterComparison={() => { onNavigate(2); if (!blueprint.comparison) onRunAgent(3); }} onOpenBlueprint={onOpenBlueprint} />}
           {!presentationMode && viewedStep === 2 && <Comparison blueprint={blueprint} />}
           {!presentationMode && viewedStep === 3 && <SpatialPlan blueprint={blueprint} onOpenImage={setModalImage} onModifyUpstream={() => onNavigate(0)} onUpdateDecision={onUpdateDecision} onRun={() => onRunAgent(4)} />}
           {!presentationMode && viewedStep === 4 && <VisualResults blueprint={blueprint} workflowStep={visualWorkflowStep} onConfirmBrief={onConfirmVisualBrief} onGenerate={onGenerateVisuals} onOpenImage={setModalImage} />}
           {!presentationMode && viewedStep === 5 && <Outputs blueprint={blueprint} workflowStep={outputWorkflowStep} onAdvance={onAdvanceOutput} onExportJSON={onExportJSON} onExportMarkdown={onExportMarkdown} onNotice={onNotice} />}
 
-          {!presentationMode && run.status === 'pending' && !isIdle && <EmptyState text={`Agent ${agent.id} 尚未执行。请完成前置确认后从底部控制栏继续。`} />}
+          {!presentationMode && viewedStep !== 1 && run.status === 'pending' && !isIdle && <EmptyState text={`Agent ${agent.id} 尚未执行。请完成前置确认后从底部控制栏继续。`} />}
 
           {!presentationMode && <CheckpointPanel
             blueprint={blueprint}
@@ -275,25 +283,86 @@ function ProjectDefinition({ blueprint, onOpenBlueprint }) {
   return <RoadshowBlueprintDraft blueprint={blueprint} onOpenBlueprint={onOpenBlueprint} />;
 }
 
-function Concepts({ blueprint, requirement, onRequirement, onRun, onRegenerate, onEnterComparison }) {
-  if (!blueprint.conceptCandidates.length) {
-    const project = selectProjectInputForAgents(blueprint);
+function Concepts({ blueprint, requirement, onRequirement, onRun, onRegenerate, onEnterComparison, onOpenBlueprint }) {
+  const candidates = selectConceptCandidates(blueprint);
+  if (!candidates.length) {
+    const input = selectConceptGenerationInput(blueprint);
     const goals = selectProjectGoals(blueprint).map((item) => item.value).join('；');
     const constraints = selectCoreConstraints(blueprint).map((item) => item.value).join('；');
-    return <div className="space-y-4"><Card title={`从 Blueprint ${blueprint.milestoneVersion || 'v2'} 读取的核心条件`}><div className="grid gap-3 md:grid-cols-3"><div><p className="text-xs font-semibold text-[var(--lf-brand-700)]">项目目标</p><p className="mt-1 text-sm text-[var(--lf-muted)]">{goals || '待确认'}</p></div><div><p className="text-xs font-semibold text-[var(--lf-brand-700)]">目标人群</p><p className="mt-1 text-sm text-[var(--lf-muted)]">{project.targetUsers || '待确认'}</p></div><div><p className="text-xs font-semibold text-[var(--lf-brand-700)]">核心约束</p><p className="mt-1 text-sm text-[var(--lf-muted)]">{constraints || '待确认'}</p></div></div></Card><Card title="本轮概念生成要求"><textarea value={requirement} onChange={(event) => onRequirement(event.target.value)} className="form-input min-h-[100px]" placeholder="可补充概念倾向、场景偏好或必须避免的表达。若改变项目目标，将重新生成全部方向。" /><div className="mt-3 flex justify-end"><button onClick={onRun} className="btn-primary px-6 py-3 text-sm">生成三个概念方向</button></div></Card></div>;
+    const readItems = ['项目事实', '项目目标', '场地条件', '核心约束', '设计原则', '成功标准', '待补充事项'];
+    return <div className="space-y-4">
+      <div className="rounded-2xl border border-violet-200 bg-[var(--lf-brand-50)] p-5">
+        <p className="text-xs font-bold tracking-[0.14em] text-[var(--lf-brand-600)]">AGENT 02 · CONCEPT GENERATION</p>
+        <h2 className="mt-2 text-2xl font-bold text-[var(--lf-brand-950)]">概念方向生成</h2>
+        <p className="mt-2 text-sm leading-6 text-[var(--lf-muted)]">Agent 2 将基于已确认的项目设计蓝本 v2，生成三个策略本质不同的概念候选。</p>
+        <div className="mt-4 flex flex-wrap gap-2">{readItems.map((item) => <span key={item} className="rounded-full border border-violet-100 bg-white px-3 py-1.5 text-xs font-semibold text-[var(--lf-brand-700)]">✓ {item}</span>)}</div>
+      </div>
+      <Card title="已确认的概念生成基线">
+        <div className="grid gap-3 md:grid-cols-3">
+          <div><p className="text-xs font-semibold text-[var(--lf-brand-700)]">项目目标</p><p className="mt-1 text-sm text-[var(--lf-muted)]">{goals || '待确认'}</p></div>
+          <div><p className="text-xs font-semibold text-[var(--lf-brand-700)]">主要使用者</p><p className="mt-1 text-sm text-[var(--lf-muted)]">{input.stakeholders.map((item) => item.value).join('、') || '待确认'}</p></div>
+          <div><p className="text-xs font-semibold text-[var(--lf-brand-700)]">核心约束</p><p className="mt-1 text-sm text-[var(--lf-muted)]">{constraints || '待确认'}</p></div>
+        </div>
+      </Card>
+      <Card title="概念生成补充要求（可选）">
+        <textarea value={requirement} onChange={(event) => onRequirement(event.target.value)} className="form-input min-h-[100px]" placeholder="例如：希望更突出林下活动，避免过度商业化表达。" />
+        <div className="mt-3 flex justify-end"><button onClick={onRun} className="btn-primary px-6 py-3 text-sm">生成三个概念方向</button></div>
+      </Card>
+    </div>;
   }
   const conceptTone = { A: 'var(--lf-brand-700)', B: '#7c3aed', C: 'var(--lf-cyan)' };
   const stale = blueprint.agentRuns?.[2]?.status === 'stale';
-  return <div className="space-y-4"><div className="rounded-xl border border-cyan-100 bg-cyan-50 p-3"><p className="text-sm font-semibold text-cyan-900">三个方向均为候选，尚未形成最终概念</p><p className="mt-1 text-xs text-cyan-800">Agent 2 只负责生成；AI 推荐和设计师最终判断将在 Agent 3 完成。来源 Blueprint v{blueprint.agentRuns?.[2]?.blueprintVersionRead || blueprint.currentVersion}</p></div><div className="grid grid-cols-1 gap-4 xl:grid-cols-3">{blueprint.conceptCandidates.map((concept) => <motion.div key={concept.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="surface-card overflow-hidden p-0"><div className="h-1.5" style={{ background: conceptTone[concept.id] }} /><VisualAssetFrame asset={getConceptVisual(concept, blueprint, stale ? '已失效' : undefined)} className="m-3 mb-0" compact /><div className="p-4"><div className="flex items-center justify-between"><span className="w-9 h-9 rounded-xl text-white flex items-center justify-center font-bold" style={{ background: conceptTone[concept.id] }}>{concept.id}</span><Badge tone="amber">候选 · 尚未确认</Badge></div><h3 className="mt-3 text-lg font-serif font-bold text-[var(--lf-brand-950)]">{concept.name}</h3><p className="mt-2 text-sm text-slate-600 leading-relaxed">{concept.concept}</p><p className="mt-3 text-xs font-semibold text-[var(--lf-brand-700)]">关键词：{concept.sceneFeatures?.join(' · ')}</p><div className="mt-3"><p className="text-xs font-semibold text-[var(--lf-muted)]">空间策略</p><p className="mt-1 text-xs leading-5 text-slate-700">{concept.spatialStructure}</p></div><p className="mt-3 text-xs text-[var(--lf-brand-700)] bg-[var(--lf-brand-50)] rounded-lg p-2.5">适用价值：{concept.fit}</p></div></motion.div>)}</div><Card title="补充生成条件与下一步"><textarea value={requirement} onChange={(event) => onRequirement(event.target.value)} className="form-input min-h-[74px]" placeholder="补充条件会要求重新生成全部三个方向，不会静默追加到旧结果。" /><div className="mt-3 flex justify-end gap-2"><button onClick={onRegenerate} className="btn-secondary px-4 py-2 text-xs">重新生成三个方向</button><button onClick={onEnterComparison} className="btn-primary px-5 py-2 text-xs">进入方案比选</button></div></Card></div>;
+  return <div className="space-y-4">
+    <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-cyan-100 bg-cyan-50 p-4">
+      <div><p className="text-base font-semibold text-cyan-900">已写入项目设计蓝本 v3｜三个概念候选</p><p className="mt-1 text-sm text-cyan-800">三个方向均为候选，尚未评分、推荐或形成最终方案。来源 Blueprint {blueprint.agentRuns?.[2]?.blueprintVersionRead || 'v2'} → v3。</p></div>
+      <button type="button" onClick={onOpenBlueprint} className="btn-secondary px-4 py-2 text-xs">查看本次更新</button>
+    </div>
+    <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+      {candidates.map((concept) => {
+        const code = concept.code || concept.id;
+        return <motion.article key={concept.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="surface-card overflow-hidden p-0">
+          <div className="h-1.5" style={{ background: conceptTone[code] }} />
+          <VisualAssetFrame asset={getConceptVisual(concept, blueprint, stale ? '已失效' : undefined)} className="m-3 mb-0" compact />
+          <div className="p-4">
+            <div className="flex items-center justify-between"><span className="flex h-9 w-9 items-center justify-center rounded-xl font-bold text-white" style={{ background: conceptTone[code] }}>{code}</span><Badge tone="amber">候选 · 未比选</Badge></div>
+            <h3 className="mt-3 text-lg font-serif font-bold text-[var(--lf-brand-950)]">{concept.name}</h3>
+            <p className="mt-2 text-sm font-semibold leading-6 text-[var(--lf-brand-700)]">{concept.proposition}</p>
+            <p className="mt-2 text-xs leading-5 text-slate-600">{concept.narrative}</p>
+            <div className="mt-3 rounded-xl bg-[var(--lf-brand-50)] p-3"><p className="text-xs font-bold text-[var(--lf-brand-700)]">核心策略</p><p className="mt-1 text-xs leading-5 text-slate-700">{concept.strategicFocus}</p></div>
+            <div className="mt-3"><p className="text-xs font-bold text-[var(--lf-muted)]">概念级空间组织假设</p><p className="mt-1 text-xs leading-5 text-slate-700">{concept.spatialHypothesis}</p></div>
+            <div className="mt-3"><p className="text-xs font-bold text-[var(--lf-muted)]">关键场景</p><p className="mt-1 text-xs leading-5 text-slate-700">{concept.keyScenes.join(' · ')}</p></div>
+            <div className="mt-3 grid grid-cols-1 gap-2">
+              <p className="text-xs leading-5 text-emerald-700"><b>优势：</b>{concept.advantages.join('；')}</p>
+              <p className="text-xs leading-5 text-rose-700"><b>风险：</b>{concept.risks.join('；')}</p>
+              <p className="text-xs leading-5 text-violet-700"><b>适用：</b>{concept.applicableConditions.join('；')}</p>
+            </div>
+            <details className="mt-3 rounded-xl border border-violet-100 bg-white p-3">
+              <summary className="cursor-pointer text-xs font-bold text-[var(--lf-brand-700)]">查看与项目设计蓝本的对应关系</summary>
+              <div className="mt-3 space-y-2">{concept.responseMappings.map((mapping) => <p key={`${concept.id}-${mapping.sourceItemId}`} className="text-xs leading-5 text-slate-600"><b>{mapping.sourceLabel}</b>（{mapping.sourceStatus === 'assumption' ? '合理假设' : mapping.sourceStatus === 'pending' ? '待确认' : '已确认'}）：{mapping.response}</p>)}</div>
+              {concept.dependencies.length > 0 && <div className="mt-3 border-t border-violet-100 pt-3"><p className="text-xs font-bold text-amber-700">待复核资料</p>{concept.dependencies.map((item) => <p key={item.id} className="mt-1 text-xs text-amber-700">· {item.value}</p>)}</div>}
+            </details>
+          </div>
+        </motion.article>;
+      })}
+    </div>
+    <Card title="方向差异摘要">
+      <div className="grid gap-3 lg:grid-cols-3">{candidates.map((concept) => <div key={`summary-${concept.id}`} className="rounded-xl border border-violet-100 bg-white p-3"><p className="text-sm font-bold text-[var(--lf-brand-900)]">{concept.code}｜{concept.name}</p><div className="mt-2 space-y-1.5 text-xs leading-5 text-[var(--lf-muted)]"><p><b>核心问题：</b>{concept.proposition}</p><p><b>策略重点：</b>{concept.strategicFocus}</p><p><b>体验倾向：</b>{concept.experienceIntent}</p><p><b>实施倾向：</b>{concept.applicableConditions[0]}</p></div></div>)}</div>
+    </Card>
+    <Card title="补充生成条件与下一步">
+      <textarea value={requirement} onChange={(event) => onRequirement(event.target.value)} className="form-input min-h-[74px]" placeholder="补充要求后将完整重新生成三个方向，不会静默追加。" />
+      <div className="mt-3 flex justify-end gap-2"><button onClick={onRegenerate} className="btn-secondary px-4 py-2 text-xs">补充要求并重新生成</button><button onClick={onEnterComparison} className="btn-primary px-5 py-2 text-xs">进入方案比选</button></div>
+    </Card>
+  </div>;
 }
 
 function Comparison({ blueprint }) {
   if (!blueprint.comparison) return <EmptyState text="等待概念生成后运行方案选择 Agent。" />;
+  const candidates = selectConceptCandidates(blueprint);
   const tone = { A: 'var(--lf-brand-700)', B: '#7c3aed', C: 'var(--lf-cyan)' };
   const conceptsStale = blueprint.agentRuns?.[2]?.status === 'stale';
   return <div className="space-y-4">
     <div className="grid grid-cols-3 gap-3">
-      {blueprint.conceptCandidates.map((concept) => <div key={concept.id} className={`surface-card border-t-4 p-3 ${blueprint.designerDecision.selectedConceptId === concept.id ? 'ring-2 ring-violet-200' : ''}`} style={{ borderTopColor: tone[concept.id] }}><VisualAssetFrame asset={getConceptVisual(concept, blueprint, conceptsStale ? '已失效' : undefined)} compact /><div className="mt-3 flex items-center justify-between"><span className="text-xs font-bold" style={{ color: tone[concept.id] }}>方案 {concept.id}</span>{blueprint.agentRecommendation.conceptId === concept.id && <Badge tone="amber">推荐</Badge>}</div><p className="mt-2 text-base font-bold text-[var(--lf-brand-950)]">{concept.name}</p><p className="mt-1 line-clamp-2 text-xs text-[var(--lf-muted)]">{concept.concept}</p>{blueprint.designerDecision.selectedConceptId === concept.id && <p className="mt-3 text-xs font-semibold text-[var(--lf-success)]">✓ 设计师当前选择</p>}</div>)}
+      {candidates.map((concept) => <div key={concept.id} className={`surface-card border-t-4 p-3 ${blueprint.designerDecision.selectedConceptId === concept.id ? 'ring-2 ring-violet-200' : ''}`} style={{ borderTopColor: tone[concept.code || concept.id] }}><VisualAssetFrame asset={getConceptVisual(concept, blueprint, conceptsStale ? '已失效' : undefined)} compact /><div className="mt-3 flex items-center justify-between"><span className="text-xs font-bold" style={{ color: tone[concept.code || concept.id] }}>方案 {concept.code || concept.id}</span>{blueprint.agentRecommendation.conceptId === concept.id && <Badge tone="amber">推荐</Badge>}</div><p className="mt-2 text-base font-bold text-[var(--lf-brand-950)]">{concept.name}</p><p className="mt-1 line-clamp-2 text-xs text-[var(--lf-muted)]">{concept.proposition || concept.narrative}</p>{blueprint.designerDecision.selectedConceptId === concept.id && <p className="mt-3 text-xs font-semibold text-[var(--lf-success)]">✓ 设计师当前选择</p>}</div>)}
     </div>
     <div className="rounded-2xl border border-amber-200 bg-[var(--lf-gold-soft)] p-4"><div className="flex items-center gap-2"><Badge tone="amber">Agent 推荐意见</Badge><strong className="text-sm text-amber-950">{blueprint.agentRecommendation.conceptId}｜{blueprint.agentRecommendation.conceptName}</strong><span className="text-xs text-amber-700">{blueprint.agentRecommendation.score} 分</span></div><p className="text-xs text-amber-800 mt-2">{blueprint.agentRecommendation.reason}</p><p className="text-xs text-rose-600 mt-2">推荐仅供参考，必须由设计师最终选择。</p></div>
     <ComparisonTable comparison={blueprint.comparison} />
@@ -376,8 +445,8 @@ function PptPlaceholder({ label, status = '待生成', blueprint, invalid = fals
 
 function PptSlideVisual({ page, blueprint, invalid }) {
   const assets = Object.fromEntries((blueprint.visualAssets || []).map((asset) => [asset.id, normalizeVisualAsset(asset, blueprint, invalid)]));
-  const concept = blueprint.conceptCandidates.find((item) => item.id === blueprint.designerDecision.selectedConceptId);
-  const concepts = blueprint.conceptCandidates;
+  const concept = selectConceptCandidate(blueprint, blueprint.designerDecision.selectedConceptId);
+  const concepts = selectConceptCandidates(blueprint);
   const plan = getPlanAsset(blueprint, invalid ? '已失效' : undefined);
   const frame = (asset, extra = {}) => <VisualAssetFrame asset={{ ...asset, ...extra, status: invalid ? '已失效' : extra.status || asset?.status }} showMeta={false} allowZoom={false} className="h-full" visualClassName="h-full" />;
 

@@ -14,7 +14,7 @@ import {
 
 const AGENT_FIELD_OWNERS = {
   1: ['projectBasicInfo', 'confirmedFacts', 'explicitRequirements', 'latentGoals', 'siteConditions', 'deliverableRequirements', 'informationSources', 'unconfirmedInfo', 'systemAssumptions', 'designConstraints', 'coreDesignQuestions', 'risks', 'nextTasks'],
-  2: ['conceptCandidates', 'risks', 'nextTasks'],
+  2: [],
   3: ['comparison', 'agentRecommendation', 'risks', 'nextTasks'],
   4: ['coreNarrative', 'spatialStructure', 'functionalZones', 'circulationStrategy', 'professionalStrategies', 'featureNodes', 'risks', 'nextTasks'],
   5: ['visualTasks', 'visualAssets', 'qualityReview', 'risks', 'nextTasks'],
@@ -368,6 +368,7 @@ export function getNextRunnableAgent(blueprint) {
 
 export function canRunAgent(blueprint, agentId) {
   if (agentId >= 2 && blueprint.checkpoints.find((item) => item.id === 'checkpoint-1')?.status !== '已确认') return false;
+  if (agentId >= 3 && !blueprint.chapters?.conceptGeneration?.conceptCandidates?.length) return false;
   if (agentId >= 4 && blueprint.checkpoints.find((item) => item.id === 'checkpoint-2')?.status !== '已确认') return false;
   if (agentId >= 5 && blueprint.checkpoints.find((item) => item.id === 'checkpoint-3')?.status !== '已确认') return false;
   return true;

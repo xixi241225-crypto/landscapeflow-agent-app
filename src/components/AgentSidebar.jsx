@@ -1,4 +1,5 @@
 import { AGENTS } from '../blueprint/blueprintModel';
+import { selectConceptCandidate } from '../blueprint/blueprintSelectors';
 
 const descriptions = [
   '事实、来源、缺口与核心问题',
@@ -11,7 +12,7 @@ const descriptions = [
 
 export default function AgentSidebar({ blueprint, viewedStep, currentStep, onStepClick }) {
   const completedCount = Object.values(blueprint.agentRuns || {}).filter((item) => item.status === 'done').length;
-  const concept = blueprint.conceptCandidates?.find((item) => item.id === blueprint.designerDecision?.selectedConceptId);
+  const concept = selectConceptCandidate(blueprint, blueprint.designerDecision?.selectedConceptId);
   return (
     <div className="h-full flex flex-col bg-[#F7F8FF]">
       <div className="px-5 py-4 border-b border-[var(--lf-border)] bg-white">
@@ -61,11 +62,11 @@ export default function AgentSidebar({ blueprint, viewedStep, currentStep, onSte
         <div className="blueprint-surface rounded-xl border p-3.5">
           <div className="flex items-center justify-between">
             <p className="text-xs font-bold tracking-widest text-[var(--lf-brand-600)]">当前项目</p>
-            <span className="rounded-full bg-cyan-50 px-2 py-1 text-xs font-bold text-cyan-700">v{blueprint.currentVersion}</span>
+            <span className="rounded-full bg-cyan-50 px-2 py-1 text-xs font-bold text-cyan-700">{blueprint.milestoneVersion || 'v0'} · r{blueprint.revision ?? blueprint.currentVersion}</span>
           </div>
           <p className="text-sm font-semibold text-[var(--lf-text)] mt-2 truncate">{blueprint.projectBasicInfo.projectName || '未命名项目'}</p>
           <p className="text-xs text-[var(--lf-muted)] mt-1 truncate">{blueprint.projectBasicInfo.city || '地点待填写'} · {blueprint.projectBasicInfo.area || '面积待填写'}</p>
-          <p className="text-xs text-[var(--lf-gold)] mt-1.5 truncate">{concept ? `${concept.id}｜${concept.name}` : '概念方向待设计师确认'}</p>
+          <p className="text-xs text-[var(--lf-gold)] mt-1.5 truncate">{concept ? `${concept.code || concept.id}｜${concept.name}` : '概念方向待设计师确认'}</p>
           <div className="h-2 rounded-full bg-white mt-3 overflow-hidden"><div className="h-full bg-[var(--lf-success)] transition-all" style={{ width: `${completedCount / 6 * 100}%` }} /></div>
           <p className="text-xs font-medium text-[var(--lf-success)] mt-2">{completedCount} / 6 Agent 已完成</p>
         </div>
