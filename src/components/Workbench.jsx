@@ -4,9 +4,12 @@ import ProjectHistorySidebar from './ProjectHistorySidebar';
 import AgentContent from './AgentContent';
 import BottomControlBar from './BottomControlBar';
 import BlueprintPanel from './BlueprintPanel';
+import BlueprintDrawer from './BlueprintDrawer';
 import HistoryPanel from './HistoryPanel';
 import { DEMO_CASE, DEMO_FILES } from '../data/demoCase';
 import { createBlueprint } from '../blueprint/blueprintModel';
+import { deriveRoadshowStateFromBlueprint } from '../blueprint/blueprintSelectors';
+import { confirmProjectDefinitionBlueprint, runProjectDefinitionAgent } from '../agents/projectDefinitionAgent';
 import {
   applyAgentPatch,
   applyDesignerPatch,
@@ -63,6 +66,7 @@ function newProjectState(presentationMode = false) {
 function getInitialState() {
   const restored = loadActiveProject();
   if (!restored?.blueprint) return newProjectState();
+  const derivedRoadshow = deriveRoadshowStateFromBlueprint(restored.blueprint);
   return {
     ...restored,
     runState: restored.runState === 'running' ? 'paused' : restored.runState,
@@ -72,11 +76,11 @@ function getInitialState() {
     conceptRequirement: restored.conceptRequirement || '',
     projectInputStep: restored.projectInputStep ?? (restored.blueprint.agentRuns?.[1]?.blueprintVersionWritten ? 2 : 0),
     presentationMode: Boolean(restored.presentationMode),
-    presentationStage: restored.presentationStage === 3 ? 2 : restored.presentationStage ?? 0,
+    presentationStage: restored.presentationStage === 3 ? 2 : restored.presentationStage ?? derivedRoadshow.presentationStage,
     presentationAgentStates: Array.isArray(restored.presentationAgentStates) && restored.presentationAgentStates.length === 6
       ? restored.presentationAgentStates.map((status) => status === '执行中' ? '等待' : status)
-      : Array(6).fill('等待'),
-    presentationComplete: Boolean(restored.presentationComplete),
+      : derivedRoadshow.presentationAgentStates,
+    presentationComplete: restored.presentationComplete ?? derivedRoadshow.presentationComplete,
   };
 }
 
@@ -93,6 +97,7 @@ export default function Workbench() {
   const [runState, setRunState] = useState(initial.runState || 'idle');
   const [runMode, setRunMode] = useState(initial.runMode || 'professional');
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [fullBlueprintOpen, setFullBlueprintOpen] = useState(false);
   const [visualWorkflowStep, setVisualWorkflowStep] = useState(initial.visualWorkflowStep || 0);
   const [outputWorkflowStep, setOutputWorkflowStep] = useState(initial.outputWorkflowStep || 0);
   const [conceptRequirement, setConceptRequirement] = useState(initial.conceptRequirement || '');
@@ -132,10 +137,11 @@ export default function Workbench() {
     presentationTokenRef.current += 1;
   }, []);
 
-  const commitBlueprint = useCallback((next, reason) => {
+  const commitBlueprint = useCallback((next, reason, versionMetadata = {}) => {
     blueprintRef.current = next;
     setBlueprint(next);
-    setVersions((history) => createBlueprintVersion(next, history, reason));
+    setFormData((previous) => ({ ...previous, ...(next.projectBasicInfo || {}) }));
+    setVersions((history) => createBlueprintVersion(next, history, reason, versionMetadata));
   }, []);
 
   const validateProject = useCallback((data = formData) => {
@@ -245,16 +251,31 @@ export default function Workbench() {
       if (!controller.signal.aborted) setAgentProgress({ agentId, step: index + 1, actions: AGENT_ANALYSIS_STEPS[agentId] });
     }, delayMs * ratio));
     try {
-      const patch = await mockAgentProvider.runAgent(agentId, source, { signal: controller.signal, delayMs });
-      const next = applyAgentPatch(source, agentId, patch, `演示协作引擎完成 Agent ${agentId} 结构化写入`);
+      let next;
+      let versionMetadata = {};
+      if (agentId === 1) {
+        await new Promise((resolve, reject) => {
+          const timer = setTimeout(resolve, delayMs);
+          controller.signal.addEventListener('abort', () => {
+            clearTimeout(timer);
+            reject(new DOMException('任务已停止', 'AbortError'));
+          }, { once: true });
+        });
+        const result = runProjectDefinitionAgent(source.projectBasicInfo, source);
+        next = result.blueprint;
+        versionMetadata = { ...result.version, changeSet: result.changeSet };
+      } else {
+        const patch = await mockAgentProvider.runAgent(agentId, source, { signal: controller.signal, delayMs });
+        next = applyAgentPatch(source, agentId, patch, `演示协作引擎完成 Agent ${agentId} 结构化写入`);
+      }
       const checkpoint = next.checkpoints.find((item) => item.afterAgent === agentId);
-      commitBlueprint(next, `${mode === 'roadshow' ? '路演演示' : '专业协作'} · Agent ${agentId} 完成`);
+      commitBlueprint(next, `${mode === 'roadshow' ? '路演演示' : '专业协作'} · Agent ${agentId} 完成`, versionMetadata);
       if (agentId === 5) setVisualWorkflowStep(1);
       if (agentId === 6) setOutputWorkflowStep(1);
 
       if (checkpoint) {
         setRunState('checkpoint');
-        setNotice(`已到达确认节点：${checkpoint.name}`);
+        setNotice(agentId === 1 ? '已写入项目设计蓝本 v1，可查看本次更新并确认设计方向。' : `已到达确认节点：${checkpoint.name}`);
         return false;
       }
       if (agentId === 6 && !next.invalidatedOutputs.length) setRunState('done');
@@ -334,8 +355,10 @@ export default function Workbench() {
     try {
       let source = blueprintRef.current;
       if (source.currentCheckpoint === 'checkpoint-1') {
-        source = confirmCheckpoint(source, 'checkpoint-1', { source: '路演唯一人工确认', scope: ['项目目标', '核心约束', '推荐设计策略'] }, '设计师');
-        commitBlueprint(source, '设计师确认设计方向');
+        const confirmation = confirmProjectDefinitionBlueprint(source);
+        source = confirmation.blueprint;
+        commitBlueprint(source, '设计师确认设计方向', { ...confirmation.version, changeSet: confirmation.changeSet });
+        setNotice('项目设计蓝本 v2 已确认，六个专业 Agent 将以该版本为统一设计基线。');
       }
 
       for (let index = 0; index < 6; index += 1) {
@@ -490,6 +513,13 @@ export default function Workbench() {
 
   const handleConfirmCheckpoint = useCallback((checkpointId, payload = {}) => {
     let source = blueprintRef.current;
+    if (checkpointId === 'checkpoint-1') {
+      const confirmation = confirmProjectDefinitionBlueprint(source);
+      commitBlueprint(confirmation.blueprint, '设计师确认设计方向', { ...confirmation.version, changeSet: confirmation.changeSet });
+      setRunState(runMode === 'roadshow' ? 'ready' : 'ready');
+      setNotice('项目设计蓝本 v2 已确认，六个专业 Agent 将以该版本为统一设计基线。');
+      return;
+    }
     if (checkpointId === 'checkpoint-2' && payload.designerDecision) {
       const fields = ['selectedConceptId', 'acceptedRecommendation', 'fusionRequirements', 'modificationNotes', 'decisionReason'];
       const changed = fields.some((field) => (source.designerDecision?.[field] || '') !== (payload.designerDecision[field] || ''));
@@ -548,10 +578,17 @@ export default function Workbench() {
 
   const handleRestore = useCallback((versionId) => {
     const next = restoreBlueprintVersion(versions, versionId, blueprintRef.current);
-    commitBlueprint(next, `恢复项目状态至历史版本`);
+    blueprintRef.current = next;
+    setBlueprint(next);
+    setFormData((previous) => ({ ...previous, ...(next.projectBasicInfo || {}) }));
     setRunState(next.currentCheckpoint ? 'checkpoint' : getNextRunnableAgent(next) ? 'ready' : 'done');
-    setNotice('项目状态已恢复，并创建新的恢复版本。');
-  }, [commitBlueprint, versions]);
+    const restoredRoadshow = deriveRoadshowStateFromBlueprint(next);
+    setPresentationStage(restoredRoadshow.presentationStage);
+    setPresentationAgentStates(restoredRoadshow.presentationAgentStates);
+    setPresentationComplete(restoredRoadshow.presentationComplete);
+    setViewedStep(0);
+    setNotice(`已恢复项目设计蓝本 ${next.milestoneVersion}，页面与执行状态已同步。`);
+  }, [versions]);
 
   const handleLoadProject = useCallback((record) => {
     controllerRef.current?.abort();
@@ -650,7 +687,7 @@ export default function Workbench() {
           <p className="truncate text-xs text-[var(--lf-muted)]">当前阶段：{presentationMode ? ['项目资料', '设计蓝本', 'Agent 协作', '完整成果'][presentationStage] : blueprint.agentRuns[viewedStep + 1]?.agentName}</p>
         </div>
         <div className="flex items-center gap-2">
-          <span className="rounded-full bg-cyan-50 px-3 py-1.5 text-xs font-semibold text-cyan-700">Blueprint v{blueprint.currentVersion}</span>
+          <span className="rounded-full bg-cyan-50 px-3 py-1.5 text-xs font-semibold text-cyan-700">Blueprint {blueprint.milestoneVersion || 'v0'} · r{blueprint.revision ?? blueprint.currentVersion}</span>
         </div>
       </header>
       {notice && <div className="fixed top-16 left-1/2 -translate-x-1/2 z-[70] rounded-xl bg-gray-900 text-white text-xs px-4 py-2.5 shadow-xl max-w-xl text-center">{notice}</div>}
@@ -702,6 +739,7 @@ export default function Workbench() {
             onNavigate={setViewedStep}
             onRegenerateConcepts={handleRegenerateConcepts}
             onNotice={setNotice}
+            onOpenBlueprint={() => setFullBlueprintOpen(true)}
           />
           {!showProjectInputWizard && <BottomControlBar
             blueprint={blueprint}
@@ -736,10 +774,13 @@ export default function Workbench() {
           presentationStage={presentationStage}
           presentationAgentStates={presentationAgentStates}
           onOpenVersions={() => setHistoryOpen(true)}
+          onOpenFullBlueprint={() => setFullBlueprintOpen(true)}
+          onRestore={handleRestore}
           onInitiateModification={presentationMode ? handleModifyPresentationInputs : () => { setViewedStep(0); setNotice('已进入发起修改流程。保存上游修改后，系统将创建新版本并标记下游影响。'); }}
         />
       </div>
       <HistoryPanel isOpen={historyOpen} onToggle={() => setHistoryOpen(false)} onLoad={handleLoadProject} versions={versions} onRestore={handleRestore} />
+      <BlueprintDrawer open={fullBlueprintOpen} onClose={() => setFullBlueprintOpen(false)} blueprint={blueprint} versions={versions} onRestore={handleRestore} />
     </div>
   );
 }

@@ -1,4 +1,12 @@
 import { roadshowProject } from '../data/roadshowProject';
+import {
+  BLUEPRINT_STATUS_LABELS,
+  selectAgent1ExecutionSummary,
+  selectCoreConstraints,
+  selectDesignPrinciples,
+  selectProjectDefinitionDetails,
+  selectProjectGoals,
+} from '../blueprint/blueprintSelectors';
 
 const GLOBAL_STAGES = ['项目资料', '设计蓝本', 'Agent 协作', '完整成果'];
 
@@ -23,50 +31,47 @@ function BlueprintList({ number, title, items, tone }) {
         <h3>{title}</h3>
       </div>
       <ul>
-        {items.map((item) => <li key={item}><i>✓</i><p>{item}</p></li>)}
+        {items.map((item, index) => (
+          <li key={item.id || `${title}-${index}`}>
+            <i>✓</i>
+            <p>{item.value || item.label || item}</p>
+            {item.status === 'assumption' && <small className="ml-auto shrink-0 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700">合理假设</small>}
+          </li>
+        ))}
       </ul>
     </section>
   );
 }
 
-export function RoadshowBlueprintDraft({ blueprint }) {
-  const design = roadshowProject.designBlueprint;
+export function RoadshowBlueprintDraft({ blueprint, onOpenBlueprint }) {
   const basic = blueprint.projectBasicInfo || {};
-  const facts = blueprint.confirmedFacts || [];
+  const details = selectProjectDefinitionDetails(blueprint);
+  const goals = selectProjectGoals(blueprint);
+  const constraints = selectCoreConstraints(blueprint);
+  const principles = selectDesignPrinciples(blueprint);
   return (
     <div className="roadshow-draft-page">
       <div className="roadshow-draft-heading">
         <div>
           <p className="text-xs font-bold tracking-[0.16em] text-[var(--lf-brand-600)]">LANDSCAPE DESIGN BRIEF</p>
           <h2>项目设计蓝本草案</h2>
-          <p>设计总监智能体已将项目资料归纳为目标、约束与可执行策略。</p>
+          <p>Agent 1 已将项目资料整理为统一的项目定义基线，请确认后启动后续设计。</p>
         </div>
-        <span>Blueprint v{blueprint.currentVersion}</span>
+        <span>Blueprint {blueprint.milestoneVersion || 'v1'} · r{blueprint.revision ?? blueprint.currentVersion}</span>
+      </div>
+
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-cyan-200 bg-cyan-50 px-5 py-4">
+        <div>
+          <p className="text-sm font-bold text-cyan-900">已写入项目设计蓝本 {blueprint.milestoneVersion || 'v1'}</p>
+          <p className="mt-1 text-xs text-cyan-800">本次新增：项目事实、项目目标、核心约束、设计原则、待补充事项。</p>
+        </div>
+        <button type="button" onClick={onOpenBlueprint} className="btn-secondary px-4 py-2 text-sm">查看本次更新</button>
       </div>
 
       <div className="roadshow-draft-grid">
-        <BlueprintList number="01" title="项目目标" tone="violet" items={design.goals} />
-        <BlueprintList
-          number="02"
-          title="核心约束"
-          tone="gold"
-          items={[
-            '保留主要活动功能',
-            '减少高维护水景和大面积石材铺装',
-            '满足安全、无障碍和生态设计要求',
-          ]}
-        />
-        <BlueprintList
-          number="03"
-          title="推荐设计策略"
-          tone="cyan"
-          items={[
-            '以低维护植物形成空间主体',
-            '减少大面积硬质铺装',
-            '优先采用生态、再生或在地材料',
-            '保留核心活动空间与景观识别性',
-          ]}
-        />
+        <BlueprintList number="01" title="项目目标" tone="violet" items={goals} />
+        <BlueprintList number="02" title="核心约束" tone="gold" items={constraints} />
+        <BlueprintList number="03" title="设计原则" tone="cyan" items={principles} />
       </div>
 
       <details className="roadshow-draft-evidence">
@@ -74,25 +79,35 @@ export function RoadshowBlueprintDraft({ blueprint }) {
         <div className="grid gap-5 pt-5 md:grid-cols-2 xl:grid-cols-3">
           <div>
             <h4>项目基本事实</h4>
-            <p>{basic.projectName || '待补充'} · {basic.projectType || '待补充'}</p>
-            <p>{basic.city || '待补充'} · {basic.area ? `${basic.area}㎡` : '面积待补充'}</p>
+            {details.facts.map((item) => <p key={item.id}>{item.label}：{item.value} <small>（{BLUEPRINT_STATUS_LABELS[item.status] || item.status}）</small></p>)}
+          </div>
+          <div>
+            <h4>业主与使用者</h4>
+            {details.stakeholders.map((item) => <p key={item.id}>{item.value}</p>)}
+          </div>
+          <div>
+            <h4>场地条件</h4>
+            {details.siteConditions.slice(0, 6).map((item) => <p key={item.id}>{item.value}</p>)}
           </div>
           <div>
             <h4>资料来源</h4>
-            {(blueprint.informationSources || []).slice(0, 4).map((item) => <p key={item.id}>{item.name}</p>)}
+            {details.sourceDocuments.map((item) => <p key={item.id}>{item.fileName} · {item.status}</p>)}
           </div>
           <div>
-            <h4>资料缺口</h4>
-            {(blueprint.unconfirmedInfo || []).slice(0, 4).map((item) => <p key={item.id}>{item.label || item.value}</p>)}
+            <h4>成功标准</h4>
+            {details.successCriteria.map((item) => <p key={item.id}>{item.value}</p>)}
           </div>
           <div>
-            <h4>系统合理假设</h4>
-            {(blueprint.systemAssumptions || []).slice(0, 4).map((item) => <p key={item.id}>{item.title || item.value}</p>)}
+            <h4>合理假设</h4>
+            {details.latentGoals.filter((item) => item.status === 'assumption').map((item) => <p key={item.id}>{item.value}</p>)}
           </div>
           <div>
-            <h4>未确认信息</h4>
-            {facts.filter((item) => item.status !== '已确认').slice(0, 4).map((item) => <p key={item.id}>{item.label}：{item.value}</p>)}
-            {!facts.length && <p>等待项目资料整理</p>}
+            <h4>待补充信息</h4>
+            {details.openItems.map((item) => <p key={item.id}>{item.label}：{item.value}</p>)}
+          </div>
+          <div>
+            <h4>冲突信息</h4>
+            {details.conflicts.length ? details.conflicts.map((item) => <p key={item.id}>{item.value}</p>) : <p>当前未识别到信息冲突</p>}
           </div>
         </div>
       </details>
@@ -102,7 +117,7 @@ export function RoadshowBlueprintDraft({ blueprint }) {
   );
 }
 
-export function RoadshowAgentTrack({ states }) {
+export function RoadshowAgentTrack({ states, blueprint }) {
   const completed = states.filter((status) => status === '已完成').length;
   const running = states.some((status) => status === '执行中');
   return (
@@ -118,12 +133,13 @@ export function RoadshowAgentTrack({ states }) {
       <div className="roadshow-track-list">
         {roadshowProject.agentExecution.map((agent, index) => {
           const status = states[index] || '等待';
+          const result = agent.id === 1 ? selectAgent1ExecutionSummary(blueprint) : agent.result;
           return (
             <article key={agent.id} className={`roadshow-track-row ${status === '执行中' ? 'working' : ''} ${status === '已完成' ? 'done' : ''}`}>
               <span className="roadshow-track-number">0{agent.id}</span>
               <div className="min-w-0 flex-1">
                 <h3>{agent.name}</h3>
-                <p>{agent.result}</p>
+                <p>{result}</p>
               </div>
               <span className="roadshow-track-status">
                 {status === '已完成' ? '✓' : status === '执行中' ? '●' : '○'} {status}

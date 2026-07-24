@@ -1,5 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { CONTENT_STATUS } from '../blueprint/blueprintModel';
+import { useEffect, useRef, useState } from 'react';
 import VisualAssetFrame from './VisualAssetFrame';
 
 const CONCEPT_VISUAL_FALLBACKS = {
@@ -39,11 +38,9 @@ function planVisual(blueprint) {
 }
 
 export default function CheckpointPanel({ blueprint, checkpoint, onConfirm, onUpdateDecision, onAssumptionDecision, onSaveFacts, onRegenerate }) {
-  const [facts, setFacts] = useState([]);
   const [decisionDraft, setDecisionDraft] = useState(blueprint.designerDecision || {});
   const lastSavedDecision = useRef(JSON.stringify(blueprint.designerDecision || {}));
   const [error, setError] = useState('');
-  useEffect(() => setFacts((blueprint.confirmedFacts || []).map((item) => ({ ...item }))), [blueprint.confirmedFacts]);
   useEffect(() => {
     const next = {
       selectedConceptId: blueprint.designerDecision?.selectedConceptId || '',
@@ -55,7 +52,6 @@ export default function CheckpointPanel({ blueprint, checkpoint, onConfirm, onUp
     setDecisionDraft(next);
     lastSavedDecision.current = JSON.stringify(next);
   }, [blueprint.designerDecision?.selectedConceptId, blueprint.designerDecision?.acceptedRecommendation, blueprint.designerDecision?.fusionRequirements, blueprint.designerDecision?.modificationNotes, blueprint.designerDecision?.decisionReason]);
-  const pendingAssumptions = useMemo(() => blueprint.systemAssumptions.filter((item) => [CONTENT_STATUS.ASSUMPTION, CONTENT_STATUS.PENDING].includes(item.status)), [blueprint.systemAssumptions]);
   if (!checkpoint || !['待确认', '需重新确认'].includes(checkpoint.status)) return null;
 
   const saveDecision = () => {
@@ -95,38 +91,9 @@ export default function CheckpointPanel({ blueprint, checkpoint, onConfirm, onUp
       </div>
 
       {checkpoint.id === 'checkpoint-1' && (
-        <div className="space-y-4">
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <h4 className="text-xs font-semibold text-gray-800">编辑或补充项目事实</h4>
-              <button onClick={() => setFacts((prev) => [...prev, { id: `draft-${Date.now()}`, label: '补充事实', value: '', source: '设计师补充', status: CONTENT_STATUS.CONFIRMED }])} className="text-[10px] px-2 py-1 rounded bg-white border border-amber-200 text-amber-700">+ 添加事实</button>
-            </div>
-            <div className="space-y-2">
-              {facts.map((fact, index) => (
-                <div key={fact.id || index} className="grid grid-cols-[120px_1fr_28px] gap-2">
-                  <input className="form-input !py-2 !text-xs" value={fact.label || ''} onChange={(event) => setFacts((prev) => prev.map((item, i) => i === index ? { ...item, label: event.target.value } : item))} />
-                  <input className="form-input !py-2 !text-xs" value={fact.value || ''} onChange={(event) => setFacts((prev) => prev.map((item, i) => i === index ? { ...item, value: event.target.value } : item))} />
-                  <button className="text-red-400" onClick={() => setFacts((prev) => prev.filter((_, i) => i !== index))}>×</button>
-                </div>
-              ))}
-            </div>
-            <button onClick={() => onSaveFacts(facts)} className="mt-2 text-[10px] px-3 py-1.5 rounded-lg bg-white border border-green-200 text-green-700">保存事实修改</button>
-          </div>
-          <div>
-            <h4 className="text-xs font-semibold text-gray-800 mb-2">接受或否定系统假设</h4>
-            <div className="space-y-2">
-              {blueprint.systemAssumptions.map((item) => (
-                <div key={item.id} className="rounded-xl bg-white border border-amber-100 p-3 flex items-start justify-between gap-3">
-                  <div><p className="text-xs font-medium text-gray-800">{item.title}</p><p className="text-[10px] text-gray-500 mt-1">{item.value}</p><p className="text-[9px] mt-1 text-amber-700">当前：{item.status}</p></div>
-                  <div className="flex gap-1 shrink-0">
-                    <button onClick={() => onAssumptionDecision(item.id, true)} className="text-[10px] px-2 py-1 rounded bg-green-50 text-green-700 border border-green-200">接受</button>
-                    <button onClick={() => onAssumptionDecision(item.id, false)} className="text-[10px] px-2 py-1 rounded bg-gray-50 text-gray-600 border border-gray-200">否定</button>
-                  </div>
-                </div>
-              ))}
-            </div>
-            {pendingAssumptions.length > 0 && <p className="text-[10px] text-amber-700 mt-2">仍有 {pendingAssumptions.length} 项未作人工决定；可保留为风险后继续确认。</p>}
-          </div>
+        <div className="rounded-xl border border-violet-100 bg-white p-4">
+          <p className="text-sm font-semibold text-[var(--lf-brand-950)]">请确认上方项目目标、核心约束与设计原则。</p>
+          <p className="mt-2 text-xs leading-6 text-[var(--lf-muted)]">待补充信息和合理假设会保留在蓝本中，不会被伪装为已确认事实。确认后将形成 v2，供后续五个 Agent 统一读取。</p>
         </div>
       )}
 
@@ -195,7 +162,7 @@ export default function CheckpointPanel({ blueprint, checkpoint, onConfirm, onUp
 
       {error && <p className="text-xs text-red-600 mt-3">{error}</p>}
       <div className="flex justify-end mt-4">
-        <button onClick={handleConfirm} className="btn-primary px-6 py-3 text-sm">{checkpoint.id === 'checkpoint-1' ? '确认项目定义并写入 Blueprint' : checkpoint.id === 'checkpoint-2' ? '确认方向并写入 Blueprint' : checkpoint.id === 'checkpoint-3' ? '确认空间方案并写入 Blueprint' : '确认最终成果并完成项目'}</button>
+        <button onClick={handleConfirm} className="btn-primary px-6 py-3 text-sm">{checkpoint.id === 'checkpoint-1' ? '确认设计方向并开始设计' : checkpoint.id === 'checkpoint-2' ? '确认方向并写入 Blueprint' : checkpoint.id === 'checkpoint-3' ? '确认空间方案并写入 Blueprint' : '确认最终成果并完成项目'}</button>
       </div>
     </div>
   );

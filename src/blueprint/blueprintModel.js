@@ -1,5 +1,23 @@
 export const BLUEPRINT_SCHEMA_VERSION = '2.0';
 
+export const BLUEPRINT_ITEM_STATUS = {
+  CONFIRMED: 'confirmed',
+  ASSUMPTION: 'assumption',
+  PENDING: 'pending',
+  CONFLICT: 'conflict',
+};
+
+export const BLUEPRINT_MILESTONES = {
+  DRAFT: 'v0',
+  PROJECT_DEFINED: 'v1',
+  DIRECTION_CONFIRMED: 'v2',
+  CONCEPTS_GENERATED: 'v3',
+  SCHEME_SELECTED: 'v4',
+  SPACE_DEVELOPED: 'v5',
+  VISUALS_PREPARED: 'v6',
+  DELIVERABLES_READY: 'v7',
+};
+
 export const CONTENT_STATUS = {
   CONFIRMED: '已确认',
   AI_SUGGESTED: 'AI建议',
@@ -30,13 +48,30 @@ const makeId = (prefix = 'item') => `${prefix}-${Date.now().toString(36)}-${Math
 
 export function createBlueprint(formData = {}, projectId = makeId('project')) {
   const createdAt = now();
+  const blueprintId = makeId('blueprint');
   return {
-    id: makeId('blueprint'),
+    id: blueprintId,
+    blueprintId,
     projectId,
     schemaVersion: BLUEPRINT_SCHEMA_VERSION,
+    revision: 0,
+    milestoneVersion: BLUEPRINT_MILESTONES.DRAFT,
+    stage: 'project-input',
+    status: 'draft',
+    updatedBy: 'designer',
     currentVersion: 0,
     createdAt,
     updatedAt: createdAt,
+    chapters: {
+      projectDefinition: null,
+      conceptGeneration: null,
+      schemeDecision: null,
+      spatialDevelopment: null,
+      visualExpression: null,
+      deliverables: null,
+    },
+    decisions: [],
+    agentExecutions: [],
     projectBasicInfo: {
       projectName: formData.projectName || '',
       city: formData.city || '',
@@ -158,7 +193,13 @@ export function getBlueprintStatusCounts(blueprint) {
   const walk = (value) => {
     if (!value || typeof value !== 'object' || visited.has(value)) return;
     visited.add(value);
-    if (value.status && counts[value.status] !== undefined) counts[value.status] += 1;
+    const normalizedStatus = {
+      confirmed: CONTENT_STATUS.CONFIRMED,
+      assumption: CONTENT_STATUS.ASSUMPTION,
+      pending: CONTENT_STATUS.PENDING,
+      conflict: CONTENT_STATUS.PENDING,
+    }[value.status] || value.status;
+    if (normalizedStatus && counts[normalizedStatus] !== undefined) counts[normalizedStatus] += 1;
     if (Array.isArray(value)) value.forEach(walk);
     else Object.entries(value).forEach(([key, child]) => {
       if (!['_meta', 'changeLog'].includes(key)) walk(child);

@@ -7,6 +7,7 @@ import VisualAssetFrame from './VisualAssetFrame';
 import ProjectDefinitionWizard from './ProjectDefinitionWizard';
 import { RoadshowAgentTrack, RoadshowBlueprintDraft, RoadshowStageRail } from './RoadshowFlow';
 import { AGENTS, CONTENT_STATUS } from '../blueprint/blueprintModel';
+import { selectCoreConstraints, selectProjectGoals, selectProjectInputForAgents } from '../blueprint/blueprintSelectors';
 
 const stepGoals = [
   '提取事实、来源、缺口、假设、约束与核心设计问题',
@@ -108,11 +109,6 @@ function Card({ title, children, accent = 'var(--lf-brand-600)', className = '' 
   return <div className={`surface-card p-4 ${className}`}><div className="flex items-center gap-2 mb-3"><span className="w-1 h-4 rounded" style={{ background: accent }} /><h3 className="text-sm font-semibold text-[var(--lf-text)]">{title}</h3></div>{children}</div>;
 }
 
-function StatusDot({ status }) {
-  const tone = status === CONTENT_STATUS.CONFIRMED ? 'green' : status === CONTENT_STATUS.ASSUMPTION ? 'amber' : status === CONTENT_STATUS.REJECTED ? 'gray' : status === CONTENT_STATUS.AI_SUGGESTED ? 'blue' : 'amber';
-  return <Badge tone={tone}>{status}</Badge>;
-}
-
 export default function AgentContent({
   blueprint,
   formData,
@@ -150,6 +146,7 @@ export default function AgentContent({
   onNavigate,
   onRegenerateConcepts,
   onNotice,
+  onOpenBlueprint,
 }) {
   const [modalImage, setModalImage] = useState(null);
   const agent = AGENTS[viewedStep];
@@ -213,8 +210,8 @@ export default function AgentContent({
                   onNotice={onNotice}
                 />
               )}
-              {presentationStage === 1 && <RoadshowBlueprintDraft blueprint={blueprint} />}
-              {presentationStage === 2 && <RoadshowAgentTrack states={presentationAgentStates} />}
+              {presentationStage === 1 && <RoadshowBlueprintDraft blueprint={blueprint} onOpenBlueprint={onOpenBlueprint} />}
+              {presentationStage === 2 && <RoadshowAgentTrack states={presentationAgentStates} blueprint={blueprint} />}
             </>
           ) : viewedStep === 0 && (showProjectWizard ? (
             <ProjectDefinitionWizard
@@ -232,7 +229,7 @@ export default function AgentContent({
               onNotice={onNotice}
             />
           ) : run.status === 'working' ? null : (
-            <ProjectDefinition blueprint={blueprint} onSaveFacts={onSaveFacts} onAssumptionDecision={onAssumptionDecision} />
+            <ProjectDefinition blueprint={blueprint} onOpenBlueprint={onOpenBlueprint} />
           ))}
 
           {!presentationMode && viewedStep === 1 && <Concepts blueprint={blueprint} requirement={conceptRequirement} onRequirement={onConceptRequirement} onRun={() => onRunAgent(2)} onRegenerate={onRegenerateConcepts} onEnterComparison={() => { onNavigate(2); if (!blueprint.comparison) onRunAgent(3); }} />}
@@ -274,40 +271,17 @@ function ProjectMaterialPreview({ project, blueprintVersion, className = '' }) {
   );
 }
 
-function ProjectDefinition({ blueprint, onSaveFacts, onAssumptionDecision }) {
-  const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState([]);
-  useEffect(() => setDraft(blueprint.confirmedFacts.map((item) => ({ ...item }))), [blueprint.confirmedFacts]);
-  return (
-    <div className="space-y-4">
-      <ProjectMaterialPreview project={blueprint.projectBasicInfo} blueprintVersion={blueprint.currentVersion} />
-      <Card title="Agent 1｜项目资料整理结果">
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
-          {[
-            ['项目基本情况', blueprint.confirmedFacts],
-            ['甲方显性需求', blueprint.explicitRequirements],
-            ['甲方潜在目标', blueprint.latentGoals],
-            ['场地资源与限制', blueprint.siteConditions],
-            ['核心设计问题', blueprint.coreDesignQuestions],
-            ['资料缺失清单', blueprint.unconfirmedInfo],
-            ['合理假设', blueprint.systemAssumptions],
-            ['后续成果要求', blueprint.deliverableRequirements],
-          ].map(([title, items]) => <div key={title} className="rounded-xl border border-violet-100 bg-[var(--lf-brand-50)] p-3"><p className="text-sm font-bold text-[var(--lf-brand-900)]">{title}</p><p className="mt-2 text-xs leading-5 text-[var(--lf-muted)]">{items?.slice(0, 3).map((item) => item.label || item.title || item.value).filter(Boolean).join('；') || '等待补充'}</p></div>)}
-        </div>
-      </Card>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Card title="关键项目事实"><div className="space-y-2">{blueprint.confirmedFacts.map((fact) => <div key={fact.id} className="flex items-start justify-between gap-3 border-b border-gray-100 pb-2"><div><p className="text-[10px] text-gray-400">{fact.label}</p><p className="text-xs text-gray-700 mt-0.5">{fact.value}</p></div><StatusDot status={fact.status} /></div>)}</div><button onClick={() => setEditing(!editing)} className="mt-3 text-[10px] px-3 py-1.5 rounded-lg border border-amber-200 text-amber-700">{editing ? '收起编辑' : '修改上游事实'}</button></Card>
-        <Card title="未确认信息与来源" accent="#D6A84F"><div className="space-y-2">{blueprint.unconfirmedInfo.map((item) => <div key={item.id}><p className="text-xs text-gray-700">{item.label}</p><p className="text-[10px] text-gray-500">{item.value}</p></div>)}</div><div className="mt-3 pt-3 border-t border-gray-100">{blueprint.informationSources.map((item) => <p key={item.id} className="text-[10px] text-gray-500">{item.name} · {item.detail}</p>)}</div></Card>
-      </div>
-      {editing && <Card title="编辑事实将使下游成果失效" accent="#DC2626"><div className="space-y-2">{draft.map((item, index) => <div key={item.id} className="grid grid-cols-[120px_1fr] gap-2"><input className="form-input !text-xs !py-2" value={item.label} onChange={(event) => setDraft((prev) => prev.map((value, i) => i === index ? { ...value, label: event.target.value } : value))} /><input className="form-input !text-xs !py-2" value={item.value} onChange={(event) => setDraft((prev) => prev.map((value, i) => i === index ? { ...value, value: event.target.value } : value))} /></div>)}</div><button onClick={() => { onSaveFacts(draft); setEditing(false); }} className="mt-3 px-4 py-2 rounded-lg bg-red-600 text-white text-xs">保存并标记下游需重新生成</button></Card>}
-      <Card title="系统假设｜必须由设计师接受或否定" accent="#D6A84F"><div className="grid grid-cols-1 md:grid-cols-2 gap-3">{blueprint.systemAssumptions.map((item) => <div key={item.id} className="rounded-xl border border-amber-100 bg-amber-50 p-3"><div className="flex items-start justify-between gap-2"><p className="text-xs font-medium text-gray-800">{item.title}</p><StatusDot status={item.status} /></div><p className="text-[10px] text-gray-600 mt-1">{item.value}</p><div className="flex gap-2 mt-2"><button onClick={() => onAssumptionDecision(item.id, true)} className="text-[10px] px-2 py-1 rounded bg-white border border-green-200 text-green-700">接受</button><button onClick={() => onAssumptionDecision(item.id, false)} className="text-[10px] px-2 py-1 rounded bg-white border border-gray-200 text-gray-600">否定</button></div></div>)}</div></Card>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4"><Card title="设计约束"><ul className="space-y-2">{blueprint.designConstraints.map((item) => <li key={item.id} className="text-xs text-gray-700">• {item.value || item.title}</li>)}</ul></Card><Card title="核心设计问题"><ul className="space-y-2">{blueprint.coreDesignQuestions.map((item) => <li key={item.id} className="text-xs text-gray-700">• {item.value}</li>)}</ul></Card></div>
-    </div>
-  );
+function ProjectDefinition({ blueprint, onOpenBlueprint }) {
+  return <RoadshowBlueprintDraft blueprint={blueprint} onOpenBlueprint={onOpenBlueprint} />;
 }
 
 function Concepts({ blueprint, requirement, onRequirement, onRun, onRegenerate, onEnterComparison }) {
-  if (!blueprint.conceptCandidates.length) return <div className="space-y-4"><Card title="从 Blueprint 读取的核心条件"><div className="grid gap-3 md:grid-cols-3"><div><p className="text-xs font-semibold text-[var(--lf-brand-700)]">设计目标</p><p className="mt-1 text-sm text-[var(--lf-muted)]">{blueprint.projectBasicInfo.designGoals || '待确认'}</p></div><div><p className="text-xs font-semibold text-[var(--lf-brand-700)]">目标人群</p><p className="mt-1 text-sm text-[var(--lf-muted)]">{blueprint.projectBasicInfo.targetUsers || '待确认'}</p></div><div><p className="text-xs font-semibold text-[var(--lf-brand-700)]">核心约束</p><p className="mt-1 text-sm text-[var(--lf-muted)]">{blueprint.projectBasicInfo.constraints || '待确认'}</p></div></div></Card><Card title="本轮概念生成要求"><textarea value={requirement} onChange={(event) => onRequirement(event.target.value)} className="form-input min-h-[100px]" placeholder="可补充概念倾向、场景偏好或必须避免的表达。若改变项目目标，将重新生成全部方向。" /><div className="mt-3 flex justify-end"><button onClick={onRun} className="btn-primary px-6 py-3 text-sm">生成三个概念方向</button></div></Card></div>;
+  if (!blueprint.conceptCandidates.length) {
+    const project = selectProjectInputForAgents(blueprint);
+    const goals = selectProjectGoals(blueprint).map((item) => item.value).join('；');
+    const constraints = selectCoreConstraints(blueprint).map((item) => item.value).join('；');
+    return <div className="space-y-4"><Card title={`从 Blueprint ${blueprint.milestoneVersion || 'v2'} 读取的核心条件`}><div className="grid gap-3 md:grid-cols-3"><div><p className="text-xs font-semibold text-[var(--lf-brand-700)]">项目目标</p><p className="mt-1 text-sm text-[var(--lf-muted)]">{goals || '待确认'}</p></div><div><p className="text-xs font-semibold text-[var(--lf-brand-700)]">目标人群</p><p className="mt-1 text-sm text-[var(--lf-muted)]">{project.targetUsers || '待确认'}</p></div><div><p className="text-xs font-semibold text-[var(--lf-brand-700)]">核心约束</p><p className="mt-1 text-sm text-[var(--lf-muted)]">{constraints || '待确认'}</p></div></div></Card><Card title="本轮概念生成要求"><textarea value={requirement} onChange={(event) => onRequirement(event.target.value)} className="form-input min-h-[100px]" placeholder="可补充概念倾向、场景偏好或必须避免的表达。若改变项目目标，将重新生成全部方向。" /><div className="mt-3 flex justify-end"><button onClick={onRun} className="btn-primary px-6 py-3 text-sm">生成三个概念方向</button></div></Card></div>;
+  }
   const conceptTone = { A: 'var(--lf-brand-700)', B: '#7c3aed', C: 'var(--lf-cyan)' };
   const stale = blueprint.agentRuns?.[2]?.status === 'stale';
   return <div className="space-y-4"><div className="rounded-xl border border-cyan-100 bg-cyan-50 p-3"><p className="text-sm font-semibold text-cyan-900">三个方向均为候选，尚未形成最终概念</p><p className="mt-1 text-xs text-cyan-800">Agent 2 只负责生成；AI 推荐和设计师最终判断将在 Agent 3 完成。来源 Blueprint v{blueprint.agentRuns?.[2]?.blueprintVersionRead || blueprint.currentVersion}</p></div><div className="grid grid-cols-1 gap-4 xl:grid-cols-3">{blueprint.conceptCandidates.map((concept) => <motion.div key={concept.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="surface-card overflow-hidden p-0"><div className="h-1.5" style={{ background: conceptTone[concept.id] }} /><VisualAssetFrame asset={getConceptVisual(concept, blueprint, stale ? '已失效' : undefined)} className="m-3 mb-0" compact /><div className="p-4"><div className="flex items-center justify-between"><span className="w-9 h-9 rounded-xl text-white flex items-center justify-center font-bold" style={{ background: conceptTone[concept.id] }}>{concept.id}</span><Badge tone="amber">候选 · 尚未确认</Badge></div><h3 className="mt-3 text-lg font-serif font-bold text-[var(--lf-brand-950)]">{concept.name}</h3><p className="mt-2 text-sm text-slate-600 leading-relaxed">{concept.concept}</p><p className="mt-3 text-xs font-semibold text-[var(--lf-brand-700)]">关键词：{concept.sceneFeatures?.join(' · ')}</p><div className="mt-3"><p className="text-xs font-semibold text-[var(--lf-muted)]">空间策略</p><p className="mt-1 text-xs leading-5 text-slate-700">{concept.spatialStructure}</p></div><p className="mt-3 text-xs text-[var(--lf-brand-700)] bg-[var(--lf-brand-50)] rounded-lg p-2.5">适用价值：{concept.fit}</p></div></motion.div>)}</div><Card title="补充生成条件与下一步"><textarea value={requirement} onChange={(event) => onRequirement(event.target.value)} className="form-input min-h-[74px]" placeholder="补充条件会要求重新生成全部三个方向，不会静默追加到旧结果。" /><div className="mt-3 flex justify-end gap-2"><button onClick={onRegenerate} className="btn-secondary px-4 py-2 text-xs">重新生成三个方向</button><button onClick={onEnterComparison} className="btn-primary px-5 py-2 text-xs">进入方案比选</button></div></Card></div>;

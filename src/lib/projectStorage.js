@@ -50,10 +50,12 @@ export function listProjects() {
 
 function normalizeProject(project) {
   if (!project?.blueprint) return project;
-  const blueprint = project.blueprint;
+  const blueprint = migrateBlueprintToV2(project.blueprint);
   return {
     ...project,
+    formData: project.formData || blueprint.projectBasicInfo || {},
     runMode: project.runMode === 'demo' ? 'roadshow' : project.runMode,
+    versions: migrateVersionHistory(project.versions || []),
     blueprint: {
       ...blueprint,
       pptOutline: blueprint.pptOutline || blueprint.pptStructure || [],
@@ -78,3 +80,5 @@ export function clearProjects() {
   localStorage.removeItem(PROJECTS_KEY);
   localStorage.removeItem(ACTIVE_PROJECT_KEY);
 }
+import { migrateBlueprintToV2 } from '../blueprint/blueprintMigration.js';
+import { migrateVersionHistory } from '../blueprint/blueprintVersionService.js';

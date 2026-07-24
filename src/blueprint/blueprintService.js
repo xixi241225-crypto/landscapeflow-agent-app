@@ -1,11 +1,16 @@
 import {
   AGENTS,
+  BLUEPRINT_MILESTONES,
   CHECKPOINTS,
   CONTENT_STATUS,
   cloneBlueprint,
   makeMeta,
   newEntityId,
 } from './blueprintModel.js';
+import {
+  createBlueprintVersion as createVersionSnapshot,
+  restoreBlueprintVersion as restoreVersionSnapshot,
+} from './blueprintVersionService.js';
 
 const AGENT_FIELD_OWNERS = {
   1: ['projectBasicInfo', 'confirmedFacts', 'explicitRequirements', 'latentGoals', 'siteConditions', 'deliverableRequirements', 'informationSources', 'unconfirmedInfo', 'systemAssumptions', 'designConstraints', 'coreDesignQuestions', 'risks', 'nextTasks'],
@@ -17,6 +22,24 @@ const AGENT_FIELD_OWNERS = {
 };
 
 const APPEND_BY_AGENT_FIELDS = new Set(['risks', 'nextTasks', 'qualityReview']);
+
+const AGENT_CHAPTER = {
+  1: 'projectDefinition',
+  2: 'conceptGeneration',
+  3: 'schemeDecision',
+  4: 'spatialDevelopment',
+  5: 'visualExpression',
+  6: 'deliverables',
+};
+
+const AGENT_MILESTONE = {
+  1: BLUEPRINT_MILESTONES.PROJECT_DEFINED,
+  2: BLUEPRINT_MILESTONES.CONCEPTS_GENERATED,
+  3: BLUEPRINT_MILESTONES.SCHEME_SELECTED,
+  4: BLUEPRINT_MILESTONES.SPACE_DEVELOPED,
+  5: BLUEPRINT_MILESTONES.VISUALS_PREPARED,
+  6: BLUEPRINT_MILESTONES.DELIVERABLES_READY,
+};
 
 const FIELD_IMPACT = {
   projectBasicInfo: [2, 3, 4, 5, 6],
@@ -89,7 +112,8 @@ export function applyAgentPatch(blueprint, agentId, patch, reason = 'Agent 结�
   }
 
   const next = cloneBlueprint(blueprint);
-  const version = next.currentVersion + 1;
+  const version = (next.revision ?? next.currentVersion ?? 0) + 1;
+  const milestoneVersion = AGENT_MILESTONE[agent.id];
   const source = `Agent ${agent.id}｜${agent.name}`;
   fields.forEach((field) => {
     const stamped = stampValue(patch[field], source, reason, version, CONTENT_STATUS.AI_SUGGESTED);
@@ -100,15 +124,47 @@ export function applyAgentPatch(blueprint, agentId, patch, reason = 'Agent 结�
       next[field] = stamped;
     }
   });
+  const chapter = AGENT_CHAPTER[agent.id];
+  const chapterPatch = Object.fromEntries(fields
+    .filter((field) => !['risks', 'nextTasks', 'qualityReview'].includes(field))
+    .map((field) => [field, next[field]]));
+  next.chapters = {
+    ...(next.chapters || {}),
+    [chapter]: {
+      ...(next.chapters?.[chapter] || {}),
+      ...chapterPatch,
+    },
+  };
+  next.revision = version;
   next.currentVersion = version;
+  next.milestoneVersion = milestoneVersion;
+  next.stage = agent.id === 6 ? 'deliverables' : 'agent-collaboration';
+  next.status = agent.id === 6 ? 'review' : next.status;
+  next.updatedBy = `agent-${agent.id}`;
   next.updatedAt = now();
   next.agentRuns[agent.id] = {
     ...next.agentRuns[agent.id],
     status: 'done',
     lastRunAt: now(),
-    blueprintVersionRead: blueprint.currentVersion,
-    blueprintVersionWritten: version,
+    blueprintVersionRead: blueprint.milestoneVersion || `v${blueprint.currentVersion || 0}`,
+    blueprintVersionWritten: milestoneVersion,
   };
+  next.agentExecutions = [...(next.agentExecutions || []), {
+    id: newEntityId('execution'),
+    agentId: `agent-${agent.id}`,
+    agentName: agent.name,
+    startedAt: blueprint.updatedAt,
+    completedAt: next.updatedAt,
+    inputVersion: blueprint.milestoneVersion || `v${blueprint.currentVersion || 0}`,
+    outputVersion: milestoneVersion,
+    readSections: ['chapters.projectDefinition', ...Object.entries(AGENT_CHAPTER).filter(([id]) => Number(id) < agent.id).map(([, name]) => `chapters.${name}`)],
+    writtenSections: [`chapters.${chapter}`],
+    status: 'completed',
+    summary: `Agent ${agent.id} ${agent.name}已完成并写入${milestoneVersion}`,
+    warnings: [],
+    openItemCount: 0,
+    conflictCount: 0,
+  }];
   next.invalidatedOutputs = next.invalidatedOutputs.filter((item) => item.targetAgent !== agent.id);
   next.changeLog.unshift({
     id: newEntityId('change'),
@@ -117,6 +173,7 @@ export function applyAgentPatch(blueprint, agentId, patch, reason = 'Agent 结�
     reason,
     confirmationStatus: CONTENT_STATUS.AI_SUGGESTED,
     version,
+    milestoneVersion,
     fields,
   });
   const checkpoint = CHECKPOINTS.find((item) => item.afterAgent === agent.id);
@@ -162,10 +219,11 @@ export function invalidateDownstream(blueprint, changedFields, reason = '上游�
 export function applyDesignerPatch(blueprint, patch, reason = '设计师修改上游内容') {
   let next = cloneBlueprint(blueprint);
   const fields = Object.keys(patch || {});
-  const version = next.currentVersion + 1;
+  const version = (next.revision ?? next.currentVersion ?? 0) + 1;
   fields.forEach((field) => {
     next[field] = stampValue(patch[field], '设计师', reason, version, CONTENT_STATUS.CONFIRMED);
   });
+  next.revision = version;
   next.currentVersion = version;
   next.updatedAt = now();
   next.changeLog.unshift({
@@ -183,7 +241,7 @@ export function applyDesignerPatch(blueprint, patch, reason = '设计师修改�
 
 export function updateDesignerDecision(blueprint, decision, reason = '设计师确认概念方向') {
   let next = cloneBlueprint(blueprint);
-  const version = next.currentVersion + 1;
+  const version = (next.revision ?? next.currentVersion ?? 0) + 1;
   const mergedDecision = {
     ...next.designerDecision,
     ...decision,
@@ -194,6 +252,7 @@ export function updateDesignerDecision(blueprint, decision, reason = '设计师�
     status: confirmationStatus,
     _meta: makeMeta('设计师', reason, version, confirmationStatus),
   };
+  next.revision = version;
   next.currentVersion = version;
   next.updatedAt = now();
   next.changeLog.unshift({
@@ -211,13 +270,14 @@ export function updateDesignerDecision(blueprint, decision, reason = '设计师�
 
 export function updateAssumptionDecision(blueprint, assumptionId, accepted) {
   const next = cloneBlueprint(blueprint);
-  const version = next.currentVersion + 1;
+  const version = (next.revision ?? next.currentVersion ?? 0) + 1;
   next.systemAssumptions = next.systemAssumptions.map((item) => item.id === assumptionId ? {
     ...item,
     status: accepted ? CONTENT_STATUS.CONFIRMED : CONTENT_STATUS.REJECTED,
     designerDecision: accepted ? '接受' : '否定',
     _meta: makeMeta('设计师', accepted ? '接受系统假设' : '否定系统假设', version, accepted ? CONTENT_STATUS.CONFIRMED : CONTENT_STATUS.REJECTED),
   } : item);
+  next.revision = version;
   next.currentVersion = version;
   next.updatedAt = now();
   next.changeLog.unshift({
@@ -242,7 +302,8 @@ export function confirmCheckpoint(blueprint, checkpointId, decision = {}, confir
     throw new Error('仍有需重新生成的下游成果，无法完成最终确认');
   }
   const next = cloneBlueprint(blueprint);
-  const version = next.currentVersion + 1;
+  const version = (next.revision ?? next.currentVersion ?? 0) + 1;
+  next.revision = version;
   next.currentVersion = version;
   next.updatedAt = now();
   next.checkpoints = next.checkpoints.map((item) => item.id === checkpointId ? {
@@ -290,35 +351,12 @@ export function confirmCheckpoint(blueprint, checkpointId, decision = {}, confir
   return next;
 }
 
-export function createBlueprintVersion(blueprint, history = [], reason = '保存版本') {
-  const snapshot = {
-    id: newEntityId('version'),
-    version: blueprint.currentVersion,
-    createdAt: now(),
-    reason,
-    snapshot: cloneBlueprint(blueprint),
-  };
-  const filtered = history.filter((item) => item.version !== snapshot.version);
-  return [snapshot, ...filtered].slice(0, 30);
+export function createBlueprintVersion(blueprint, history = [], reason = '保存版本', metadata = {}) {
+  return createVersionSnapshot(blueprint, history, reason, metadata);
 }
 
 export function restoreBlueprintVersion(history, versionId, currentBlueprint) {
-  const version = history.find((item) => item.id === versionId || item.version === versionId);
-  if (!version) throw new Error('未找到要恢复的蓝本版本');
-  const restored = cloneBlueprint(version.snapshot);
-  restored.currentVersion = Math.max(currentBlueprint?.currentVersion || 0, restored.currentVersion) + 1;
-  restored.updatedAt = now();
-  restored.officialPackageStatus = restored.invalidatedOutputs.length ? '需重新生成' : restored.officialPackageStatus;
-  restored.changeLog.unshift({
-    id: newEntityId('change'),
-    sourceAgent: '设计师',
-    modifiedAt: now(),
-    reason: `恢复自 v${version.version}`,
-    confirmationStatus: CONTENT_STATUS.CONFIRMED,
-    version: restored.currentVersion,
-    fields: ['项目状态'],
-  });
-  return restored;
+  return restoreVersionSnapshot(history, versionId, currentBlueprint);
 }
 
 export function getNextRunnableAgent(blueprint) {

@@ -1,6 +1,12 @@
 import VisualAssetFrame from './VisualAssetFrame';
 import { CONTENT_STATUS, getBlueprintStatusCounts } from '../blueprint/blueprintModel';
-import { roadshowProject } from '../data/roadshowProject';
+import {
+  selectBlueprintProgress,
+  selectCoreConstraints,
+  selectDesignPrinciples,
+  selectProjectFacts,
+  selectProjectGoals,
+} from '../blueprint/blueprintSelectors';
 
 const conceptFallbacks = { A: './demo-images/aerial.jpg', B: './demo-images/awn.jpg', C: './demo-images/elderly.jpg' };
 
@@ -54,9 +60,14 @@ function runStatus(blueprint, id) {
   return '待写入';
 }
 
-export default function BlueprintPanel({ blueprint, versions, viewedStep, onOpenVersions, onInitiateModification, presentationMode = false, presentationStage = 0, presentationAgentStates = [] }) {
+export default function BlueprintPanel({ blueprint, versions, viewedStep, onOpenVersions, onOpenFullBlueprint, onInitiateModification, presentationMode = false, presentationStage = 0, presentationAgentStates = [] }) {
   const counts = getBlueprintStatusCounts(blueprint);
   const completed = Object.values(blueprint.agentRuns || {}).filter((item) => item.status === 'done').length;
+  const chapterProgress = selectBlueprintProgress(blueprint);
+  const goals = selectProjectGoals(blueprint);
+  const constraints = selectCoreConstraints(blueprint);
+  const principles = selectDesignPrinciples(blueprint);
+  const facts = selectProjectFacts(blueprint);
   const concept = blueprint.conceptCandidates?.find((item) => item.id === blueprint.designerDecision?.selectedConceptId);
   const plan = blueprint.spatialStructure?.planAsset || (blueprint.spatialStructure?.planImage ? {
     id: 'SP01', title: '当前空间总平面', assetType: '总平面图', url: blueprint.spatialStructure.planImage,
@@ -66,7 +77,6 @@ export default function BlueprintPanel({ blueprint, versions, viewedStep, onOpen
   const latest = blueprint.changeLog?.[0];
 
   if (presentationMode) {
-    const design = roadshowProject.designBlueprint;
     const presentationCompleted = presentationStage === 0
       ? 15
       : presentationStage === 1
@@ -82,10 +92,10 @@ export default function BlueprintPanel({ blueprint, versions, viewedStep, onOpen
               <p className="text-base font-bold text-[var(--lf-brand-950)]">项目设计蓝本</p>
               <p className="mt-0.5 text-xs text-[var(--lf-muted)]">六 Agent 的共同设计依据</p>
             </div>
-            <Pill tone="cyan">v{blueprint.currentVersion}</Pill>
+            <Pill tone="cyan">{blueprint.milestoneVersion || 'v0'} · r{blueprint.revision ?? blueprint.currentVersion}</Pill>
           </div>
           <div className="mt-4 flex items-center justify-between text-xs font-semibold">
-            <span className="text-[var(--lf-muted)]">当前完成度</span>
+            <span className="text-[var(--lf-muted)]">当前阶段：{blueprint.stage === 'project-definition' ? '项目定义' : blueprint.stage === 'agent-collaboration' ? 'Agent 协作' : blueprint.stage === 'deliverables' ? '成果输出' : '项目资料'}</span>
             <span className="text-[var(--lf-brand-700)]">{presentationCompleted}%</span>
           </div>
           <div className="mt-2 h-2 overflow-hidden rounded-full bg-violet-100">
@@ -95,9 +105,9 @@ export default function BlueprintPanel({ blueprint, versions, viewedStep, onOpen
 
         <div className="flex-1 overflow-y-auto p-4">
           {[
-            ['项目目标', design.goals],
-            ['核心约束', ['保留主要活动功能', '减少高维护水景和大面积石材铺装', '满足安全、无障碍和生态设计要求']],
-            ['设计策略', ['低维护植物形成空间主体', '减少大面积硬质铺装', '采用生态、再生或在地材料', '保留活动空间与景观识别性']],
+            ['项目目标', goals],
+            ['核心约束', constraints],
+            ['设计原则', principles],
           ].map(([title, items], index) => (
             <section key={title} className="mb-3 rounded-xl border border-violet-100 bg-white p-3">
               <div className="flex items-center gap-2">
@@ -105,17 +115,18 @@ export default function BlueprintPanel({ blueprint, versions, viewedStep, onOpen
                 <h3 className="text-sm font-bold text-[var(--lf-brand-950)]">{title}</h3>
               </div>
               <div className="mt-3 space-y-2">
-                {items.map((item) => <p key={item} className="text-xs leading-5 text-[var(--lf-muted)]">· {item}</p>)}
+                {items.length ? items.map((item) => <p key={item.id} className="text-xs leading-5 text-[var(--lf-muted)]">· {item.value}</p>) : <p className="text-xs text-slate-400">等待 Agent 1 写入</p>}
               </div>
             </section>
           ))}
           <details className="rounded-xl border border-violet-100 bg-violet-50/50 p-3">
-            <summary className="cursor-pointer text-xs font-semibold text-[var(--lf-brand-700)]">查看完整蓝本状态</summary>
-            <p className="mt-3 text-xs leading-5 text-[var(--lf-muted)]">{completed}/6 Agent 已写入 · {versions.length} 个版本记录 · {blueprint.invalidatedOutputs.length} 项需更新</p>
+            <summary className="cursor-pointer text-xs font-semibold text-[var(--lf-brand-700)]">六章完成度</summary>
+            <p className="mt-3 text-xs leading-5 text-[var(--lf-muted)]">{chapterProgress.completed}/6 章已写入 · {versions.length} 个正式版本 · {blueprint.invalidatedOutputs.length} 项需更新</p>
           </details>
         </div>
 
         <div className="grid grid-cols-2 gap-2 border-t border-violet-100 bg-white p-3">
+          <button onClick={onOpenFullBlueprint} className="btn-primary col-span-2 px-3 py-2 text-xs">查看完整蓝本</button>
           <button onClick={onOpenVersions} className="btn-secondary px-3 py-2 text-xs">版本记录（{versions.length}）</button>
           <button onClick={onInitiateModification} className="btn-gold px-3 py-2 text-xs">补充资料</button>
         </div>
@@ -131,7 +142,7 @@ export default function BlueprintPanel({ blueprint, versions, viewedStep, onOpen
             <p className="text-base font-bold text-[var(--lf-brand-950)]">项目设计蓝本</p>
             <p className="mt-0.5 text-xs text-[var(--lf-muted)]">项目唯一设计依据</p>
           </div>
-          <Pill tone="cyan">v{blueprint.currentVersion}</Pill>
+          <Pill tone="cyan">{blueprint.milestoneVersion || 'v0'} · r{blueprint.revision ?? blueprint.currentVersion}</Pill>
         </div>
         <p className="mt-3 text-xs text-[var(--lf-muted)]">最后更新：{new Date(blueprint.updatedAt).toLocaleString('zh-CN', { hour: '2-digit', minute: '2-digit' })}</p>
         <div className="mt-3 h-2 overflow-hidden rounded-full bg-violet-100">
@@ -156,9 +167,26 @@ export default function BlueprintPanel({ blueprint, versions, viewedStep, onOpen
           </div>
         )}
 
+        <div className="my-3 space-y-2">
+          {[
+            ['项目目标', goals],
+            ['核心约束', constraints],
+            ['设计原则', principles],
+          ].map(([title, items]) => (
+            <section key={title} className="rounded-xl border border-violet-100 bg-white p-3">
+              <h3 className="text-xs font-bold text-[var(--lf-brand-700)]">{title}</h3>
+              <div className="mt-2 space-y-1">
+                {items.slice(0, 3).map((item) => <p key={item.id} className="line-clamp-2 text-xs leading-5 text-[var(--lf-muted)]">· {item.value}</p>)}
+                {!items.length && <p className="text-xs text-slate-400">等待 Agent 1 写入</p>}
+              </div>
+            </section>
+          ))}
+          <p className="px-1 text-xs text-[var(--lf-muted)]">六章完成度：{chapterProgress.completed}/6 · 当前阶段：{blueprint.stage}</p>
+        </div>
+
         <BlueprintSection number="01" title="项目定义" status={runStatus(blueprint, 1)} open={viewedStep === 0}>
-          <MiniList items={blueprint.confirmedFacts} />
-          {blueprint.unconfirmedInfo?.length > 0 && <p className="mt-2 text-xs font-semibold text-amber-700">资料缺口 {blueprint.unconfirmedInfo.length} 项</p>}
+          <MiniList items={facts} />
+          {selectProjectFacts(blueprint).filter((item) => item.status === 'pending').length > 0 && <p className="mt-2 text-xs font-semibold text-amber-700">资料缺口待确认</p>}
         </BlueprintSection>
 
         <BlueprintSection number="02" title="候选概念" status={runStatus(blueprint, 2)} open={viewedStep === 1}>
@@ -203,6 +231,7 @@ export default function BlueprintPanel({ blueprint, versions, viewedStep, onOpen
       </div>
 
       <div className="grid grid-cols-2 gap-2 border-t border-violet-100 bg-white p-3">
+        <button onClick={onOpenFullBlueprint} className="btn-primary col-span-2 px-3 py-2 text-xs">查看完整蓝本</button>
         <button onClick={onOpenVersions} className="btn-secondary px-3 py-2 text-xs">版本记录（{versions.length}）</button>
         <button onClick={onInitiateModification} className="btn-gold px-3 py-2 text-xs">发起修改</button>
       </div>

@@ -1,5 +1,6 @@
 import { AgentProvider, assertProviderPatch } from './agentProvider.js';
 import { CONTENT_STATUS, getRecordValue } from '../blueprint/blueprintModel.js';
+import { selectProjectDefinitionDetails, selectProjectInputForAgents } from '../blueprint/blueprintSelectors.js';
 
 const northernPattern = /北京|河北|天津|山西|内蒙古|辽宁|吉林|黑龙江/;
 
@@ -18,7 +19,7 @@ function splitText(value, fallback = []) {
 }
 
 function getProject(blueprint) {
-  return blueprint.projectBasicInfo || {};
+  return selectProjectInputForAgents(blueprint);
 }
 
 function selectedConcept(blueprint) {
@@ -352,17 +353,18 @@ function visualPatch(blueprint) {
 
 function outputPatch(blueprint) {
   const project = getProject(blueprint);
+  const definition = selectProjectDefinitionDetails(blueprint);
   const concept = selectedConcept(blueprint);
-  const assumptionsPending = blueprint.systemAssumptions.filter((item) => item.status === CONTENT_STATUS.ASSUMPTION || item.status === CONTENT_STATUS.PENDING).length;
+  const assumptionsPending = [...definition.latentGoals, ...definition.openItems].filter((item) => ['assumption', 'pending', CONTENT_STATUS.ASSUMPTION, CONTENT_STATUS.PENDING].includes(item.status)).length;
   const strategy = blueprint.professionalStrategies || {};
   const zones = blueprint.functionalZones.map((item) => item.name).join('、');
   const nodes = blueprint.featureNodes.map((item) => item.name).join('、');
-  const sources = blueprint.informationSources.map((item) => item.name).join('、');
+  const sources = definition.sourceDocuments.map((item) => item.fileName).join('、');
   const pages = [
     ['01', '封面', `${compact(project.projectName, '景观概念方案')}｜${concept?.name || '概念方向待确认'}`, '项目主视觉全幅', ['projectBasicInfo.projectName', 'designerDecision.selectedConceptId']],
     ['02', '项目背景与设计任务', `${compact(project.city, '项目地点待确认')}｜${compact(project.area, '面积待确认')}｜${compact(project.projectType, '项目类型待确认')}；设计目标：${compact(project.designGoals, '待确认')}`, '区位图 + 任务关键词', ['projectBasicInfo', 'informationSources']],
-    ['03', '场地理解与核心问题', blueprint.coreDesignQuestions.map((item) => item.value).join('；'), '现状照片 + 问题分析图', ['confirmedFacts', 'coreDesignQuestions', 'unconfirmedInfo']],
-    ['04', '项目目标与设计约束', `${compact(project.designGoals, '目标待确认')}；核心约束：${blueprint.designConstraints.map((item) => item.value).join('、')}`, '目标与约束双栏信息图', ['projectBasicInfo.designGoals', 'designConstraints']],
+    ['03', '场地理解与核心问题', definition.coreQuestions.map((item) => item.value).join('；'), '现状照片 + 问题分析图', ['chapters.projectDefinition.siteConditions', 'chapters.projectDefinition.coreQuestions', 'chapters.projectDefinition.openItems']],
+    ['04', '项目目标与设计约束', `${compact(project.designGoals, '目标待确认')}；核心约束：${definition.constraints.map((item) => item.value).join('、')}`, '目标与约束双栏信息图', ['chapters.projectDefinition.explicitGoals', 'chapters.projectDefinition.constraints']],
     ['05', '核心设计概念', `${concept?.name || '待选择'}：${concept?.concept || '待生成'}；核心叙事：${blueprint.coreNarrative?.value || '待生成'}`, '概念主视觉 + 叙事关键词', ['conceptCandidates', 'coreNarrative']],
     ['06', '方案比选与设计师决策', `A/B/C 多维度比选；Agent 推荐 ${blueprint.agentRecommendation?.conceptId || '—'}；设计师选择 ${concept?.id || '—'}；融合要求：${blueprint.designerDecision.fusionRequirements || '无'}`, '比选表 + 设计师决策高亮', ['comparison', 'agentRecommendation', 'designerDecision']],
     ['07', '总体空间结构', blueprint.spatialStructure?.value || '待生成', '总平面 + 结构示意', ['spatialStructure', 'coreNarrative']],

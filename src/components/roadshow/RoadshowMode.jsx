@@ -2,10 +2,20 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ROADSHOW_IMAGE_URLS, ROADSHOW_STAGES, roadshowProject } from '../../data/roadshowProject';
+import { DEMO_CASE, DEMO_FILES } from '../../data/demoCase';
+import { createBlueprint } from '../../blueprint/blueprintModel';
+import { migrateBlueprintToV2 } from '../../blueprint/blueprintMigration';
+import { selectAgent1ExecutionSummary, selectCoreConstraints, selectDesignPrinciples, selectProjectGoals } from '../../blueprint/blueprintSelectors';
+import { confirmProjectDefinitionBlueprint, runProjectDefinitionAgent } from '../../agents/projectDefinitionAgent';
+import { loadActiveProject } from '../../lib/projectStorage';
 
 const STORAGE_KEY = 'landscapeflow_v2_roadshow_state';
 const AGENT_DURATION = 680;
 const defaultAgentStates = () => roadshowProject.agentExecution.map(() => '等待');
+const demoInput = () => ({ ...DEMO_CASE, siteFiles: DEMO_FILES });
+const demoDraftBlueprint = () => createBlueprint(demoInput(), 'P-SL-001');
+const demoConfirmedBlueprint = () => confirmProjectDefinitionBlueprint(runProjectDefinitionAgent(demoInput(), demoDraftBlueprint()).blueprint).blueprint;
+const activeOrDemoBlueprint = () => loadActiveProject()?.blueprint || demoConfirmedBlueprint();
 
 function getSavedState() {
   try {
@@ -20,6 +30,7 @@ function getSavedState() {
         : defaultAgentStates(),
       executionComplete: Boolean(saved.executionComplete),
       resultsTab: saved.resultsTab || 'ppt',
+      blueprint: migrateBlueprintToV2(saved.blueprint || demoDraftBlueprint()),
     };
   } catch {
     return null;
@@ -34,6 +45,7 @@ function initialState() {
     agentStates: defaultAgentStates(),
     executionComplete: false,
     resultsTab: 'ppt',
+    blueprint: demoDraftBlueprint(),
   };
 }
 
@@ -72,15 +84,15 @@ function RoadshowImage({ src, alt, fit = 'cover', className = '', placeholder = 
   return <img src={src} alt={alt} className={className} style={{ objectFit: fit }} onError={() => setFailed(true)} />;
 }
 
-function BlueprintStatusBar() {
+function BlueprintStatusBar({ blueprint }) {
   return (
     <div className="roadshow-blueprint-status">
       <span className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-500 text-white"><CheckIcon className="h-4 w-4" /></span>
-      <span className="font-bold text-[var(--lf-brand-950)]">项目设计蓝本 V1.0</span>
+      <span className="font-bold text-[var(--lf-brand-950)]">项目设计蓝本 {blueprint.milestoneVersion || 'v0'}</span>
       <span className="hidden h-4 w-px bg-violet-200 sm:block" />
       <span className="text-emerald-700">已由设计师确认</span>
       <span className="hidden h-4 w-px bg-violet-200 md:block" />
-      <span className="hidden text-[var(--lf-muted)] md:inline">4 项核心策略已同步至 6 个专业 Agent</span>
+      <span className="hidden text-[var(--lf-muted)] md:inline">项目目标、核心约束与设计原则已同步至 6 个专业 Agent</span>
     </div>
   );
 }
@@ -216,12 +228,11 @@ function ProjectOverviewPage({ generating, onGenerate }) {
   );
 }
 
-function BlueprintPage({ confirmed, onConfirm }) {
-  const blueprint = roadshowProject.designBlueprint;
+function BlueprintPage({ blueprint, confirmed, onConfirm }) {
   const groups = [
-    { number: '01', title: '项目目标', tone: 'violet', items: blueprint.goals },
-    { number: '02', title: '核心约束', tone: 'gold', items: blueprint.constraints },
-    { number: '03', title: '设计策略', tone: 'cyan', items: blueprint.strategies },
+    { number: '01', title: '项目目标', tone: 'violet', items: selectProjectGoals(blueprint) },
+    { number: '02', title: '核心约束', tone: 'gold', items: selectCoreConstraints(blueprint) },
+    { number: '03', title: '设计原则', tone: 'cyan', items: selectDesignPrinciples(blueprint) },
   ];
   return (
     <section className="roadshow-content roadshow-page-scroll">
@@ -229,7 +240,7 @@ function BlueprintPage({ confirmed, onConfirm }) {
         <div className="roadshow-title-row">
           <div>
             <p className="roadshow-eyebrow">景观设计总监智能体 · 专业判断</p>
-            <h1>项目设计蓝本 V1.0</h1>
+            <h1>项目设计蓝本 {blueprint.milestoneVersion || 'v1'}</h1>
             <p>将零散业主要求转化为六个专业 Agent 共同执行的唯一设计依据。</p>
           </div>
           <div className="roadshow-metric"><strong>12 → 1</strong><span>份资料 · 一份蓝本</span></div>
@@ -243,15 +254,10 @@ function BlueprintPage({ confirmed, onConfirm }) {
                 <h2>{group.title}</h2>
               </div>
               <ul>
-                {group.items.map((item) => <li key={item}><CheckIcon className="mt-0.5 h-4 w-4 shrink-0" /><span>{item}</span></li>)}
+                {group.items.map((item) => <li key={item.id}><CheckIcon className="mt-0.5 h-4 w-4 shrink-0" /><span>{item.value}</span></li>)}
               </ul>
             </article>
           ))}
-        </div>
-
-        <div className="roadshow-principle">
-          <span className="text-sm font-extrabold tracking-[0.18em] text-amber-700">DESIGN PRINCIPLE</span>
-          <blockquote>“{blueprint.principle}”</blockquote>
         </div>
 
         <div className="mt-6 text-center">
@@ -274,7 +280,7 @@ function BlueprintPage({ confirmed, onConfirm }) {
   );
 }
 
-function ExecutionPage({ agentStates, running, complete, onStart, onResults }) {
+function ExecutionPage({ agentStates, running, complete, onStart, onResults, blueprint }) {
   const currentIndex = agentStates.findIndex((status) => status === '执行中');
   const completedCount = agentStates.filter((status) => status === '已完成').length;
   return (
@@ -306,7 +312,7 @@ function ExecutionPage({ agentStates, running, complete, onStart, onResults }) {
                   </span>
                 </div>
                 <h2>{agent.name}</h2>
-                <p>{status === '已完成' ? agent.result : status === '执行中' ? '正在读取 Blueprint V1.0 并执行专业任务…' : '等待景观设计总监智能体调度'}</p>
+                <p>{status === '已完成' ? (agent.id === 1 ? selectAgent1ExecutionSummary(blueprint) : agent.result) : status === '执行中' ? `正在读取 Blueprint ${blueprint.milestoneVersion || 'v2'} 并执行专业任务…` : '等待景观设计总监智能体调度'}</p>
                 {status === '执行中' && <div className="mt-5 flex gap-1.5"><i /><i /><i /></div>}
               </motion.article>
             );
@@ -504,6 +510,7 @@ export default function RoadshowMode() {
     agentStates: Array(6).fill('已完成'),
     executionComplete: true,
     resultsTab: 'ppt',
+    blueprint: activeOrDemoBlueprint(),
   } : initialState()).current;
   const [stage, setStage] = useState(initial.stage);
   const [projectLoaded, setProjectLoaded] = useState(initial.projectLoaded);
@@ -511,6 +518,7 @@ export default function RoadshowMode() {
   const [agentStates, setAgentStates] = useState(initial.agentStates);
   const [executionComplete, setExecutionComplete] = useState(initial.executionComplete);
   const [resultsTab, setResultsTab] = useState(initial.resultsTab);
+  const [blueprint, setBlueprint] = useState(initial.blueprint);
   const [loading, setLoading] = useState(false);
   const [loadingStep, setLoadingStep] = useState(0);
   const [generatingBlueprint, setGeneratingBlueprint] = useState(false);
@@ -518,7 +526,7 @@ export default function RoadshowMode() {
   const [notice, setNotice] = useState('');
   const operationToken = useRef(0);
 
-  const persistentState = useMemo(() => ({ stage, projectLoaded, blueprintConfirmed, agentStates, executionComplete, resultsTab }), [agentStates, blueprintConfirmed, executionComplete, projectLoaded, resultsTab, stage]);
+  const persistentState = useMemo(() => ({ stage, projectLoaded, blueprintConfirmed, agentStates, executionComplete, resultsTab, blueprint }), [agentStates, blueprint, blueprintConfirmed, executionComplete, projectLoaded, resultsTab, stage]);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(persistentState));
@@ -544,6 +552,7 @@ export default function RoadshowMode() {
     setLoading(false);
     setGeneratingBlueprint(false);
     setRunningAgents(false);
+    setBlueprint(demoDraftBlueprint());
     setAgentStates((states) => states.map((status) => status === '执行中' ? '等待' : status));
     setStage(nextStage);
     if (nextStage === 'results') setResultsTab('ppt');
@@ -587,16 +596,18 @@ export default function RoadshowMode() {
     setGeneratingBlueprint(true);
     await delay(850);
     if (operationToken.current !== token) return;
+    setBlueprint(runProjectDefinitionAgent(demoInput(), blueprint).blueprint);
     setGeneratingBlueprint(false);
     setStage('blueprintPending');
-  }, [generatingBlueprint]);
+  }, [blueprint, generatingBlueprint]);
 
   const confirmBlueprint = useCallback(async () => {
     if (blueprintConfirmed) return;
     const token = operationToken.current + 1;
     operationToken.current = token;
+    setBlueprint((current) => confirmProjectDefinitionBlueprint(current).blueprint);
     setBlueprintConfirmed(true);
-    setNotice('设计方向已确认并写入项目设计蓝本 V1.0。');
+    setNotice('项目设计蓝本 v2 已确认，六个专业 Agent 将以该版本为统一设计基线。');
     await delay(1050);
     if (operationToken.current === token) setStage('agentExecuting');
   }, [blueprintConfirmed]);
@@ -673,15 +684,15 @@ export default function RoadshowMode() {
   return (
     <div className="roadshow-shell">
       <RoadshowHeader stage={stage} blueprintConfirmed={blueprintConfirmed} compactResults={directResults} onHome={() => navigate('/')} />
-      {blueprintConfirmed && ['agentExecuting', 'results'].includes(stage) && <BlueprintStatusBar />}
+      {blueprintConfirmed && ['agentExecuting', 'results'].includes(stage) && <BlueprintStatusBar blueprint={blueprint} />}
       {notice && <div className="roadshow-notice">{notice}</div>}
 
       <AnimatePresence mode="wait">
         <motion.main key={stage} initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -8 }} transition={{ duration: 0.22 }} className="min-h-0 flex-1">
           {stage === 'ready' && <ProjectLoadPage loading={loading} loadingStep={loadingStep} onLoad={loadProject} />}
           {stage === 'projectOverview' && <ProjectOverviewPage generating={generatingBlueprint} onGenerate={generateBlueprint} />}
-          {stage === 'blueprintPending' && <BlueprintPage confirmed={blueprintConfirmed} onConfirm={confirmBlueprint} />}
-          {stage === 'agentExecuting' && <ExecutionPage agentStates={agentStates} running={runningAgents} complete={executionComplete} onStart={executeAgents} onResults={() => goToStage('results')} />}
+          {stage === 'blueprintPending' && <BlueprintPage blueprint={blueprint} confirmed={blueprintConfirmed} onConfirm={confirmBlueprint} />}
+          {stage === 'agentExecuting' && <ExecutionPage blueprint={blueprint} agentStates={agentStates} running={runningAgents} complete={executionComplete} onStart={executeAgents} onResults={() => goToStage('results')} />}
           {stage === 'results' && <ResultsPage activeTab={resultsTab} onTabChange={setResultsTab} onDownload={handlePptDownload} />}
         </motion.main>
       </AnimatePresence>
