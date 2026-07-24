@@ -1,0 +1,31 @@
+{
+  "name": "landscapeflow-agent-app",
+  "homepage": "https://xixi241225-crypto.github.io/landscapeflow-agent-app/",
+  "private": true,
+  "version": "2.0.0",
+  "description": "LandscapeFlow AI｜景观方案设计总监智能体 — 1名设计总监、6个专业Agent与1份项目设计蓝本",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "predeploy": "npm run build",
+    "deploy": "gh-pages -d dist"
+  },
+  "dependencies": {
+    "framer-motion": "^11.0.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-router-dom": "^6.20.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "@vitejs/plugin-react": "^4.2.0",
+    "autoprefixer": "^10.4.17",
+    "gh-pages": "^6.3.0",
+    "postcss": "^8.4.33",
+    "tailwindcss": "^3.4.1",
+    "vite": "^5.0.0"
+  }
+}

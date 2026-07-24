@@ -1,0 +1,173 @@
+export const ROADSHOW_STAGES = [
+  { id: 'ready', index: 1, label: '载入项目', shortLabel: '项目载入' },
+  { id: 'projectOverview', index: 2, label: '项目资料总览', shortLabel: '资料总览' },
+  { id: 'blueprintPending', index: 3, label: '项目设计蓝本', shortLabel: '设计蓝本' },
+  { id: 'agentExecuting', index: 4, label: '设计执行轨迹', shortLabel: 'Agent 协作' },
+  { id: 'results', index: 5, label: '完整成果中心', shortLabel: '成果中心' },
+];
+
+const demoImage = (fileName) => `./demo-images/${fileName}`;
+
+export const roadshowProject = {
+  projectInfo: {
+    name: '松林社区公园更新设计',
+    meta: '社区公共空间｜约 2.8 公顷｜方案设计阶段',
+    task: '面向儿童、老人及社区居民，营造自然生态、低维护、可持续的社区公共空间。',
+    documentCount: 12,
+    privacyNote: '共 12 份项目资料，已完成脱敏处理',
+  },
+  loadingSteps: [
+    '读取项目任务书',
+    '识别场地资料',
+    '提取设计目标',
+    '整理参考偏好',
+  ],
+  inputDocuments: [
+    {
+      id: 'brief',
+      title: '项目任务书',
+      count: 3,
+      files: ['社区公园更新设计任务书.pdf', '成果深度要求.docx', '汇报节点计划.xlsx'],
+      preview: demoImage('entrance.jpg'),
+      result: '已识别建设目标、服务人群、核心功能及成果要求。',
+    },
+    {
+      id: 'site',
+      title: '场地基础资料',
+      count: 3,
+      files: ['场地红线及现状总平.dwg', '现状植被调查.pdf', '周边社区关系图.jpg'],
+      preview: demoImage('plan.jpg'),
+      result: '已识别场地红线、主要出入口、现状植被及周边社区关系。',
+    },
+    {
+      id: 'requirements',
+      title: '设计目标与约束',
+      count: 3,
+      files: ['社区访谈纪要.docx', '造价控制要求.pdf', '运营维护意见.xlsx'],
+      preview: demoImage('children.jpg'),
+      result: '已识别生态体验、造价控制、低维护及全年龄使用要求。',
+    },
+    {
+      id: 'references',
+      title: '参考案例与风格偏好',
+      count: 3,
+      files: ['自然社区公园案例集.pdf', '材料与色彩意向.jpg', '甲方风格偏好.pptx'],
+      preview: demoImage('planting.jpg'),
+      result: '推荐自然生态、邻里共享、轻介入和低维护设计方向。',
+    },
+  ],
+  designBlueprint: {
+    version: '1.0',
+    goals: [
+      '满足儿童、老人和社区居民日常活动',
+      '营造自然生态的公共空间体验',
+      '控制造价与后期维护成本',
+    ],
+    constraints: [
+      '保留主要活动功能',
+      '控制硬质铺装比例',
+      '避免高维护水景和复杂构筑物',
+      '兼顾安全、无障碍和全年使用',
+    ],
+    strategies: [
+      '以低维护植物景观形成空间主体',
+      '通过林下活动和环形慢行组织社区生活',
+      '减少大面积石材铺装',
+      '优先采用生态、再生或在地材料',
+      '将造价集中投入核心活动区和入口识别空间',
+    ],
+    principle: '控制造价，不是简单减少景观内容，而是通过专业设计重新分配资源。',
+  },
+  agentExecution: [
+    { id: 1, name: '项目定义', result: '已将真实项目资料整理为项目设计蓝本' },
+    { id: 2, name: '概念生成', result: '已形成符合目标与约束的核心概念方向' },
+    { id: 3, name: '方案选择', result: '已根据设计策略确定推荐方向' },
+    { id: 4, name: '空间推演', result: '已完成总平面、功能分区与空间策略' },
+    { id: 5, name: '视觉表达', result: '已完成视觉任务书与代表性效果图' },
+    { id: 6, name: '成果输出', result: '已生成完整方案文案与可编辑汇报 PPT' },
+  ],
+  deliverables: {
+    summary: [
+      ['1 份', '项目定义'],
+      ['1 套', '概念方案'],
+      ['1 张', '总平面'],
+      ['3 张', '分析图'],
+      ['2 张', '代表性效果图'],
+      ['1 套', '18 页 PPT 内容'],
+    ],
+    projectDefinition: {
+      positioning: '面向全龄社区居民的自然生态型邻里共享公园',
+      concept: '林下邻里客厅',
+      statement: '以保留松林为生态骨架，用一条环形慢行路径串联儿童探索、长者康养与邻里共享活动。',
+      strategies: [
+        '林下共享：保留大树，以林荫空间承载高频社区生活',
+        '一环串联：无障碍慢行环连接三类核心人群活动',
+        '轻介入低维护：减少复杂构筑物，强化耐候植物与在地材料',
+      ],
+      image: demoImage('aerial.jpg'),
+    },
+    masterplan: {
+      title: '松林社区公园更新设计｜总平面方案',
+      image: demoImage('plan.jpg'),
+      structure: '一环、三核、五类活动空间',
+    },
+    analysisDiagrams: [
+      { id: 'A01', title: '功能分区分析', subtitle: '儿童探索、长者康养、邻里共享三核联动', image: '', type: '功能分区图' },
+      { id: 'A02', title: '慢行动线分析', subtitle: '无障碍环线串联入口、活动核与林下节点', image: '', type: '慢行动线图' },
+      { id: 'A03', title: '空间结构分析', subtitle: '松林生态基底与五类活动空间协同组织', image: '', type: '空间结构图' },
+    ],
+    renderings: [
+      { id: 'R01', title: '林下邻里客厅', subtitle: '保留乔木下的共享休憩与社区交往', image: demoImage('elderly.jpg') },
+      { id: 'R02', title: '儿童自然探索场', subtitle: '自然材料、可看护边界与低干预游戏体验', image: demoImage('children.jpg') },
+    ],
+    plantStrategy: {
+      title: '低维护植物策略',
+      description: '保留乡土乔木，补充耐阴地被与四季稳定的观赏草，减少高耗养草花和大面积精细草坪。',
+      image: demoImage('planting.jpg'),
+    },
+    materialStrategy: {
+      title: '生态与在地材料策略',
+      description: '优先使用透水铺装、再生木、耐候钢与本地石材，将精细材料集中于入口和核心活动界面。',
+      image: demoImage('awn.jpg'),
+    },
+    editablePpt: {
+      fileName: '松林社区公园景观方案汇报.pptx',
+      format: '.pptx',
+      pageCount: 18,
+      editable: true,
+      fileUrl: '',
+      status: '内容与缩略图已生成，PPTX 文件待接入',
+      replacementPath: 'public/roadshow-assets/松林社区公园景观方案汇报.pptx',
+      slides: [
+        { number: 1, title: '封面', kicker: '松林社区公园更新设计', image: demoImage('aerial.jpg'), visual: '鸟瞰效果图' },
+        { number: 2, title: '项目背景', kicker: '社区公共空间更新与全龄共享需求', image: demoImage('entrance.jpg'), visual: '项目区位与入口现状' },
+        { number: 3, title: '场地认知', kicker: '松林基底、社区界面与现状问题', image: demoImage('plan.jpg'), visual: '场地问题分析' },
+        { number: 4, title: '项目目标', kicker: '生态体验、造价控制、低维护、全年龄', image: '', visual: '目标矩阵' },
+        { number: 5, title: '设计概念', kicker: '林下邻里客厅', image: demoImage('elderly.jpg'), visual: '概念场景图' },
+        { number: 6, title: '设计策略', kicker: '林下共享 · 一环串联 · 轻介入低维护', image: demoImage('planting.jpg'), visual: '策略图解' },
+        { number: 7, title: '总平面', kicker: '一环、三核、五类活动空间', image: demoImage('plan.jpg'), visual: '总平面方案' },
+        { number: 8, title: '功能分区', kicker: '三类人群与复合活动分区', image: '', visual: '功能分区分析图' },
+        { number: 9, title: '空间结构', kicker: '生态基底与活动核心协同', image: '', visual: '空间结构分析图' },
+        { number: 10, title: '慢行动线', kicker: '连续、无障碍、可停留的环形慢行', image: '', visual: '慢行动线分析图' },
+        { number: 11, title: '儿童活动区', kicker: '自然探索与安全看护', image: demoImage('children.jpg'), visual: '儿童活动效果图' },
+        { number: 12, title: '老年活动区', kicker: '林下康养与邻里交往', image: demoImage('elderly.jpg'), visual: '长者活动效果图' },
+        { number: 13, title: '邻里共享空间', kicker: '日常休憩与社区活动复合承载', image: demoImage('night.jpg'), visual: '邻里共享场景' },
+        { number: 14, title: '植物策略', kicker: '乡土、耐阴、四季稳定、低维护', image: demoImage('planting.jpg'), visual: '植物群落意向' },
+        { number: 15, title: '材料策略', kicker: '透水、再生、在地、耐久', image: demoImage('awn.jpg'), visual: '材料组合意向' },
+        { number: 16, title: '代表性效果图一', kicker: '林下邻里客厅', image: demoImage('aerial.jpg'), visual: '核心场景效果图' },
+        { number: 17, title: '代表性效果图二', kicker: '全龄共享活动场', image: demoImage('entrance.jpg'), visual: '入口与活动场效果图' },
+        { number: 18, title: '结语', kicker: '让自然成为社区日常生活的底色', image: demoImage('night.jpg'), visual: '项目价值与下一步' },
+      ],
+    },
+  },
+};
+
+export const ROADSHOW_IMAGE_URLS = Array.from(new Set([
+  ...roadshowProject.inputDocuments.map((item) => item.preview),
+  roadshowProject.deliverables.projectDefinition.image,
+  roadshowProject.deliverables.masterplan.image,
+  ...roadshowProject.deliverables.renderings.map((item) => item.image),
+  roadshowProject.deliverables.plantStrategy.image,
+  roadshowProject.deliverables.materialStrategy.image,
+  ...roadshowProject.deliverables.editablePpt.slides.map((item) => item.image),
+].filter(Boolean)));
