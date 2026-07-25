@@ -17,7 +17,7 @@ const AGENT_FIELD_OWNERS = {
   2: [],
   3: ['comparison', 'agentRecommendation', 'risks', 'nextTasks'],
   4: ['coreNarrative', 'spatialStructure', 'functionalZones', 'circulationStrategy', 'professionalStrategies', 'featureNodes', 'risks', 'nextTasks'],
-  5: ['visualTasks', 'visualAssets', 'qualityReview', 'risks', 'nextTasks'],
+  5: ['visualTasks', 'analysisAssets', 'visualCandidates', 'visualReview', 'visualAssets', 'qualityReview', 'risks', 'nextTasks'],
   6: ['schemeNarrative', 'pptOutline', 'pptStructure', 'qualityReview', 'outputArtifacts', 'risks', 'nextTasks'],
 };
 
@@ -61,6 +61,10 @@ const FIELD_IMPACT = {
   professionalStrategies: [5, 6],
   featureNodes: [5, 6],
   visualTasks: [6],
+  analysisAssets: [6],
+  visualCandidates: [6],
+  selectedVisuals: [6],
+  visualReview: [6],
   visualAssets: [6],
 };
 
@@ -149,7 +153,7 @@ export function applyAgentPatch(blueprint, agentId, patch, reason = 'Agent 结�
     blueprintVersionRead: blueprint.milestoneVersion || `v${blueprint.currentVersion || 0}`,
     blueprintVersionWritten: milestoneVersion,
   };
-  next.agentExecutions = [...(next.agentExecutions || []), {
+  const execution = {
     id: newEntityId('execution'),
     agentId: `agent-${agent.id}`,
     agentName: agent.name,
@@ -164,7 +168,16 @@ export function applyAgentPatch(blueprint, agentId, patch, reason = 'Agent 结�
     warnings: [],
     openItemCount: 0,
     conflictCount: 0,
-  }];
+    ...(agent.id === 5 ? {
+      executionType: 'visual-candidate-generation',
+      traceId: `visual-agent5-r${version}`,
+      visualTaskIds: (next.visualTasks || []).map((item) => item.id),
+      analysisAssetIds: (next.analysisAssets || []).map((item) => item.id),
+      candidateIds: (next.visualCandidates || []).map((item) => item.id),
+      sourceBlueprintFields: [...new Set((next.visualTasks || []).flatMap((item) => item.sourceBlueprintFields || []))],
+    } : {}),
+  };
+  next.agentExecutions = [...(next.agentExecutions || []), execution];
   next.invalidatedOutputs = next.invalidatedOutputs.filter((item) => item.targetAgent !== agent.id);
   next.changeLog.unshift({
     id: newEntityId('change'),
@@ -207,6 +220,29 @@ export function invalidateDownstream(blueprint, changedFields, reason = '上游�
     }
     if (next.agentRuns[agentId]) next.agentRuns[agentId].status = 'stale';
   });
+  if (impactedAgents.includes(5)) {
+    next.visualReview = {
+      ...(next.visualReview || {}),
+      status: 'stale',
+      staleAt: now(),
+      staleReason: reason,
+      changedFields,
+    };
+    next.selectedVisuals = (next.selectedVisuals || []).map((selection) => ({
+      ...selection,
+      selectionStatus: 'stale',
+      staleAt: now(),
+      staleReason: reason,
+    }));
+    next.chapters = {
+      ...(next.chapters || {}),
+      visualExpression: next.chapters?.visualExpression ? {
+        ...next.chapters.visualExpression,
+        visualReview: next.visualReview,
+        selectedVisuals: next.selectedVisuals,
+      } : next.chapters?.visualExpression,
+    };
+  }
   if (impactedAgents.length) {
     next.checkpoints = next.checkpoints.map((checkpoint) => impactedAgents.some((agentId) => agentId <= checkpoint.afterAgent)
       ? { ...checkpoint, status: '需重新确认', confirmedAt: null, confirmedBy: null }
@@ -310,7 +346,27 @@ export function confirmCheckpoint(blueprint, checkpointId, decision = {}, confir
       throw new Error('请先完成设计说明书全部分项复核');
     }
   }
-  if (checkpointId === 'checkpoint-4' && blueprint.invalidatedOutputs.length) {
+  if (checkpointId === 'checkpoint-4') {
+    const visualSelection = decision.visualSelection;
+    if (blueprint.agentRuns?.[5]?.status !== 'done') {
+      throw new Error('视觉表达尚未完成，无法进行视觉方案挑选');
+    }
+    if (blueprint.invalidatedOutputs?.some((item) => item.targetAgent === 5)) {
+      throw new Error('视觉候选已因上游修改失效，请重新运行视觉表达');
+    }
+    if (!visualSelection?.candidateId || !visualSelection?.scene) {
+      throw new Error('请先选择一个视觉候选');
+    }
+    const candidate = (blueprint.visualCandidates || []).find((item) => (
+      item.id === visualSelection.candidateId && item.scene === visualSelection.scene
+    ));
+    if (!candidate) throw new Error('所选视觉候选不属于当前 Blueprint');
+    if (candidate.isFactSource !== false) throw new Error('视觉候选必须明确标记为非事实源');
+    if (!Array.isArray(visualSelection.reasons) || !visualSelection.reasons.length) {
+      throw new Error('请至少选择一项视觉判断理由');
+    }
+  }
+  if (checkpointId === 'checkpoint-5' && blueprint.invalidatedOutputs.length) {
     throw new Error('仍有需重新生成的下游成果，无法完成最终确认');
   }
   const next = cloneBlueprint(blueprint);
@@ -318,6 +374,76 @@ export function confirmCheckpoint(blueprint, checkpointId, decision = {}, confir
   next.revision = version;
   next.currentVersion = version;
   next.updatedAt = now();
+  if (checkpointId === 'checkpoint-4') {
+    const visualSelection = decision.visualSelection;
+    const candidate = next.visualCandidates.find((item) => item.id === visualSelection.candidateId);
+    const previous = (next.selectedVisuals || []).find((item) => item.scene === visualSelection.scene) || null;
+    const traceId = newEntityId('visual-trace');
+    const selection = {
+      id: newEntityId('visual-selection'),
+      traceId,
+      scene: visualSelection.scene,
+      visualTaskId: visualSelection.visualTaskId || candidate.visualTaskId,
+      candidateId: candidate.id,
+      visualAssetId: candidate.assetRef || candidate.id,
+      candidateName: candidate.name,
+      reasons: [...visualSelection.reasons],
+      comment: String(visualSelection.comment || '').trim(),
+      sourceBlueprintFields: [...new Set([
+        ...(candidate.sourceBlueprintFields || []),
+        ...(visualSelection.sourceBlueprintFields || []),
+      ])],
+      selectedAt: now(),
+      selectedBy: confirmedBy,
+      selectionStatus: 'confirmed',
+      isFactSource: false,
+    };
+    next.selectedVisuals = [
+      ...(next.selectedVisuals || []).filter((item) => item.scene !== selection.scene),
+      selection,
+    ];
+    next.visualReview = {
+      ...(next.visualReview || {}),
+      status: 'confirmed',
+      checkpointId: 'checkpoint-4',
+      confirmedAt: selection.selectedAt,
+      confirmedBy,
+      sourceBlueprintRevision: blueprint.revision ?? blueprint.currentVersion,
+      selectedScenes: next.selectedVisuals.map((item) => item.scene),
+    };
+    next.chapters = {
+      ...(next.chapters || {}),
+      visualExpression: {
+        ...(next.chapters?.visualExpression || {}),
+        selectedVisuals: next.selectedVisuals,
+        visualReview: next.visualReview,
+      },
+    };
+    next.changeLog.unshift({
+      id: newEntityId('change'),
+      traceId,
+      type: 'visual-selection-review',
+      actor: confirmedBy,
+      sourceAgent: confirmedBy,
+      action: 'confirmed',
+      modifiedAt: selection.selectedAt,
+      reason: '设计师确认 Gate 4 视觉候选',
+      confirmationStatus: CONTENT_STATUS.CONFIRMED,
+      version,
+      fields: ['selectedVisuals', 'visualReview', 'checkpoints'],
+      scene: selection.scene,
+      candidate: {
+        id: candidate.id,
+        name: candidate.name,
+        assetRef: candidate.assetRef,
+      },
+      reasons: selection.reasons,
+      comment: selection.comment,
+      before: previous,
+      after: selection,
+      relatedBlueprintFields: selection.sourceBlueprintFields,
+    });
+  }
   next.checkpoints = next.checkpoints.map((item) => item.id === checkpointId ? {
     ...item,
     status: '已确认',
@@ -335,7 +461,7 @@ export function confirmCheckpoint(blueprint, checkpointId, decision = {}, confir
       next[field] = (next[field] || []).map((item) => ({ ...item, status: CONTENT_STATUS.CONFIRMED, _meta: makeMeta(confirmedBy, '确认项目定义', version, CONTENT_STATUS.CONFIRMED) }));
     });
   }
-  if (checkpointId === 'checkpoint-4') next.officialPackageStatus = '演示方案已完成｜正式成果可继续深化';
+  if (checkpointId === 'checkpoint-5') next.officialPackageStatus = '演示方案已完成｜正式成果可继续深化';
   next.changeLog.unshift({
     id: newEntityId('change'),
     sourceAgent: confirmedBy,
@@ -368,5 +494,6 @@ export function canRunAgent(blueprint, agentId) {
   if (agentId >= 3 && !blueprint.chapters?.conceptGeneration?.conceptCandidates?.length) return false;
   if (agentId >= 4 && blueprint.checkpoints.find((item) => item.id === 'checkpoint-2')?.status !== '已确认') return false;
   if (agentId >= 5 && blueprint.checkpoints.find((item) => item.id === 'checkpoint-3')?.status !== '已确认') return false;
+  if (agentId >= 6 && blueprint.checkpoints.find((item) => item.id === 'checkpoint-4')?.status !== '已确认') return false;
   return true;
 }

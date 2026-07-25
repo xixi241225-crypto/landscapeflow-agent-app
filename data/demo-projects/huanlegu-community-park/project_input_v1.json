@@ -6,6 +6,7 @@
     "projectId": "beijing-happy-valley-community-park",
     "displayName": "北京市欢乐谷社区公园景观设计",
     "sourceCaseId": "L2-001",
+    "demoAssetBinding": "huanlegu-community-park-demo-v1",
     "excludedL2CaseIds": [
       "L2-001"
     ],

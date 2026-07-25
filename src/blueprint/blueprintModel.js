@@ -34,19 +34,20 @@ export const CONTENT_STATUS = {
 };
 
 export const AGENTS = [
-  { id: 1, name: '项目定义', checkpointId: 'checkpoint-1' },
+  { id: 1, name: '前期分析', checkpointId: 'checkpoint-1' },
   { id: 2, name: '概念生成' },
-  { id: 3, name: '方案选择', checkpointId: 'checkpoint-2' },
+  { id: 3, name: '方案比选', checkpointId: 'checkpoint-2' },
   { id: 4, name: '空间推演', checkpointId: 'checkpoint-3' },
-  { id: 5, name: '视觉表达' },
-  { id: 6, name: '成果输出', checkpointId: 'checkpoint-4' },
+  { id: 5, name: '视觉表达', checkpointId: 'checkpoint-4' },
+  { id: 6, name: '成果输出', checkpointId: 'checkpoint-5' },
 ];
 
 export const CHECKPOINTS = [
   { id: 'checkpoint-1', order: 1, afterAgent: 1, name: '项目理解确认', description: '确认项目事实、目标、约束、缺口、假设和核心问题。' },
   { id: 'checkpoint-2', order: 2, afterAgent: 3, name: '方案方向决策', description: '由设计师选择方案方向，并记录融合要求和修改意见。' },
   { id: 'checkpoint-3', order: 3, afterAgent: 4, name: '设计说明书分项确认', description: '设计师逐项复核 Design Statement（含六项专业策略），通过或提出专业修改意见。' },
-  { id: 'checkpoint-4', order: 4, afterAgent: 6, name: '最终成果确认', description: '复核图文、数据、假设、视觉偏离和成果完整性。' },
+  { id: 'checkpoint-4', order: 4, afterAgent: 5, name: '视觉方案挑选', description: '设计师比较视觉候选，选择采用方向并记录专业判断理由。' },
+  { id: 'checkpoint-5', order: 5, afterAgent: 6, name: '成果交付复核', description: '复核图文、数据、假设、视觉偏离和成果完整性。' },
 ];
 
 const now = () => new Date().toISOString();
@@ -147,6 +148,16 @@ export function createBlueprint(formData = {}, projectId = makeId('project')) {
     },
     featureNodes: [],
     visualTasks: [],
+    analysisAssets: [],
+    visualCandidates: [],
+    selectedVisuals: [],
+    visualReview: {
+      status: 'notStarted',
+      checkpointId: 'checkpoint-4',
+      confirmedAt: null,
+      confirmedBy: null,
+      sourceBlueprintRevision: null,
+    },
     visualAssets: [],
     schemeNarrative: null,
     pptOutline: [],

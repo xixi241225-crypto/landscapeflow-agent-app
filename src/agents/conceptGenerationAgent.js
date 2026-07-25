@@ -463,7 +463,7 @@ function downstreamInvalidation(next, reason) {
         }
       : checkpoint
   ));
-  if (['checkpoint-2', 'checkpoint-3', 'checkpoint-4'].includes(next.currentCheckpoint)) {
+  if (['checkpoint-2', 'checkpoint-3', 'checkpoint-4', 'checkpoint-5'].includes(next.currentCheckpoint)) {
     next.currentCheckpoint = null;
   }
 }

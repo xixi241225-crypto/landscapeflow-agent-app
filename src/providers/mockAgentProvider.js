@@ -6,6 +6,7 @@ import {
   selectProjectDefinitionDetails,
   selectProjectInputForAgents,
 } from '../blueprint/blueprintSelectors.js';
+import { demoAssetVisualProvider } from './demoAssetVisualProvider.js';
 
 function parseArea(area) {
   const parsed = Number(String(area || '').replace(/[^0-9.]/g, ''));
@@ -386,69 +387,7 @@ function scopedAgent4Patch(blueprint, context) {
 }
 
 function visualPatch(blueprint) {
-  const concept = selectedConcept(blueprint);
-  const project = getProject(blueprint);
-  const structure = blueprint.spatialStructure?.title || getRecordValue(blueprint.spatialStructure, '空间结构待确认');
-  const definition = selectProjectDefinitionDetails(blueprint);
-  const confirmedUsers = definition.stakeholders
-    .filter((item) => ['confirmed', CONTENT_STATUS.CONFIRMED].includes(item.status))
-    .map((item) => compact(item.value || item.label, ''))
-    .filter(Boolean);
-  const people = confirmedUsers.length
-    ? confirmedUsers.join('、')
-    : '适量项目使用者，具体人群结构待确认';
-  const keyScenes = concept?.keyScenes?.length ? concept.keyScenes : ['核心公共场景', '安静休憩场景', '自然体验场景'];
-  const sceneTitles = Array.from({ length: 3 }, (_, index) => keyScenes[index] || ['核心公共场景', '安静休憩场景', '自然体验场景'][index]);
-  const blueprintVersion = blueprint.currentVersion + 1;
-  const tasks = [
-    ['V01', '鸟瞰总览', '45°鸟瞰', './demo-images/aerial.jpg'],
-    ['V02', '到达与公共界面', '1.6m 人视', './demo-images/entrance.jpg'],
-    ['V03', sceneTitles[0], '1.6m 人视', './demo-images/awn.jpg'],
-    ['V04', sceneTitles[1], '1.6m 人视', './demo-images/children.jpg'],
-    ['V05', sceneTitles[2], '1.6m 人视', './demo-images/elderly.jpg'],
-    ['V06', '夜景氛围', '蓝调时刻', './demo-images/night.jpg'],
-    ['V07', '植物与环境策略', '分析图', './demo-images/planting.jpg'],
-    ['V08', '空间策略总平', '正投影', './demo-images/plan.jpg'],
-  ];
-  return {
-    visualTasks: tasks.map(([id, title, angle], index) => ({
-      id,
-      title,
-      angle,
-      season: index === 5 ? '夏季' : '春末至初夏',
-      time: index === 5 ? '蓝调时刻' : index === 0 ? '上午' : '午后',
-      light: index === 5 ? '场景照明与自然余晖协调，具体照度待专项确认' : '以清晰空间层次为原则，具体光照条件待场地复核',
-      people,
-      activity: title.includes('到达') ? '到达、停留与导视识别' : `围绕“${title}”表达日常使用，具体活动内容待需求确认`,
-      plant: blueprint.professionalStrategies?.plant || '遵循适地适树原则，具体植物条件待调查确认',
-      material: blueprint.professionalStrategies?.material || '遵循耐久、防滑和易维护原则，具体材料待样板确认',
-      atmosphere: '专业、克制、可实施，并符合当前项目与概念气质',
-      mustInclude: `${concept?.name || '已确认概念'}的核心空间特征、真实尺度关系与主要使用人群`,
-      avoid: '禁止脱离总平面的夸张构筑物、过度商业化设施、错误植物季相与不合理高差',
-      prompt: `${compact(project.projectName, '景观项目')}，概念“${concept?.name}”，空间结构“${structure}”，${title}，体现${compact(project.stylePreference, '自然、专业、可实施')}，人物与材料服从蓝本。`,
-      status: CONTENT_STATUS.AI_SUGGESTED,
-    })),
-    visualAssets: tasks.map(([id, title, angle, url]) => ({
-      id,
-      title,
-      assetType: angle === '分析图' ? '植物策略分析图' : angle === '正投影' ? '空间策略总平面' : '景观效果图',
-      angle,
-      url,
-      aspectRatio: angle === '正投影' ? '3:4' : angle === '分析图' ? '4:3' : '16:9',
-      objectFit: ['分析图', '正投影'].includes(angle) ? 'contain' : 'cover',
-      sourceAgent: 'Agent 5｜视觉表达',
-      blueprintVersion,
-      isDemoAsset: true,
-      label: '演示案例视觉成果',
-      status: '演示案例',
-    })),
-    qualityReview: [
-      { check: '视觉—概念一致性', result: '演示视觉的场景气质与概念方向一致，正式深化时再按任务书逐张复核。', level: 'pass' },
-      { check: '视觉—空间一致性', result: '视觉任务已关联空间结构与特色节点。', level: 'pass' },
-    ],
-    risks: [{ title: '视觉深化边界', value: '当前图片为演示案例成果，正式项目需依据视觉任务书进行定向生产。', status: CONTENT_STATUS.PENDING }],
-    nextTasks: [{ title: '视觉深化', value: '在正式成果阶段按 V01-V08 逐项生产、选图与复核。', status: CONTENT_STATUS.PENDING }],
-  };
+  return demoAssetVisualProvider.createPatch(blueprint);
 }
 
 function outputPatch(blueprint) {

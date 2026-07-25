@@ -6,7 +6,6 @@ export default function BottomControlBar({
   runMode,
   viewedStep,
   currentStep,
-  visualWorkflowStep,
   outputWorkflowStep,
   onRunNext,
   onPause,
@@ -27,7 +26,9 @@ export default function BottomControlBar({
   if (presentationMode) {
     const completeCount = presentationAgentStates.filter((status) => status === '已完成').length;
     const activeCheckpoint = blueprint.checkpoints?.find((checkpoint) => checkpoint.id === blueprint.currentCheckpoint);
-    const waitingForDesigner = ['checkpoint-2', 'checkpoint-3'].includes(activeCheckpoint?.id);
+    const waitingForDesigner = ['checkpoint-2', 'checkpoint-3', 'checkpoint-4'].includes(activeCheckpoint?.id);
+    const agent6Ready = blueprint.checkpoints?.find((checkpoint) => checkpoint.id === 'checkpoint-4')?.status === '已确认'
+      && blueprint.agentRuns?.[6]?.status === 'pending';
     return (
       <div className="absolute bottom-0 left-0 right-0 z-30 border-t border-[var(--lf-border)] bg-white/95 px-5 py-3 backdrop-blur-md">
         <div className="mx-auto flex max-w-[980px] items-center justify-between gap-4">
@@ -50,7 +51,7 @@ export default function BottomControlBar({
               <div className="min-w-0 flex-1">
                 <div className="flex items-center justify-between text-sm">
                   <span className={completeCount === 6 ? 'font-semibold text-emerald-700' : 'font-semibold text-[var(--lf-brand-700)]'}>
-                    {completeCount === 6 ? '六个专业 Agent 已全部完成' : waitingForDesigner ? `等待设计师：${activeCheckpoint.name}` : '正在生成完整方案……'}
+                    {completeCount === 6 ? '六个专业 Agent 已全部完成' : waitingForDesigner ? `等待设计师：${activeCheckpoint.name}` : agent6Ready ? 'Gate 4 已确认｜Agent 6 成果输出为下一可运行步骤' : '正在生成完整方案……'}
                   </span>
                   <span className="text-[var(--lf-muted)]">{completeCount} / 6</span>
                 </div>
@@ -75,9 +76,7 @@ export default function BottomControlBar({
       ? '当前阶段尚未执行'
       : viewedRun?.status === 'stale'
         ? '当前成果需要重新生成'
-        : viewedStep === 4 && visualWorkflowStep < 3
-          ? '请先确认任务书并生成视觉成果'
-          : viewedStep === 5 && outputWorkflowStep < 4
+        : viewedStep === 5 && outputWorkflowStep < 4
             ? '请先完成方案文案与 PPT 预览'
             : checkpointForViewed && checkpointForViewed.status !== '已确认'
               ? `等待${checkpointForViewed.name}`

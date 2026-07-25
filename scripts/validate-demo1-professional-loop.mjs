@@ -251,10 +251,20 @@ assert.equal(canRunAgent(blueprint, 5), true);
 
 const agent5Patch = await mockAgentProvider.runAgent(5, blueprint, { delayMs: 0 });
 blueprint = applyAgentPatch(blueprint, 5, agent5Patch, 'Demo-1 Agent 5 验证');
-assert.ok(blueprint.visualTasks.every((task) => task.people === '适量项目使用者，具体人群结构待确认'));
+assert.ok(blueprint.visualTasks.every((task) => task.isFactSource === false));
+assert.ok(blueprint.visualCandidates.every((candidate) => candidate.isFactSource === false));
+assert.equal(blueprint.selectedVisuals.length, 0);
+const demo1Candidate = blueprint.visualCandidates[0];
+blueprint = confirmCheckpoint(blueprint, 'checkpoint-4', {
+  visualSelection: {
+    scene: demo1Candidate.scene,
+    visualTaskId: demo1Candidate.visualTaskId,
+    candidateId: demo1Candidate.id,
+    reasons: ['与总平空间关系更一致'],
+  },
+}, 'Demo-1 验证设计师');
 const agent6Patch = await mockAgentProvider.runAgent(6, blueprint, { delayMs: 0 });
 blueprint = applyAgentPatch(blueprint, 6, agent6Patch, 'Demo-1 Agent 6 验证');
-blueprint = confirmCheckpoint(blueprint, 'checkpoint-4', { source: 'Demo-1 Results' }, 'Demo-1 验证设计师');
 assert.equal(isRoadshowResultsReady(blueprint), true);
 
 // 28: a later Agent 4 source edit invalidates dependent Agent 5/6 outputs.
@@ -276,7 +286,7 @@ assert.equal(futureBlueprint.agentRuns[6].status, 'stale');
 assert.equal(futureBlueprint.currentCheckpoint, 'checkpoint-3');
 assert.equal(isRoadshowResultsReady(futureBlueprint), false);
 
-// 29—30: presentation orchestration may auto-confirm only the existing final checkpoint.
+// 29—30: presentation orchestration must stop at every human decision checkpoint.
 const workbenchSource = readFileSync(new URL('../src/components/Workbench.jsx', import.meta.url), 'utf8');
 const checkpointPanelSource = readFileSync(new URL('../src/components/CheckpointPanel.jsx', import.meta.url), 'utf8');
 const heroSource = readFileSync(new URL('../src/components/Hero.jsx', import.meta.url), 'utf8');
@@ -288,12 +298,13 @@ const runnerSource = workbenchSource.slice(
 assert.doesNotMatch(runnerSource, /updateDesignerDecision/);
 assert.doesNotMatch(runnerSource, /confirmCheckpoint\([^)]*['"]checkpoint-2['"]/s);
 assert.doesNotMatch(runnerSource, /confirmCheckpoint\([^)]*['"]checkpoint-3['"]/s);
-assert.match(runnerSource, /\['checkpoint-2', 'checkpoint-3'\]\.includes/);
+assert.doesNotMatch(runnerSource, /confirmCheckpoint\([^)]*['"]checkpoint-4['"]/s);
+assert.match(runnerSource, /\['checkpoint-2', 'checkpoint-3', 'checkpoint-4'\]\.includes/);
 assert.match(runnerSource, /getNextRunnableAgent\(blueprintRef\.current\)/);
 assert.match(runnerSource, /checkpoint-4/);
 assert.deepEqual(
-  blueprint.checkpoints.slice(0, 3).map((checkpoint) => checkpoint.name),
-  ['项目理解确认', '方案方向决策', '设计说明书分项确认'],
+  blueprint.checkpoints.slice(0, 4).map((checkpoint) => checkpoint.name),
+  ['项目理解确认', '方案方向决策', '设计说明书分项确认', '视觉方案挑选'],
 );
 assert.match(blueprint.checkpoints[2].description, /逐项复核 Design Statement.*专业修改意见/);
 assert.match(checkpointPanelSource, /DESIGNER CHECKPOINT · GATE/);

@@ -34,5 +34,5 @@ export async function runAgentStep(agentId, blueprint, options = {}) {
 }
 
 export async function runAgent() {
-  throw new Error('LandscapeFlow AI 2.0 已改为 Blueprint 驱动。请使用 runAgentStep()，并通过 confirmCheckpoint() 管理四个人工确认节点。');
+  throw new Error('LandscapeFlow AI 2.0 已改为 Blueprint 驱动。请使用 runAgentStep()，并通过 confirmCheckpoint() 管理五个人工确认节点。');
 }

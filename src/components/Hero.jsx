@@ -2,15 +2,15 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 
 const AGENTS = [
-  { id: '01', name: '项目定义', detail: '确认事实、需求、条件与资料缺口' },
+  { id: '01', name: '前期分析', detail: '确认事实、需求、条件与资料缺口' },
   { id: '02', name: '概念生成', detail: '生成差异化 A / B / C 概念方向' },
-  { id: '03', name: '方案选择', detail: '专业比选，辅助设计师最终决策' },
+  { id: '03', name: '方案比选', detail: '专业比选，辅助设计师最终决策' },
   { id: '04', name: '空间推演', detail: '深化空间结构与专业策略' },
-  { id: '05', name: '视觉表达', detail: '先确认任务书，再组织视觉成果' },
+  { id: '05', name: '视觉表达', detail: '组织分析成果、视觉候选与选择依据' },
   { id: '06', name: '成果输出', detail: '形成文案、图集与 12 页 PPT' },
 ];
 
-const CHECKPOINTS = ['项目理解确认', '方案方向决策', '设计说明书分项确认'];
+const CHECKPOINTS = ['项目理解确认', '方案方向决策', '设计说明书分项确认', '视觉方案挑选', '成果交付复核'];
 
 export default function Hero() {
   const navigate = useNavigate();

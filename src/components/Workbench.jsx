@@ -59,7 +59,6 @@ function newProjectState(presentationMode = false) {
     currentStep: -1,
     runState: 'idle',
     runMode: presentationMode ? 'roadshow' : 'professional',
-    visualWorkflowStep: 0,
     outputWorkflowStep: 0,
     conceptRequirement: '',
     projectInputStep: 0,
@@ -78,7 +77,6 @@ function getInitialState() {
     ...restored,
     runState: restored.runState === 'running' ? 'paused' : restored.runState,
     currentStep: restored.runState === 'running' ? Math.max(0, restored.currentStep || 0) : restored.currentStep,
-    visualWorkflowStep: restored.visualWorkflowStep ?? (restored.blueprint.visualAssets?.length ? 3 : restored.blueprint.visualTasks?.length ? 1 : 0),
     outputWorkflowStep: restored.outputWorkflowStep ?? (restored.blueprint.pptOutline?.length ? 4 : 0),
     conceptRequirement: restored.conceptRequirement || '',
     projectInputStep: restored.projectInputStep ?? (restored.blueprint.agentRuns?.[1]?.blueprintVersionWritten ? 2 : 0),
@@ -105,7 +103,6 @@ export default function Workbench() {
   const [runMode, setRunMode] = useState(initial.runMode || 'professional');
   const [historyOpen, setHistoryOpen] = useState(false);
   const [fullBlueprintOpen, setFullBlueprintOpen] = useState(false);
-  const [visualWorkflowStep, setVisualWorkflowStep] = useState(initial.visualWorkflowStep || 0);
   const [outputWorkflowStep, setOutputWorkflowStep] = useState(initial.outputWorkflowStep || 0);
   const [conceptRequirement, setConceptRequirement] = useState(initial.conceptRequirement || '');
   const [projectInputStep, setProjectInputStep] = useState(initial.projectInputStep || 0);
@@ -131,9 +128,9 @@ export default function Workbench() {
   useEffect(() => { blueprintRef.current = blueprint; }, [blueprint]);
 
   useEffect(() => {
-    const timer = setTimeout(() => saveProjectState({ projectId, formData, blueprint, versions, viewedStep, currentStep, runState, runMode, visualWorkflowStep, outputWorkflowStep, conceptRequirement, projectInputStep, presentationMode, presentationStage, presentationAgentStates, presentationComplete }), 160);
+    const timer = setTimeout(() => saveProjectState({ projectId, formData, blueprint, versions, viewedStep, currentStep, runState, runMode, outputWorkflowStep, conceptRequirement, projectInputStep, presentationMode, presentationStage, presentationAgentStates, presentationComplete }), 160);
     return () => clearTimeout(timer);
-  }, [projectId, formData, blueprint, versions, viewedStep, currentStep, runState, runMode, visualWorkflowStep, outputWorkflowStep, conceptRequirement, projectInputStep, presentationMode, presentationStage, presentationAgentStates, presentationComplete]);
+  }, [projectId, formData, blueprint, versions, viewedStep, currentStep, runState, runMode, outputWorkflowStep, conceptRequirement, projectInputStep, presentationMode, presentationStage, presentationAgentStates, presentationComplete]);
 
   useEffect(() => {
     if (!notice) return undefined;
@@ -284,7 +281,6 @@ export default function Workbench() {
       }
       const checkpoint = next.checkpoints.find((item) => item.afterAgent === agentId);
       commitBlueprint(next, `${mode === 'roadshow' ? '路演演示' : '专业协作'} · Agent ${agentId} 完成`, versionMetadata);
-      if (agentId === 5) setVisualWorkflowStep(1);
       if (agentId === 6) setOutputWorkflowStep(1);
 
       if (checkpoint) {
@@ -360,8 +356,13 @@ export default function Workbench() {
 
   const runPresentationUntilCheckpoint = useCallback(async () => {
     const waitingCheckpoint = blueprintRef.current.currentCheckpoint;
-    if (['checkpoint-2', 'checkpoint-3'].includes(waitingCheckpoint)) {
+    if (['checkpoint-2', 'checkpoint-3', 'checkpoint-4'].includes(waitingCheckpoint)) {
       setRunState('checkpoint');
+      return;
+    }
+    const gate4Confirmed = blueprintRef.current.checkpoints?.find((item) => item.id === 'checkpoint-4')?.status === '已确认';
+    if (gate4Confirmed && blueprintRef.current.agentRuns?.[6]?.status === 'pending') {
+      setRunState('ready');
       return;
     }
     if (presentationRunRef.current || presentationComplete) return;
@@ -390,16 +391,9 @@ export default function Workbench() {
       while (presentationTokenRef.current === token) {
         if (presentationTokenRef.current !== token) return;
         const activeCheckpoint = blueprintRef.current.currentCheckpoint;
-        if (['checkpoint-2', 'checkpoint-3'].includes(activeCheckpoint)) {
+        if (['checkpoint-2', 'checkpoint-3', 'checkpoint-4'].includes(activeCheckpoint)) {
           setRunState('checkpoint');
           return;
-        }
-        if (activeCheckpoint === 'checkpoint-4') {
-          const next = confirmCheckpoint(blueprintRef.current, 'checkpoint-4', { source: '预缓存成果复核' }, '路演预设决策');
-          commitBlueprint(next, '路演预设完成最终成果复核');
-          setOutputWorkflowStep(4);
-          setRunState('done');
-          continue;
         }
 
         const nextAgent = getNextRunnableAgent(blueprintRef.current);
@@ -415,14 +409,14 @@ export default function Workbench() {
         if (presentationTokenRef.current !== token) return;
         const completed = blueprintRef.current.agentRuns?.[nextAgent]?.status === 'done';
         setPresentationAgentStates((states) => states.map((status, itemIndex) => itemIndex === nextAgent - 1 ? (completed ? '已完成' : '等待') : status));
-        if (nextAgent === 5) setVisualWorkflowStep(3);
-
         const reachedCheckpoint = blueprintRef.current.currentCheckpoint;
-        if (['checkpoint-2', 'checkpoint-3'].includes(reachedCheckpoint)) {
+        if (['checkpoint-2', 'checkpoint-3', 'checkpoint-4'].includes(reachedCheckpoint)) {
           setRunState('checkpoint');
-          setNotice(reachedCheckpoint === 'checkpoint-2'
-            ? 'Agent 3 已完成方案比选，等待设计师主动选择方向。'
-            : 'Agent 4 已生成设计说明书，等待设计师逐项专业复核。');
+          setNotice({
+            'checkpoint-2': 'Agent 3 已完成方案比选，等待设计师主动选择方向。',
+            'checkpoint-3': 'Agent 4 已生成设计说明书，等待设计师逐项专业复核。',
+            'checkpoint-4': 'Agent 5 已生成视觉候选，等待设计师完成视觉方案挑选。',
+          }[reachedCheckpoint]);
           return;
         }
       }
@@ -439,7 +433,7 @@ export default function Workbench() {
   const handleOpenPresentationResults = useCallback(() => {
     saveProjectState({
       projectId, formData, blueprint: blueprintRef.current, versions, viewedStep, currentStep, runState: 'done', runMode: 'roadshow',
-      visualWorkflowStep: 3, outputWorkflowStep: 4, conceptRequirement, projectInputStep, presentationMode: true,
+      outputWorkflowStep: 4, conceptRequirement, projectInputStep, presentationMode: true,
       presentationStage: 2, presentationAgentStates: Array(6).fill('已完成'), presentationComplete: true,
     });
     navigate('/roadshow');
@@ -448,26 +442,17 @@ export default function Workbench() {
   const handleRunNext = useCallback(() => {
     const agentId = getNextRunnableAgent(blueprintRef.current);
     if (!agentId) { setRunState('done'); return; }
-    if (agentId === 6 && visualWorkflowStep < 3) {
-      setNotice('请先确认视觉任务书并完成视觉成果生成。');
-      setViewedStep(4);
-      return;
-    }
     if (runMode === 'roadshow') executeAgent(agentId, 'roadshow');
     else executeAgent(agentId, 'professional');
-  }, [executeAgent, runMode, visualWorkflowStep]);
+  }, [executeAgent, runMode]);
 
   const handleRunAgent = useCallback((agentId) => {
     if (blueprintRef.current.currentCheckpoint) {
       setNotice('请先完成当前设计师确认节点。');
       return;
     }
-    if (agentId === 6 && visualWorkflowStep < 3) {
-      setNotice('请先确认视觉任务书并生成视觉成果。');
-      return;
-    }
     executeAgent(agentId, runMode);
-  }, [executeAgent, runMode, visualWorkflowStep]);
+  }, [executeAgent, runMode]);
 
   const handlePause = useCallback(() => {
     pausedAgentRef.current = currentStep + 1;
@@ -507,7 +492,7 @@ export default function Workbench() {
     const fresh = newProjectState();
     setProjectId(fresh.projectId); setFormData(fresh.formData); setBlueprint(fresh.blueprint); blueprintRef.current = fresh.blueprint;
     setVersions(fresh.versions); setViewedStep(0); setCurrentStep(-1); setRunState('idle'); setRunMode('professional');
-    setVisualWorkflowStep(0); setOutputWorkflowStep(0); setConceptRequirement(''); setProjectInputStep(0); setProjectInputLoading(false); setProjectInputLoadingStep(0);
+    setOutputWorkflowStep(0); setConceptRequirement(''); setProjectInputStep(0); setProjectInputLoading(false); setProjectInputLoadingStep(0);
     setPresentationMode(false); setPresentationStage(0); setPresentationAgentStates(Array(6).fill('等待')); setPresentationComplete(false); setPresentationBusy(false); setDesignStatementBusySections([]);
     setNotice('已新建空白项目；上一项目仍保留在历史记录。');
   }, []);
@@ -519,7 +504,7 @@ export default function Workbench() {
     const fresh = newProjectState(true);
     setProjectId(fresh.projectId); setFormData(fresh.formData); setBlueprint(fresh.blueprint); blueprintRef.current = fresh.blueprint;
     setVersions(fresh.versions); setViewedStep(0); setCurrentStep(-1); setRunState('idle'); setRunMode('roadshow');
-    setVisualWorkflowStep(0); setOutputWorkflowStep(0); setConceptRequirement(''); setProjectInputStep(0); setProjectInputLoading(false); setProjectInputLoadingStep(0);
+    setOutputWorkflowStep(0); setConceptRequirement(''); setProjectInputStep(0); setProjectInputLoading(false); setProjectInputLoadingStep(0);
     setPresentationMode(true); setPresentationStage(0); setPresentationAgentStates(Array(6).fill('等待')); setPresentationComplete(false); setPresentationBusy(false); setDesignStatementBusySections([]);
     setNotice('已进入路演流程，请先载入或填写项目资料。');
   }, []);
@@ -531,7 +516,7 @@ export default function Workbench() {
     const next = { ...fresh.blueprint, projectBasicInfo: { ...fresh.blueprint.projectBasicInfo, ...demo } };
     setProjectId(fresh.projectId); setFormData(demo); setBlueprint(next); blueprintRef.current = next;
     setVersions(createBlueprintVersion(next, [], '重新开始路演演示')); setViewedStep(0); setCurrentStep(-1); setRunState('idle'); setRunMode('roadshow');
-    setVisualWorkflowStep(0); setOutputWorkflowStep(0); setConceptRequirement(''); setProjectInputStep(0);
+    setOutputWorkflowStep(0); setConceptRequirement(''); setProjectInputStep(0);
     setPresentationMode(true); setPresentationStage(0); setPresentationAgentStates(Array(6).fill('等待')); setPresentationComplete(false); setPresentationBusy(false); setDesignStatementBusySections([]);
     setNotice('路演案例与模拟资料已载入，请点击“开始整理项目资料”。');
   }, []);
@@ -602,17 +587,27 @@ export default function Workbench() {
       const changed = fields.some((field) => (source.designerDecision?.[field] || '') !== (payload.designerDecision[field] || ''));
       if (changed) source = updateDesignerDecision(source, payload.designerDecision, '设计师保存概念方向决策');
     }
-    const next = confirmCheckpoint(source, checkpointId, { source: '工作台人工确认' });
+    const next = confirmCheckpoint(source, checkpointId, {
+      source: '工作台人工确认',
+      ...(checkpointId === 'checkpoint-4' ? { visualSelection: payload.visualSelection } : {}),
+    });
     commitBlueprint(next, `设计师完成${next.checkpoints.find((item) => item.id === checkpointId)?.name}`);
-    if (checkpointId === 'checkpoint-4') setRunState('done');
+    if (checkpointId === 'checkpoint-5') setRunState('done');
     else if (presentationMode && ['checkpoint-2', 'checkpoint-3'].includes(checkpointId)) {
       setRunState('ready');
       setTimeout(runPresentationUntilCheckpoint, 360);
+    } else if (checkpointId === 'checkpoint-4') {
+      setRunState('ready');
+      setViewedStep(4);
     } else if (runMode === 'roadshow') {
       setRunState('ready');
       setTimeout(runRoadshowFlow, 360);
     } else setRunState('ready');
-    setNotice(checkpointId === 'checkpoint-4' ? '演示方案已完成｜正式成果可继续深化' : '设计师确认已写入项目设计蓝本。');
+    setNotice(checkpointId === 'checkpoint-4'
+      ? '视觉方案选择已写入 Blueprint；Agent 6 已成为下一可运行步骤，本轮不会自动执行。'
+      : checkpointId === 'checkpoint-5'
+        ? '演示方案已完成｜正式成果可继续深化'
+        : '设计师确认已写入项目设计蓝本。');
   }, [commitBlueprint, presentationMode, runMode, runPresentationUntilCheckpoint, runRoadshowFlow]);
 
   const handleUpdateDecision = useCallback((patch) => {
@@ -664,7 +659,6 @@ export default function Workbench() {
     setProjectId(record.projectId); setFormData(record.formData); setBlueprint(record.blueprint); blueprintRef.current = record.blueprint;
     setVersions(record.versions || []); setViewedStep(record.viewedStep || 0); setCurrentStep(record.currentStep ?? -1);
     setRunState(record.runState === 'running' ? 'paused' : record.runState || 'ready'); setRunMode(record.runMode || 'professional'); setHistoryOpen(false);
-    setVisualWorkflowStep(record.visualWorkflowStep ?? (record.blueprint.visualAssets?.length ? 3 : record.blueprint.visualTasks?.length ? 1 : 0));
     setOutputWorkflowStep(record.outputWorkflowStep ?? (record.blueprint.pptOutline?.length ? 4 : 0));
     setConceptRequirement(record.conceptRequirement || '');
     setProjectInputStep(record.projectInputStep ?? (record.blueprint.agentRuns?.[1]?.blueprintVersionWritten ? 2 : 0));
@@ -682,16 +676,6 @@ export default function Workbench() {
     if (blueprint.invalidatedOutputs.length && !window.confirm('当前存在需重新生成的下游成果。仍要导出带风险标记的 Markdown 吗？')) return;
     downloadBlueprintMarkdown(blueprint);
   }, [blueprint]);
-
-  const handleConfirmVisualBrief = useCallback(() => {
-    setVisualWorkflowStep(2);
-    setNotice('视觉任务书已由设计师确认，可生成对应视觉成果。');
-  }, []);
-
-  const handleGenerateVisuals = useCallback(() => {
-    setVisualWorkflowStep(3);
-    setNotice('视觉成果已按任务书组织完成，演示图片均保留来源与 Blueprint 版本。');
-  }, []);
 
   const handleAdvanceOutput = useCallback(() => {
     setOutputWorkflowStep((step) => Math.min(4, step + 1));
@@ -729,7 +713,7 @@ export default function Workbench() {
       && blueprint.agentRuns?.[1]?.status === 'pending'
       && !blueprint.agentRuns?.[1]?.blueprintVersionWritten;
   const currentProjectRecord = {
-    projectId, formData, blueprint, versions, viewedStep, currentStep, runState, runMode, visualWorkflowStep, outputWorkflowStep, conceptRequirement, projectInputStep,
+    projectId, formData, blueprint, versions, viewedStep, currentStep, runState, runMode, outputWorkflowStep, conceptRequirement, projectInputStep,
     presentationMode, presentationStage, presentationAgentStates, presentationComplete,
   };
 
@@ -768,7 +752,6 @@ export default function Workbench() {
             runState={runState}
             agentProgress={agentProgress}
             conceptRequirement={conceptRequirement}
-            visualWorkflowStep={visualWorkflowStep}
             outputWorkflowStep={outputWorkflowStep}
             projectInputStep={projectInputStep}
             projectInputLoading={projectInputLoading}
@@ -785,8 +768,6 @@ export default function Workbench() {
             onConfirmProjectMaterials={handleConfirmProjectMaterials}
             onRunAgent={handleRunAgent}
             onConceptRequirement={setConceptRequirement}
-            onConfirmVisualBrief={handleConfirmVisualBrief}
-            onGenerateVisuals={handleGenerateVisuals}
             onAdvanceOutput={handleAdvanceOutput}
             onConfirmCheckpoint={handleConfirmCheckpoint}
             onUpdateDecision={handleUpdateDecision}
@@ -809,7 +790,6 @@ export default function Workbench() {
             runMode={runMode}
             viewedStep={viewedStep}
             currentStep={currentStep}
-            visualWorkflowStep={visualWorkflowStep}
             outputWorkflowStep={outputWorkflowStep}
             presentationMode={presentationMode}
             presentationStage={presentationStage}

@@ -12,7 +12,11 @@ import {
   selectConceptCandidates,
   selectConceptGenerationInput,
   selectCoreConstraints,
+  selectAnalysisAssets,
   selectProjectGoals,
+  selectSelectedVisuals,
+  selectVisualCandidates,
+  selectVisualDecisionTrace,
 } from '../blueprint/blueprintSelectors';
 
 const stepGoals = [
@@ -125,7 +129,6 @@ export default function AgentContent({
   runState,
   agentProgress,
   conceptRequirement,
-  visualWorkflowStep,
   outputWorkflowStep,
   projectInputStep,
   projectInputLoading,
@@ -142,8 +145,6 @@ export default function AgentContent({
   onConfirmProjectMaterials,
   onRunAgent,
   onConceptRequirement,
-  onConfirmVisualBrief,
-  onGenerateVisuals,
   onAdvanceOutput,
   onConfirmCheckpoint,
   onUpdateDecision,
@@ -167,7 +168,7 @@ export default function AgentContent({
   const checkpoint = presentationMode
     ? activeCheckpoint
     : blueprint.checkpoints.find((item) => item.afterAgent === agent.id && item.id === blueprint.currentCheckpoint);
-  const visibleCheckpoint = checkpoint?.id === 'checkpoint-4' && outputWorkflowStep < 4 ? null : checkpoint;
+  const visibleCheckpoint = checkpoint;
   const isIdle = runState === 'idle' && !Object.values(blueprint.agentRuns).some((item) => item.status === 'done');
   const showProjectWizard = presentationMode
     ? presentationStage === 0
@@ -256,6 +257,25 @@ export default function AgentContent({
                     onApproveRemainingDesignStatementSections={onApproveRemainingDesignStatementSections}
                     designStatementBusySections={designStatementBusySections}
                   />
+                ) : activeCheckpoint?.id === 'checkpoint-4' ? (
+                  <div className="space-y-4">
+                    <VisualResults blueprint={blueprint} onOpenImage={setModalImage} />
+                    <CheckpointPanel
+                      blueprint={blueprint}
+                      checkpoint={activeCheckpoint}
+                      onConfirm={onConfirmCheckpoint}
+                      onAssumptionDecision={onAssumptionDecision}
+                      onSaveFacts={onSaveFacts}
+                      onRegenerate={onRegenerateConcepts}
+                      onReviewDesignStatementSection={onReviewDesignStatementSection}
+                      onRegenerateDesignStatementSection={onRegenerateDesignStatementSection}
+                      onApproveRemainingDesignStatementSections={onApproveRemainingDesignStatementSections}
+                      designStatementBusySections={designStatementBusySections}
+                    />
+                  </div>
+                ) : blueprint.checkpoints?.find((checkpoint) => checkpoint.id === 'checkpoint-4')?.status === '已确认'
+                  && blueprint.agentRuns?.[6]?.status === 'pending' ? (
+                    <VisualResults blueprint={blueprint} onOpenImage={setModalImage} />
                 ) : <RoadshowAgentTrack states={presentationAgentStates} blueprint={blueprint} />
               )}
             </>
@@ -281,7 +301,7 @@ export default function AgentContent({
           {!presentationMode && viewedStep === 1 && <Concepts blueprint={blueprint} requirement={conceptRequirement} onRequirement={onConceptRequirement} onRun={() => onRunAgent(2)} onRegenerate={onRegenerateConcepts} onEnterComparison={() => { onNavigate(2); if (!blueprint.comparison) onRunAgent(3); }} onOpenBlueprint={onOpenBlueprint} />}
           {!presentationMode && viewedStep === 2 && <Comparison blueprint={blueprint} />}
           {!presentationMode && viewedStep === 3 && <SpatialPlan blueprint={blueprint} onOpenImage={setModalImage} onModifyUpstream={() => onNavigate(0)} onUpdateDecision={onUpdateDecision} onRun={() => onRunAgent(4)} />}
-          {!presentationMode && viewedStep === 4 && <VisualResults blueprint={blueprint} workflowStep={visualWorkflowStep} onConfirmBrief={onConfirmVisualBrief} onGenerate={onGenerateVisuals} onOpenImage={setModalImage} />}
+          {!presentationMode && viewedStep === 4 && <VisualResults blueprint={blueprint} onOpenImage={setModalImage} />}
           {!presentationMode && viewedStep === 5 && <Outputs blueprint={blueprint} workflowStep={outputWorkflowStep} onAdvance={onAdvanceOutput} onExportJSON={onExportJSON} onExportMarkdown={onExportMarkdown} onNotice={onNotice} />}
 
           {!presentationMode && viewedStep !== 1 && run.status === 'pending' && !isIdle && <EmptyState text={`Agent ${agent.id} 尚未执行。请完成前置确认后从底部控制栏继续。`} />}
@@ -397,7 +417,7 @@ function Concepts({ blueprint, requirement, onRequirement, onRun, onRegenerate, 
 }
 
 function Comparison({ blueprint }) {
-  if (!blueprint.comparison) return <EmptyState text="等待概念生成后运行方案选择 Agent。" />;
+  if (!blueprint.comparison) return <EmptyState text="等待概念生成后运行方案比选 Agent。" />;
   const candidates = selectConceptCandidates(blueprint);
   const tone = { A: 'var(--lf-brand-700)', B: '#7c3aed', C: 'var(--lf-cyan)' };
   const conceptsStale = blueprint.agentRuns?.[2]?.status === 'stale';
@@ -446,26 +466,55 @@ function SpatialPlan({ blueprint, onOpenImage, onModifyUpstream, onUpdateDecisio
   </div>;
 }
 
-function VisualResults({ blueprint, workflowStep, onConfirmBrief, onGenerate, onOpenImage }) {
+function VisualResults({ blueprint, onOpenImage }) {
   if (!blueprint.visualTasks.length) return <EmptyState text="等待设计说明书分项确认后运行视觉表达 Agent。" />;
   const stale = blueprint.agentRuns?.[5]?.status === 'stale';
-  const labels = [
-    ['01', '生成视觉任务书'],
-    ['02', '设计师确认任务书'],
-    ['03', '生成视觉成果'],
-  ];
+  const analysisAssets = selectAnalysisAssets(blueprint);
+  const visualCandidates = selectVisualCandidates(blueprint, 'children');
+  const selectedVisuals = selectSelectedVisuals(blueprint, 'children');
+  const visualTrace = selectVisualDecisionTrace(blueprint);
+  const selectionTrace = [...visualTrace].reverse().find((item) => item.type === 'visual-selection-review');
+  const task = blueprint.visualTasks.find((item) => item.scene === 'children') || blueprint.visualTasks[0];
   return <div className="space-y-4">
-    <div className="grid grid-cols-3 gap-2">{labels.map(([id, label], index) => <div key={id} className={`rounded-xl border p-3 ${workflowStep >= index + 1 ? 'border-violet-200 bg-violet-50' : 'border-gray-200 bg-white'}`}><p className="text-xs font-bold text-[var(--lf-brand-600)]">{id}</p><p className="mt-1 text-sm font-semibold text-[var(--lf-text)]">{label}</p></div>)}</div>
-    <div className="rounded-xl border border-cyan-200 bg-cyan-50 p-4"><p className="text-sm font-semibold text-cyan-900">当前任务：先确认画面任务书，再生成对应成果</p><p className="text-xs text-cyan-800 mt-1">所有演示图均保留 asset id、来源 Agent、Blueprint 版本和演示案例状态。</p></div>
-    <Card title="第一步｜视觉任务书">
-      <div className="space-y-3">{blueprint.visualTasks.map((task) => <div key={task.id} className="rounded-xl border border-violet-100 bg-[var(--lf-brand-50)] p-4"><div className="flex items-center justify-between"><p className="text-sm font-bold text-[var(--lf-brand-950)]">{task.id}｜{task.title}</p><Badge tone="blue">{task.angle}</Badge></div><div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 xl:grid-cols-5">{[['季节', task.season], ['时间', task.time], ['光线', task.light], ['人物', task.people], ['活动', task.activity], ['植物', task.plant], ['材质', task.material], ['氛围', task.atmosphere], ['必须表达', task.mustInclude], ['禁止出现', task.avoid]].map(([label, value]) => <div key={label}><p className="text-xs font-semibold text-[var(--lf-brand-600)]">{label}</p><p className="mt-0.5 text-xs leading-5 text-[var(--lf-muted)]">{value}</p></div>)}</div><p className="mt-3 rounded-lg bg-white p-2 text-xs leading-5 text-[var(--lf-muted)]">Prompt：{task.prompt}</p></div>)}</div>
-      {workflowStep === 1 && <div className="mt-4 flex justify-end"><button onClick={onConfirmBrief} className="btn-primary px-6 py-3 text-sm">确认视觉任务书</button></div>}
+    <div className="rounded-xl border border-cyan-200 bg-cyan-50 p-4">
+      <div className="flex items-start justify-between gap-4">
+        <div><p className="text-sm font-semibold text-cyan-900">Agent 5 已从当前 Blueprint 组织分析成果与视觉候选</p><p className="mt-1 text-xs leading-5 text-cyan-800">视觉只作为当前设计状态的表达快照，不是项目事实源。Gate 4 确认前不会自动选择任何候选。</p></div>
+        <Badge tone={stale ? 'red' : 'blue'}>{stale ? '需重新生成' : `Blueprint r${blueprint.revision}`}</Badge>
+      </div>
+    </div>
+    <Card title="A｜Blueprint 派生分析成果">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        {analysisAssets.map((asset) => <div key={asset.id} className="rounded-xl border border-violet-100 bg-white p-3" data-testid={`analysis-${asset.id.toLowerCase()}`}>
+          <button type="button" onClick={() => onOpenImage({ src: asset.url, title: asset.title })} className="block w-full text-left">
+            <VisualAssetFrame asset={{ ...asset, sourceAgent: 'Agent 5｜视觉表达', status: stale ? '已失效' : '演示案例', aspectRatio: '16:9', objectFit: 'contain' }} compact allowZoom={false} />
+          </button>
+          <div className="mt-3 flex items-center justify-between gap-2"><p className="text-sm font-bold text-[var(--lf-brand-950)]">{asset.id}｜{asset.title}</p>{asset.role === 'directorProfessionalReview' && <Badge tone="amber">设计总监复核</Badge>}</div>
+          <p className="mt-2 text-xs leading-5 text-[var(--lf-muted)]">{asset.role === 'directorProfessionalReview' ? '空间尺度与功能关系的总监级演示复核；不是施工、法规或正式专业签审。' : '依据当前 Blueprint 结构化字段组织的演示分析成果。'}</p>
+          <button type="button" onClick={() => onOpenImage({ src: asset.url, title: asset.title })} className="btn-secondary mt-3 px-3 py-1.5 text-xs">查看大图</button>
+        </div>)}
+      </div>
     </Card>
-    {workflowStep === 2 && <Card title="第二步｜任务书已确认" accent="var(--lf-gold)"><p className="text-sm text-[var(--lf-muted)]">可以统一修改或回到具体画面任务；本次路演按当前任务书生成演示案例视觉成果。</p><div className="mt-3 flex justify-end"><button onClick={onGenerate} className="btn-primary px-6 py-3 text-sm">生成视觉成果</button></div></Card>}
-    {workflowStep >= 3 && <Card title="第三步｜任务书与视觉成果逐项对应" accent="var(--lf-gold)"><div className="space-y-4">{blueprint.visualAssets.map((asset) => {
-      const task = blueprint.visualTasks.find((item) => item.id === asset.id);
-      return <div key={asset.id} className="grid gap-4 rounded-xl border border-violet-100 bg-white p-3 xl:grid-cols-[minmax(0,1fr)_minmax(280px,1fr)]"><div><div className="flex items-center justify-between"><p className="text-sm font-bold text-[var(--lf-brand-900)]">{task?.id}｜{task?.title}</p><Badge tone="green">已采用</Badge></div><p className="mt-2 text-xs leading-5 text-[var(--lf-muted)]">{task?.prompt}</p><div className="mt-3 flex flex-wrap gap-2"><button className="btn-secondary px-3 py-1.5 text-xs">重新生成</button><button className="btn-gold px-3 py-1.5 text-xs">标记采用</button><button onClick={() => onOpenImage({ src: asset.url, title: asset.title })} className="btn-secondary px-3 py-1.5 text-xs">查看大图</button></div></div><VisualAssetFrame asset={{ ...asset, status: stale ? '已失效' : '演示案例' }} compact /></div>;
-    })}</div></Card>}
+    <Card title="B｜儿童活动场景视觉任务" accent="var(--lf-gold)">
+      <div className="rounded-xl border border-amber-100 bg-amber-50/60 p-4" data-testid="visual-task-children">
+        <div className="flex items-center justify-between gap-3"><div><p className="text-sm font-bold text-[var(--lf-brand-950)]">{task.id}｜{task.title}</p><p className="mt-1 text-xs leading-5 text-[var(--lf-muted)]">{task.objective}</p></div><Badge tone="amber">{visualCandidates.length} 个候选</Badge></div>
+        <div className="mt-3 flex flex-wrap gap-2">
+          {(task.preferenceSources || []).map((source) => <span key={source.id || source.value} className="rounded-full border border-violet-200 bg-white px-3 py-1 text-xs text-violet-700">来源：{source.id || source.label} · {source.status}</span>)}
+          <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs text-slate-600">选定概念：{task.selectedConceptId || '待确认'}｜{task.selectedConceptName}</span>
+          <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs text-slate-600">Design Statement r{task.designStatementRevision || '—'}</span>
+        </div>
+        <p className="mt-3 text-xs text-amber-800">亲水内容仅来自设计偏好；不是现状事实、正式水景决定或施工条件。{task.pendingItems?.length ? `仍有 ${task.pendingItems.length} 项条件待复核。` : ''}</p>
+      </div>
+      <div className="mt-4 grid grid-cols-2 gap-3">
+        {visualCandidates.map((candidate) => <div key={candidate.id} className="rounded-xl border border-violet-100 bg-white p-3"><VisualAssetFrame asset={{ ...candidate, title: candidate.name, sourceAgent: 'Cached Demo Asset Provider', status: stale ? '已失效' : candidate.url ? '演示案例' : '待生成', aspectRatio: '16:9' }} compact allowZoom={false} /><p className="mt-2 text-sm font-semibold text-[var(--lf-brand-950)]">{candidate.name}</p><p className="mt-1 text-xs text-[var(--lf-muted)]">{candidate.coreIntent}</p></div>)}
+      </div>
+      <p className="mt-3 rounded-xl border border-violet-100 bg-[var(--lf-brand-50)] p-3 text-xs text-[var(--lf-muted)]">{selectedVisuals.length ? `Gate 4 当前已确认：${selectedVisuals[0].candidateName}` : '尚未确认视觉方向。请在下方 Gate 4 比较候选并记录选择理由。'}</p>
+    </Card>
+    {selectionTrace && <Card title="Gate 4｜视觉决策执行轨迹" accent="var(--lf-cyan)" className="border border-cyan-100" data-testid="gate4-confirmed-trace">
+      <div data-testid="gate4-confirmed-trace" className="grid gap-3 rounded-xl bg-cyan-50 p-4 md:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
+        <div><p className="text-xs font-semibold text-cyan-700">设计师已确认</p><p className="mt-1 text-base font-bold text-cyan-950">{selectionTrace.candidate?.name}</p><p className="mt-2 text-xs text-cyan-800">场景：{selectionTrace.scene} · Trace：{selectionTrace.traceId}</p></div>
+        <div><p className="text-xs font-semibold text-cyan-700">选择理由</p><div className="mt-2 flex flex-wrap gap-2">{selectionTrace.reasons.map((reason) => <span key={reason} className="rounded-full border border-cyan-200 bg-white px-3 py-1 text-xs text-cyan-800">{reason}</span>)}</div>{selectionTrace.comment && <p className="mt-3 text-xs leading-5 text-cyan-900">补充说明：{selectionTrace.comment}</p>}</div>
+      </div>
+    </Card>}
   </div>;
 }
 
@@ -525,7 +574,7 @@ function Outputs({ blueprint, workflowStep, onAdvance, onExportJSON, onExportMar
   return <div className="space-y-5">
     <div className="grid grid-cols-2 gap-2 xl:grid-cols-4">{steps.map((label, index) => <div key={label} className={`rounded-xl border p-3 ${workflowStep >= index + 1 ? 'border-violet-200 bg-violet-50' : 'border-gray-200 bg-white'}`}><p className="text-xs font-bold text-[var(--lf-brand-600)]">0{index + 1}</p><p className="mt-1 text-sm font-semibold text-[var(--lf-text)]">{label}</p></div>)}</div>
     {hasInvalid && <div className="rounded-xl border border-rose-200 bg-rose-50 p-4"><p className="text-sm font-semibold text-rose-800">导出前提示：存在 {blueprint.invalidatedOutputs.length} 项需要重新生成的成果</p><p className="text-xs text-rose-700 mt-1">旧成果仍可查看对比，但不属于当前方案；请重新运行受影响 Agent 后再完成最终确认。</p></div>}
-    {blueprint.officialPackageStatus.includes('已完成') && <div className="rounded-2xl bg-[var(--lf-brand-900)] text-white p-5"><p className="text-xl font-serif font-bold">演示方案已完成｜正式成果可继续深化</p><p className="text-sm text-violet-100 mt-2">四个设计师确认节点已完成，所有成果来自当前项目设计蓝本。</p></div>}
+    {blueprint.officialPackageStatus.includes('已完成') && <div className="rounded-2xl bg-[var(--lf-brand-900)] text-white p-5"><p className="text-xl font-serif font-bold">演示方案已完成｜正式成果可继续深化</p><p className="text-sm text-violet-100 mt-2">五个设计师确认节点已完成，所有成果来自当前项目设计蓝本。</p></div>}
     <Card title="步骤 1｜生成完整方案文案">
       <div className="grid gap-3 md:grid-cols-2">{blueprint.schemeNarrative?.sections?.map((section) => <div key={section.title} className="rounded-xl border border-violet-100 bg-[var(--lf-brand-50)] p-3"><p className="text-sm font-bold text-[var(--lf-brand-900)]">{section.title}</p><p className="mt-1 text-xs leading-5 text-[var(--lf-muted)]">{section.value}</p></div>)}</div>
       {workflowStep === 1 && <div className="mt-4 flex justify-end"><button onClick={onAdvance} className="btn-primary px-6 py-3 text-sm">进入文案确认</button></div>}

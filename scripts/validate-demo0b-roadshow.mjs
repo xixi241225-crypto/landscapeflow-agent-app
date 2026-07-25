@@ -53,9 +53,17 @@ blueprint = confirmCheckpoint(blueprint, 'checkpoint-3', { source: 'Blueprint �
 
 const agent5Patch = await mockAgentProvider.runAgent(5, blueprint, { delayMs: 0 });
 blueprint = applyAgentPatch(blueprint, 5, agent5Patch, 'Demo-0B Agent 5 验证');
+const gate4Candidate = blueprint.visualCandidates[0];
+blueprint = confirmCheckpoint(blueprint, 'checkpoint-4', {
+  visualSelection: {
+    scene: gate4Candidate.scene,
+    visualTaskId: gate4Candidate.visualTaskId,
+    candidateId: gate4Candidate.id,
+    reasons: ['与总平空间关系更一致'],
+  },
+}, 'Demo-0B 验证设计师');
 const agent6Patch = await mockAgentProvider.runAgent(6, blueprint, { delayMs: 0 });
 blueprint = applyAgentPatch(blueprint, 6, agent6Patch, 'Demo-0B Agent 6 验证');
-blueprint = confirmCheckpoint(blueprint, 'checkpoint-4', { source: 'Blueprint 最终成果' }, 'Demo-0B 验证设计师');
 
 assert.equal(blueprint.milestoneVersion, 'v7');
 assert.ok([1, 2, 3, 4, 5, 6].every((agentId) => blueprint.agentRuns[agentId].status === 'done'));
@@ -79,6 +87,7 @@ assert.deepEqual(results.spatial.circulationStrategy, blueprint.circulationStrat
 assert.deepEqual(results.spatial.professionalStrategies, blueprint.professionalStrategies);
 assert.deepEqual(results.visual.visualTasks, blueprint.visualTasks);
 assert.deepEqual(results.visual.visualAssets, blueprint.visualAssets);
+assert.deepEqual(results.visual.selectedVisuals, blueprint.selectedVisuals);
 assert.deepEqual(results.ppt.outline, blueprint.pptOutline);
 
 assert.equal(results.definition.selectedConceptId, blueprint.designerDecision.selectedConceptId);
@@ -99,7 +108,8 @@ assert.doesNotMatch(JSON.stringify({
   featureNodes: blueprint.featureNodes,
   visualTasks: blueprint.visualTasks,
 }), unsupportedProjectClaims);
-assert.ok(blueprint.visualTasks.every((task) => task.people === '适量项目使用者，具体人群结构待确认'));
+assert.ok(blueprint.visualTasks.every((task) => task.isFactSource === false));
+assert.ok(blueprint.visualCandidates.every((candidate) => candidate.isFactSource === false));
 assert.match(blueprint.professionalStrategies.plant, /调查后确认/);
 assert.match(blueprint.professionalStrategies.ecology, /专项调查确认/);
 assert.match(blueprint.professionalStrategies.grading, /测绘数据复核/);

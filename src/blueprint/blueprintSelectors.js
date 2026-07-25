@@ -310,6 +310,35 @@ export function selectConceptGenerationInput(blueprint) {
   };
 }
 
+export function selectVisualExpression(blueprint) {
+  const chapter = blueprint?.chapters?.visualExpression || {};
+  return {
+    visualTasks: asArray(chapter.visualTasks || blueprint?.visualTasks),
+    analysisAssets: asArray(chapter.analysisAssets || blueprint?.analysisAssets),
+    visualCandidates: asArray(chapter.visualCandidates || blueprint?.visualCandidates),
+    selectedVisuals: asArray(chapter.selectedVisuals || blueprint?.selectedVisuals),
+    visualReview: chapter.visualReview || blueprint?.visualReview || null,
+  };
+}
+
+export function selectAnalysisAssets(blueprint) {
+  return selectVisualExpression(blueprint).analysisAssets;
+}
+
+export function selectVisualCandidates(blueprint, scene = '') {
+  const candidates = selectVisualExpression(blueprint).visualCandidates;
+  return scene ? candidates.filter((item) => item.scene === scene) : candidates;
+}
+
+export function selectSelectedVisuals(blueprint, scene = '') {
+  const selections = selectVisualExpression(blueprint).selectedVisuals;
+  return scene ? selections.filter((item) => item.scene === scene) : selections;
+}
+
+export function selectVisualReview(blueprint) {
+  return selectVisualExpression(blueprint).visualReview;
+}
+
 export function selectAgentExecution(blueprint, agentId) {
   return [...(blueprint?.agentExecutions || [])].reverse().find((item) => item.agentId === `agent-${agentId}` || item.agentId === Number(agentId)) || null;
 }
@@ -351,6 +380,56 @@ export function selectDesignExecutionTrace(blueprint) {
       status: execution?.status || 'awaiting-regeneration',
     };
   }).sort((a, b) => new Date(a.requestedAt || a.startedAt || 0) - new Date(b.requestedAt || b.startedAt || 0));
+}
+
+export function selectVisualDecisionTrace(blueprint) {
+  const generationExecutions = (blueprint?.agentExecutions || []).filter((execution) => (
+    execution.agentId === 'agent-5'
+    && execution.executionType === 'visual-candidate-generation'
+  ));
+  const decisionEvents = (blueprint?.changeLog || []).filter((event) => (
+    event.type === 'visual-selection-review'
+    && event.traceId
+  ));
+  return [
+    ...generationExecutions.map((execution) => ({
+      traceId: execution.traceId,
+      type: 'visual-candidate-generation',
+      actor: execution.agentName || '视觉表达',
+      action: 'generatedCandidates',
+      startedAt: execution.startedAt,
+      completedAt: execution.completedAt,
+      inputVersion: execution.inputVersion,
+      outputVersion: execution.outputVersion,
+      visualTaskIds: execution.visualTaskIds || [],
+      analysisAssetIds: execution.analysisAssetIds || [],
+      candidateIds: execution.candidateIds || [],
+      sourceBlueprintFields: execution.sourceBlueprintFields || [],
+      status: execution.status,
+    })),
+    ...decisionEvents.map((event) => ({
+      traceId: event.traceId,
+      type: 'visual-selection-review',
+      actor: event.actor || event.sourceAgent || '设计师',
+      action: event.action,
+      scene: event.scene,
+      candidate: event.candidate,
+      reasons: event.reasons || [],
+      comment: event.comment || '',
+      before: event.before || null,
+      after: event.after || null,
+      relatedBlueprintFields: event.relatedBlueprintFields || [],
+      completedAt: event.modifiedAt,
+      status: event.confirmationStatus,
+    })),
+  ].sort((a, b) => new Date(a.completedAt || a.startedAt || 0) - new Date(b.completedAt || b.startedAt || 0));
+}
+
+export function selectProjectExecutionTrace(blueprint) {
+  return [
+    ...selectDesignExecutionTrace(blueprint),
+    ...selectVisualDecisionTrace(blueprint),
+  ].sort((a, b) => new Date(a.completedAt || a.requestedAt || a.startedAt || 0) - new Date(b.completedAt || b.requestedAt || b.startedAt || 0));
 }
 
 export function selectAgent1ExecutionSummary(blueprint) {
@@ -417,9 +496,10 @@ export function isRoadshowResultsReady(blueprint) {
   const allAgentsDone = [1, 2, 3, 4, 5, 6].every((agentId) => blueprint.agentRuns?.[agentId]?.status === 'done');
   const pptOutline = asArray(blueprint.pptOutline || blueprint.pptStructure);
   const gate3Confirmed = blueprint.checkpoints?.find((checkpoint) => checkpoint.id === 'checkpoint-3')?.status === '已确认';
+  const gate4Confirmed = blueprint.checkpoints?.find((checkpoint) => checkpoint.id === 'checkpoint-4')?.status === '已确认';
   const designStatement = blueprint.deliverableArtifacts?.designStatement;
   const designStatementReady = !designStatement || designStatement.status === 'approved';
-  return allAgentsDone && pptOutline.length > 0 && gate3Confirmed && designStatementReady;
+  return allAgentsDone && pptOutline.length > 0 && gate3Confirmed && gate4Confirmed && designStatementReady;
 }
 
 function selectPptImage(page, index, assets) {
@@ -468,6 +548,7 @@ export function selectRoadshowResults(blueprint) {
   });
   const visualTasks = asArray(blueprint?.visualTasks);
   const visualAssets = asArray(blueprint?.visualAssets);
+  const selectedVisuals = selectSelectedVisuals(blueprint);
   const planVisuals = visualAssets.filter((asset) => /总平|正投影/.test(`${asset.assetType || ''} ${asset.angle || ''}`));
   const analysisVisuals = visualAssets.filter((asset) => /分析/.test(`${asset.assetType || ''} ${asset.angle || ''}`));
   const renderings = visualAssets.filter((asset) => !planVisuals.includes(asset) && !analysisVisuals.includes(asset));
@@ -531,6 +612,7 @@ export function selectRoadshowResults(blueprint) {
     visual: {
       visualTasks,
       visualAssets,
+      selectedVisuals,
       renderings,
       analysisAssets: analysisVisuals,
       planAssets: planVisuals,

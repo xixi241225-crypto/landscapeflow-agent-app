@@ -23,12 +23,18 @@ const FACT_KEYS_BY_LABEL = {
 
 function normalizeCheckpoints(checkpoints) {
   const existing = Array.isArray(checkpoints) ? checkpoints : [];
+  const legacyFinalCheckpoint = existing.find((checkpoint) => (
+    checkpoint.id === 'checkpoint-4' && checkpoint.afterAgent === 6
+  ));
   return CHECKPOINTS.map((definition) => ({
     status: '未到达',
     confirmedAt: null,
     confirmedBy: null,
     decision: null,
-    ...(existing.find((checkpoint) => checkpoint.id === definition.id) || {}),
+    ...(existing.find((checkpoint) => checkpoint.id === definition.id && checkpoint.afterAgent === definition.afterAgent)
+      || (definition.id === 'checkpoint-5' && legacyFinalCheckpoint
+        ? { ...legacyFinalCheckpoint, id: 'checkpoint-5' }
+        : {})),
     ...definition,
   }));
 }
@@ -224,7 +230,14 @@ function legacyChapters(blueprint, projectDefinition) {
       professionalStrategies: blueprint.professionalStrategies,
       featureNodes: blueprint.featureNodes,
     } : null,
-    visualExpression: blueprint.visualTasks?.length ? { visualTasks: blueprint.visualTasks, visualAssets: blueprint.visualAssets } : null,
+    visualExpression: blueprint.visualTasks?.length ? {
+      visualTasks: blueprint.visualTasks,
+      analysisAssets: blueprint.analysisAssets || [],
+      visualCandidates: blueprint.visualCandidates || [],
+      selectedVisuals: blueprint.selectedVisuals || [],
+      visualReview: blueprint.visualReview || null,
+      visualAssets: blueprint.visualAssets,
+    } : null,
     deliverables: blueprint.pptOutline?.length ? {
       schemeNarrative: blueprint.schemeNarrative,
       pptOutline: blueprint.pptOutline,
@@ -285,6 +298,16 @@ export function migrateBlueprintToV2(existingBlueprint) {
       demoPolicies: existingBlueprint.demoPolicies || {},
       decisions: existingBlueprint.decisions || [],
       agentExecutions: existingBlueprint.agentExecutions || [],
+      analysisAssets: existingBlueprint.analysisAssets || [],
+      visualCandidates: existingBlueprint.visualCandidates || [],
+      selectedVisuals: existingBlueprint.selectedVisuals || [],
+      visualReview: existingBlueprint.visualReview || {
+        status: existingBlueprint.visualTasks?.length ? 'pending' : 'notStarted',
+        checkpointId: 'checkpoint-4',
+        confirmedAt: null,
+        confirmedBy: null,
+        sourceBlueprintRevision: null,
+      },
       checkpoints: normalizeCheckpoints(existingBlueprint.checkpoints),
       deliverableArtifacts: {
         ...(existingBlueprint.deliverableArtifacts || {}),
@@ -328,6 +351,16 @@ export function migrateBlueprintToV2(existingBlueprint) {
     delete next.conceptCandidates;
     next.decisions = next.decisions || [];
     next.agentExecutions = next.agentExecutions || [];
+    next.analysisAssets = next.analysisAssets || [];
+    next.visualCandidates = next.visualCandidates || [];
+    next.selectedVisuals = next.selectedVisuals || [];
+    next.visualReview = next.visualReview || {
+      status: next.visualTasks?.length ? 'pending' : 'notStarted',
+      checkpointId: 'checkpoint-4',
+      confirmedAt: null,
+      confirmedBy: null,
+      sourceBlueprintRevision: null,
+    };
     next.deliverableArtifacts = {
       ...(next.deliverableArtifacts || {}),
       designStatement: next.deliverableArtifacts?.designStatement || null,
