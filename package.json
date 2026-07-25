@@ -11,6 +11,7 @@
     "validate:agent1": "node scripts/validate-agent1-blueprint.mjs",
     "validate:agent2": "node scripts/validate-agent2-concept-generation.mjs",
     "validate:demo0b": "node scripts/validate-demo0b-roadshow.mjs",
+    "validate:demo1": "node scripts/validate-demo1-professional-loop.mjs",
     "preview": "vite preview",
     "predeploy": "npm run build",
     "deploy": "gh-pages -d dist"

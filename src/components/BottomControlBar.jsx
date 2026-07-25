@@ -26,6 +26,8 @@ export default function BottomControlBar({
 }) {
   if (presentationMode) {
     const completeCount = presentationAgentStates.filter((status) => status === '已完成').length;
+    const activeCheckpoint = blueprint.checkpoints?.find((checkpoint) => checkpoint.id === blueprint.currentCheckpoint);
+    const waitingForDesigner = ['checkpoint-2', 'checkpoint-3'].includes(activeCheckpoint?.id);
     return (
       <div className="absolute bottom-0 left-0 right-0 z-30 border-t border-[var(--lf-border)] bg-white/95 px-5 py-3 backdrop-blur-md">
         <div className="mx-auto flex max-w-[980px] items-center justify-between gap-4">
@@ -48,7 +50,7 @@ export default function BottomControlBar({
               <div className="min-w-0 flex-1">
                 <div className="flex items-center justify-between text-sm">
                   <span className={completeCount === 6 ? 'font-semibold text-emerald-700' : 'font-semibold text-[var(--lf-brand-700)]'}>
-                    {completeCount === 6 ? '六个专业 Agent 已全部完成' : '正在生成完整方案……'}
+                    {completeCount === 6 ? '六个专业 Agent 已全部完成' : waitingForDesigner ? `等待设计师：${activeCheckpoint.name}` : '正在生成完整方案……'}
                   </span>
                   <span className="text-[var(--lf-muted)]">{completeCount} / 6</span>
                 </div>

@@ -220,7 +220,107 @@ function spatialPatch(blueprint) {
     },
     featureNodes: zones.map((zone, index) => ({ name: zone.name, value: `${concept.name}的方案节点 ${index + 1}，需在下一轮深化中落实尺度、活动、材料与场地适配。` })),
     risks: [{ title: '空间成果精度', value: '当前总平面采用演示案例视觉素材，空间结论以项目设计蓝本文本为准。', status: CONTENT_STATUS.PENDING }],
-    nextTasks: [{ title: '蓝本确认', value: '确认核心叙事、空间结构、分区、动线与五项专业策略。', status: CONTENT_STATUS.PENDING }],
+    nextTasks: [{ title: '蓝本确认', value: '确认核心叙事、空间结构、分区、动线与六项专业策略。', status: CONTENT_STATUS.PENDING }],
+  };
+}
+
+function appendReviewFocus(current, comment) {
+  const base = compact(current, '本项策略待进一步深化。');
+  return `${base} 本轮根据设计师复核意见进一步明确：${comment}`;
+}
+
+function revisePlantStrategy(blueprint, comment) {
+  if (/冬季|四季|季相|常绿|落叶/.test(comment)) {
+    const project = getProject(blueprint);
+    const locationContext = project.city ? `在${project.city}项目中，` : '';
+    return `${locationContext}植物策略进一步强化冬季空间骨架表达，统筹常绿与落叶植物的季相关系，关注枝干、色彩与质感形成冬季观赏特征，并保证四季景观连续。具体树种、规格、数量、配置比例及现状植物资料仍待调查与专项深化确认。`;
+  }
+  return appendReviewFocus(blueprint.professionalStrategies?.plant, comment);
+}
+
+export const AGENT4_SECTION_REVISION_TARGETS = {
+  coreNarrative: {
+    sourcePath: 'coreNarrative',
+    revise: (blueprint, comment) => ({
+      ...blueprint.coreNarrative,
+      value: appendReviewFocus(blueprint.coreNarrative?.value, comment),
+    }),
+  },
+  spatialStructure: {
+    sourcePath: 'spatialStructure',
+    revise: (blueprint, comment) => ({
+      ...blueprint.spatialStructure,
+      value: appendReviewFocus(blueprint.spatialStructure?.value, comment),
+    }),
+  },
+  functionalZones: {
+    sourcePath: 'functionalZones',
+    revise: (blueprint, comment) => (blueprint.functionalZones || []).map((zone) => ({
+      ...zone,
+      function: appendReviewFocus(zone.function, comment),
+    })),
+  },
+  circulation: {
+    sourcePath: 'circulationStrategy',
+    revise: (blueprint, comment) => ({
+      ...blueprint.circulationStrategy,
+      value: appendReviewFocus(blueprint.circulationStrategy?.value, comment),
+    }),
+  },
+  featureNodes: {
+    sourcePath: 'featureNodes',
+    revise: (blueprint, comment) => (blueprint.featureNodes || []).map((node) => ({
+      ...node,
+      value: appendReviewFocus(node.value, comment),
+    })),
+  },
+  plant: {
+    sourcePath: 'professionalStrategies.plant',
+    revise: revisePlantStrategy,
+  },
+  material: {
+    sourcePath: 'professionalStrategies.material',
+    revise: (blueprint, comment) => appendReviewFocus(blueprint.professionalStrategies?.material, comment),
+  },
+  ecology: {
+    sourcePath: 'professionalStrategies.ecology',
+    revise: (blueprint, comment) => appendReviewFocus(blueprint.professionalStrategies?.ecology, comment),
+  },
+  grading: {
+    sourcePath: 'professionalStrategies.grading',
+    revise: (blueprint, comment) => appendReviewFocus(blueprint.professionalStrategies?.grading, comment),
+  },
+  drainage: {
+    sourcePath: 'professionalStrategies.drainage',
+    revise: (blueprint, comment) => appendReviewFocus(blueprint.professionalStrategies?.drainage, comment),
+  },
+  operations: {
+    sourcePath: 'professionalStrategies.operations',
+    revise: (blueprint, comment) => appendReviewFocus(blueprint.professionalStrategies?.operations, comment),
+  },
+};
+
+function scopedAgent4Patch(blueprint, context) {
+  const sectionKeys = [...new Set(context.sectionKeys || [])];
+  if (!sectionKeys.length) throw new Error('Agent 4 scoped execution 缺少 sectionKeys');
+  const sectionUpdates = sectionKeys.map((sectionKey) => {
+    const target = AGENT4_SECTION_REVISION_TARGETS[sectionKey];
+    if (!target) throw new Error(`Agent 4 不支持重新生成 section：${sectionKey}`);
+    const comment = String(context.reviewComments?.[sectionKey] || '').trim();
+    if (!comment) throw new Error(`${sectionKey} 缺少设计师复核意见`);
+    return {
+      sectionKey,
+      sourcePath: target.sourcePath,
+      value: target.revise(blueprint, comment),
+    };
+  });
+  return {
+    scope: 'sections',
+    agentId: 4,
+    traceId: context.traceId,
+    comment: sectionKeys.map((key) => context.reviewComments[key]).join('；'),
+    startedAt: new Date().toISOString(),
+    sectionUpdates,
   };
 }
 
@@ -235,7 +335,7 @@ function visualPatch(blueprint) {
     .filter(Boolean);
   const people = confirmedUsers.length
     ? confirmedUsers.join('、')
-    : '适量社区使用者，具体人群结构待确认';
+    : '适量项目使用者，具体人群结构待确认';
   const keyScenes = concept?.keyScenes?.length ? concept.keyScenes : ['核心公共场景', '安静休憩场景', '自然体验场景'];
   const sceneTitles = Array.from({ length: 3 }, (_, index) => keyScenes[index] || ['核心公共场景', '安静休憩场景', '自然体验场景'][index]);
   const blueprintVersion = blueprint.currentVersion + 1;
@@ -369,6 +469,9 @@ export class MockAgentProvider extends AgentProvider {
   async runAgent(agentId, blueprint, context = {}) {
     await abortableDelay(context.delayMs ?? 520, context.signal);
     if (context.signal?.aborted) throw new DOMException('任务已停止', 'AbortError');
+    if (Number(agentId) === 4 && context.scope === 'sections') {
+      return assertProviderPatch(scopedAgent4Patch(blueprint, context));
+    }
     const builders = {
       1: projectDefinitionPatch,
       3: comparisonPatch,

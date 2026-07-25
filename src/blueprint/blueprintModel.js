@@ -7,6 +7,12 @@ export const BLUEPRINT_ITEM_STATUS = {
   CONFLICT: 'conflict',
 };
 
+export const DESIGN_STATEMENT_REVIEW_STATUS = {
+  PENDING: 'pending',
+  APPROVED: 'approved',
+  NEEDS_REVISION: 'needsRevision',
+};
+
 export const BLUEPRINT_MILESTONES = {
   DRAFT: 'v0',
   PROJECT_DEFINED: 'v1',
@@ -37,9 +43,9 @@ export const AGENTS = [
 ];
 
 export const CHECKPOINTS = [
-  { id: 'checkpoint-1', order: 1, afterAgent: 1, name: '项目事实确认', description: '确认项目事实、目标、约束、缺口、假设和核心问题。' },
-  { id: 'checkpoint-2', order: 2, afterAgent: 3, name: '概念方向确认', description: '由设计师选择概念方向，并记录融合要求和修改意见。' },
-  { id: 'checkpoint-3', order: 3, afterAgent: 4, name: '项目设计蓝本确认', description: '确认空间结构、功能分区、动线、专业策略和特色节点。' },
+  { id: 'checkpoint-1', order: 1, afterAgent: 1, name: '项目理解确认', description: '确认项目事实、目标、约束、缺口、假设和核心问题。' },
+  { id: 'checkpoint-2', order: 2, afterAgent: 3, name: '方案方向决策', description: '由设计师选择方案方向，并记录融合要求和修改意见。' },
+  { id: 'checkpoint-3', order: 3, afterAgent: 4, name: '设计说明书分项确认', description: '设计师逐项复核 Design Statement（含六项专业策略），通过或提出专业修改意见。' },
   { id: 'checkpoint-4', order: 4, afterAgent: 6, name: '最终成果确认', description: '复核图文、数据、假设、视觉偏离和成果完整性。' },
 ];
 
@@ -110,7 +116,7 @@ export function createBlueprint(formData = {}, projectId = makeId('project')) {
       modificationNotes: '',
       decisionReason: '',
       status: CONTENT_STATUS.PENDING,
-      _meta: makeMeta('设计师', '等待概念方向确认', 0, CONTENT_STATUS.PENDING),
+      _meta: makeMeta('设计师', '等待方案方向决策', 0, CONTENT_STATUS.PENDING),
     },
     coreNarrative: null,
     spatialStructure: null,
@@ -134,6 +140,9 @@ export function createBlueprint(formData = {}, projectId = makeId('project')) {
     risks: [],
     nextTasks: [],
     outputArtifacts: [],
+    deliverableArtifacts: {
+      designStatement: null,
+    },
     checkpoints: CHECKPOINTS.map((checkpoint) => ({
       ...checkpoint,
       status: '未到达',

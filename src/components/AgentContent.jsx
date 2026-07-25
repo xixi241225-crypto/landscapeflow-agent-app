@@ -153,13 +153,20 @@ export default function AgentContent({
   onExportMarkdown,
   onNavigate,
   onRegenerateConcepts,
+  onReviewDesignStatementSection,
+  onRegenerateDesignStatementSection,
+  onApproveRemainingDesignStatementSections,
+  designStatementBusySections,
   onNotice,
   onOpenBlueprint,
 }) {
   const [modalImage, setModalImage] = useState(null);
   const agent = AGENTS[viewedStep];
   const run = blueprint.agentRuns[agent.id];
-  const checkpoint = blueprint.checkpoints.find((item) => item.afterAgent === agent.id && item.id === blueprint.currentCheckpoint);
+  const activeCheckpoint = blueprint.checkpoints.find((item) => item.id === blueprint.currentCheckpoint);
+  const checkpoint = presentationMode
+    ? activeCheckpoint
+    : blueprint.checkpoints.find((item) => item.afterAgent === agent.id && item.id === blueprint.currentCheckpoint);
   const visibleCheckpoint = checkpoint?.id === 'checkpoint-4' && outputWorkflowStep < 4 ? null : checkpoint;
   const isIdle = runState === 'idle' && !Object.values(blueprint.agentRuns).some((item) => item.status === 'done');
   const showProjectWizard = presentationMode
@@ -219,7 +226,38 @@ export default function AgentContent({
                 />
               )}
               {presentationStage === 1 && <RoadshowBlueprintDraft blueprint={blueprint} onOpenBlueprint={onOpenBlueprint} />}
-              {presentationStage === 2 && <RoadshowAgentTrack states={presentationAgentStates} blueprint={blueprint} />}
+              {presentationStage === 2 && (
+                activeCheckpoint?.id === 'checkpoint-2' ? (
+                  <div className="space-y-4">
+                    <Comparison blueprint={blueprint} />
+                    <CheckpointPanel
+                      blueprint={blueprint}
+                      checkpoint={activeCheckpoint}
+                      onConfirm={onConfirmCheckpoint}
+                      onAssumptionDecision={onAssumptionDecision}
+                      onSaveFacts={onSaveFacts}
+                      onRegenerate={onRegenerateConcepts}
+                      onReviewDesignStatementSection={onReviewDesignStatementSection}
+                      onRegenerateDesignStatementSection={onRegenerateDesignStatementSection}
+                      onApproveRemainingDesignStatementSections={onApproveRemainingDesignStatementSections}
+                      designStatementBusySections={designStatementBusySections}
+                    />
+                  </div>
+                ) : activeCheckpoint?.id === 'checkpoint-3' ? (
+                  <CheckpointPanel
+                    blueprint={blueprint}
+                    checkpoint={activeCheckpoint}
+                    onConfirm={onConfirmCheckpoint}
+                    onAssumptionDecision={onAssumptionDecision}
+                    onSaveFacts={onSaveFacts}
+                    onRegenerate={onRegenerateConcepts}
+                    onReviewDesignStatementSection={onReviewDesignStatementSection}
+                    onRegenerateDesignStatementSection={onRegenerateDesignStatementSection}
+                    onApproveRemainingDesignStatementSections={onApproveRemainingDesignStatementSections}
+                    designStatementBusySections={designStatementBusySections}
+                  />
+                ) : <RoadshowAgentTrack states={presentationAgentStates} blueprint={blueprint} />
+              )}
             </>
           ) : viewedStep === 0 && (showProjectWizard ? (
             <ProjectDefinitionWizard
@@ -252,10 +290,13 @@ export default function AgentContent({
             blueprint={blueprint}
             checkpoint={visibleCheckpoint}
             onConfirm={onConfirmCheckpoint}
-            onUpdateDecision={onUpdateDecision}
             onAssumptionDecision={onAssumptionDecision}
             onSaveFacts={onSaveFacts}
             onRegenerate={onRegenerateConcepts}
+            onReviewDesignStatementSection={onReviewDesignStatementSection}
+            onRegenerateDesignStatementSection={onRegenerateDesignStatementSection}
+            onApproveRemainingDesignStatementSections={onApproveRemainingDesignStatementSections}
+            designStatementBusySections={designStatementBusySections}
           />}
         </div>
       </div>
@@ -406,7 +447,7 @@ function SpatialPlan({ blueprint, onOpenImage, onModifyUpstream, onUpdateDecisio
 }
 
 function VisualResults({ blueprint, workflowStep, onConfirmBrief, onGenerate, onOpenImage }) {
-  if (!blueprint.visualTasks.length) return <EmptyState text="等待项目设计蓝本确认后运行视觉表达 Agent。" />;
+  if (!blueprint.visualTasks.length) return <EmptyState text="等待设计说明书分项确认后运行视觉表达 Agent。" />;
   const stale = blueprint.agentRuns?.[5]?.status === 'stale';
   const labels = [
     ['01', '生成视觉任务书'],

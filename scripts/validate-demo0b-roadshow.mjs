@@ -8,6 +8,10 @@ import {
   updateDesignerDecision,
 } from '../src/blueprint/blueprintService.js';
 import {
+  approvePendingDesignStatementSections,
+  buildDesignStatement,
+} from '../src/blueprint/designStatementService.js';
+import {
   isRoadshowResultsReady,
   selectRoadshowResults,
 } from '../src/blueprint/blueprintSelectors.js';
@@ -43,6 +47,8 @@ blueprint = confirmCheckpoint(blueprint, 'checkpoint-2', { selectedConceptId }, 
 
 const agent4Patch = await mockAgentProvider.runAgent(4, blueprint, { delayMs: 0 });
 blueprint = applyAgentPatch(blueprint, 4, agent4Patch, 'Demo-0B Agent 4 验证');
+blueprint = buildDesignStatement(blueprint);
+blueprint = approvePendingDesignStatementSections(blueprint, 'Demo-0B 验证设计师');
 blueprint = confirmCheckpoint(blueprint, 'checkpoint-3', { source: 'Blueprint 空间成果' }, 'Demo-0B 验证设计师');
 
 const agent5Patch = await mockAgentProvider.runAgent(5, blueprint, { delayMs: 0 });
@@ -93,7 +99,7 @@ assert.doesNotMatch(JSON.stringify({
   featureNodes: blueprint.featureNodes,
   visualTasks: blueprint.visualTasks,
 }), unsupportedProjectClaims);
-assert.ok(blueprint.visualTasks.every((task) => task.people === '适量社区使用者，具体人群结构待确认'));
+assert.ok(blueprint.visualTasks.every((task) => task.people === '适量项目使用者，具体人群结构待确认'));
 assert.match(blueprint.professionalStrategies.plant, /调查后确认/);
 assert.match(blueprint.professionalStrategies.ecology, /专项调查确认/);
 assert.match(blueprint.professionalStrategies.grading, /测绘数据复核/);

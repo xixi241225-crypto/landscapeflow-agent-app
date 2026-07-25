@@ -26,6 +26,12 @@ import {
 import { mockAgentProvider } from '../providers/mockAgentProvider';
 import { loadActiveProject, saveProjectState } from '../lib/projectStorage';
 import { downloadBlueprintJSON, downloadBlueprintMarkdown } from '../lib/reportExporter';
+import {
+  approvePendingDesignStatementSections,
+  buildDesignStatement,
+  regenerateDesignStatementSections,
+  reviewDesignStatementSection,
+} from '../blueprint/designStatementService';
 
 const emptyForm = {
   projectName: '', city: '', area: '', projectType: '', targetUsers: '', designGoals: '', constraints: '', stylePreference: '', maintenance: '', clientFocus: '',
@@ -36,7 +42,7 @@ const AGENT_ANALYSIS_STEPS = {
   1: ['读取项目条件', '区分事实与假设', '归纳核心设计问题'],
   2: ['读取已确认事实', '展开差异化概念', '校核优势与风险'],
   3: ['建立比选维度', '计算项目适配度', '形成 Agent 推荐'],
-  4: ['读取设计师最终选择', '推演空间与动线', '组织五项专业策略'],
+  4: ['读取设计师最终选择', '推演空间与动线', '组织六项专业策略'],
   5: ['拆解视觉任务', '匹配重点空间场景', '组织演示案例视觉成果'],
   6: ['汇总蓝本字段', '组织报告与 12 页 PPT', '执行最终质量复核'],
 };
@@ -110,6 +116,7 @@ export default function Workbench() {
   const [presentationAgentStates, setPresentationAgentStates] = useState(initial.presentationAgentStates || Array(6).fill('等待'));
   const [presentationComplete, setPresentationComplete] = useState(initial.presentationComplete || false);
   const [presentationBusy, setPresentationBusy] = useState(false);
+  const [designStatementBusySections, setDesignStatementBusySections] = useState([]);
   const [notice, setNotice] = useState(initial.runState === 'paused' ? '页面刷新后已恢复项目；运行任务保持暂停，请手动继续。' : '');
   const [agentProgress, setAgentProgress] = useState(null);
   const blueprintRef = useRef(blueprint);
@@ -119,6 +126,7 @@ export default function Workbench() {
   const projectInputTokenRef = useRef(0);
   const projectSubmitRef = useRef(false);
   const presentationTokenRef = useRef(0);
+  const presentationRunRef = useRef(false);
 
   useEffect(() => { blueprintRef.current = blueprint; }, [blueprint]);
 
@@ -272,6 +280,7 @@ export default function Workbench() {
       } else {
         const patch = await mockAgentProvider.runAgent(agentId, source, { signal: controller.signal, delayMs });
         next = applyAgentPatch(source, agentId, patch, `演示协作引擎完成 Agent ${agentId} 结构化写入`);
+        if (agentId === 4) next = buildDesignStatement(next);
       }
       const checkpoint = next.checkpoints.find((item) => item.afterAgent === agentId);
       commitBlueprint(next, `${mode === 'roadshow' ? '路演演示' : '专业协作'} · Agent ${agentId} 完成`, versionMetadata);
@@ -343,20 +352,31 @@ export default function Workbench() {
     setProjectInputStep(2);
     setPresentationAgentStates(Array(6).fill('等待'));
     setPresentationComplete(false);
+    setDesignStatementBusySections([]);
     setRunState('idle');
     setViewedStep(0);
     setNotice('可在当前资料检查页直接补充或修改资料。');
   }, []);
 
-  const handleConfirmPresentation = useCallback(async () => {
-    if (presentationBusy || presentationComplete) return;
+  const runPresentationUntilCheckpoint = useCallback(async () => {
+    const waitingCheckpoint = blueprintRef.current.currentCheckpoint;
+    if (['checkpoint-2', 'checkpoint-3'].includes(waitingCheckpoint)) {
+      setRunState('checkpoint');
+      return;
+    }
+    if (presentationRunRef.current || presentationComplete) return;
     const token = presentationTokenRef.current + 1;
     presentationTokenRef.current = token;
+    presentationRunRef.current = true;
     setPresentationBusy(true);
     setPresentationStage(2);
-    setPresentationAgentStates(Array(6).fill('等待'));
     setPresentationComplete(false);
     setRunMode('roadshow');
+    setPresentationAgentStates((states) => states.map((status, index) => (
+      blueprintRef.current.agentRuns?.[index + 1]?.status === 'done'
+        ? '已完成'
+        : status === '执行中' ? '等待' : status
+    )));
 
     try {
       let source = blueprintRef.current;
@@ -367,55 +387,54 @@ export default function Workbench() {
         setNotice('项目设计蓝本 v2 已确认，六个专业 Agent 将以该版本为统一设计基线。');
       }
 
-      for (let index = 0; index < 6; index += 1) {
+      while (presentationTokenRef.current === token) {
         if (presentationTokenRef.current !== token) return;
-        setPresentationAgentStates((states) => states.map((status, itemIndex) => itemIndex === index ? '执行中' : status));
-
-        if (index === 0) {
-          await new Promise((resolve) => setTimeout(resolve, 560));
-        } else {
-          await executeAgent(index + 1, 'roadshow');
+        const activeCheckpoint = blueprintRef.current.currentCheckpoint;
+        if (['checkpoint-2', 'checkpoint-3'].includes(activeCheckpoint)) {
+          setRunState('checkpoint');
+          return;
         }
-        if (presentationTokenRef.current !== token) return;
-
-        if (index === 2 && blueprintRef.current.currentCheckpoint === 'checkpoint-2') {
-          const recommendationId = blueprintRef.current.agentRecommendation?.conceptId || 'B';
-          let next = updateDesignerDecision(blueprintRef.current, {
-            selectedConceptId: recommendationId,
-            acceptedRecommendation: true,
-            fusionRequirements: '保持所选概念的核心策略，并在待确认资料补齐后深化空间尺度与节点内容。',
-            modificationNotes: '',
-            decisionReason: '路演模式采用已准备的设计师决策',
-          }, '路演预设概念决策');
-          next = confirmCheckpoint(next, 'checkpoint-2', { source: '预缓存路演决策' }, '路演预设决策');
-          commitBlueprint(next, '路演预设完成概念方向确认');
-          setRunState('ready');
-        }
-        if (index === 3 && blueprintRef.current.currentCheckpoint === 'checkpoint-3') {
-          const next = confirmCheckpoint(blueprintRef.current, 'checkpoint-3', { source: '预缓存空间策略' }, '路演预设决策');
-          commitBlueprint(next, '路演预设完成空间策略确认');
-          setRunState('ready');
-        }
-        if (index === 4) setVisualWorkflowStep(3);
-        if (index === 5 && blueprintRef.current.currentCheckpoint === 'checkpoint-4') {
+        if (activeCheckpoint === 'checkpoint-4') {
           const next = confirmCheckpoint(blueprintRef.current, 'checkpoint-4', { source: '预缓存成果复核' }, '路演预设决策');
           commitBlueprint(next, '路演预设完成最终成果复核');
           setOutputWorkflowStep(4);
           setRunState('done');
+          continue;
         }
 
-        setPresentationAgentStates((states) => states.map((status, itemIndex) => itemIndex === index ? '已完成' : status));
+        const nextAgent = getNextRunnableAgent(blueprintRef.current);
+        if (!nextAgent) {
+          setPresentationComplete(true);
+          setRunState('done');
+          setNotice('六个专业 Agent 已完成协作，完整成果已解锁。');
+          return;
+        }
+
+        setPresentationAgentStates((states) => states.map((status, itemIndex) => itemIndex === nextAgent - 1 ? '执行中' : status));
+        await executeAgent(nextAgent, 'roadshow');
+        if (presentationTokenRef.current !== token) return;
+        const completed = blueprintRef.current.agentRuns?.[nextAgent]?.status === 'done';
+        setPresentationAgentStates((states) => states.map((status, itemIndex) => itemIndex === nextAgent - 1 ? (completed ? '已完成' : '等待') : status));
+        if (nextAgent === 5) setVisualWorkflowStep(3);
+
+        const reachedCheckpoint = blueprintRef.current.currentCheckpoint;
+        if (['checkpoint-2', 'checkpoint-3'].includes(reachedCheckpoint)) {
+          setRunState('checkpoint');
+          setNotice(reachedCheckpoint === 'checkpoint-2'
+            ? 'Agent 3 已完成方案比选，等待设计师主动选择方向。'
+            : 'Agent 4 已生成设计说明书，等待设计师逐项专业复核。');
+          return;
+        }
       }
-      setPresentationComplete(true);
-      setNotice('六个专业 Agent 已完成协作，完整成果已解锁。');
     } catch (error) {
       console.error('路演 Agent 协作失败：', error);
       setNotice(`路演协作未完成：${error.message}`);
       setRunState('stopped');
     } finally {
+      presentationRunRef.current = false;
       if (presentationTokenRef.current === token) setPresentationBusy(false);
     }
-  }, [commitBlueprint, executeAgent, presentationBusy, presentationComplete]);
+  }, [commitBlueprint, executeAgent, presentationComplete]);
 
   const handleOpenPresentationResults = useCallback(() => {
     saveProjectState({
@@ -489,7 +508,7 @@ export default function Workbench() {
     setProjectId(fresh.projectId); setFormData(fresh.formData); setBlueprint(fresh.blueprint); blueprintRef.current = fresh.blueprint;
     setVersions(fresh.versions); setViewedStep(0); setCurrentStep(-1); setRunState('idle'); setRunMode('professional');
     setVisualWorkflowStep(0); setOutputWorkflowStep(0); setConceptRequirement(''); setProjectInputStep(0); setProjectInputLoading(false); setProjectInputLoadingStep(0);
-    setPresentationMode(false); setPresentationStage(0); setPresentationAgentStates(Array(6).fill('等待')); setPresentationComplete(false); setPresentationBusy(false);
+    setPresentationMode(false); setPresentationStage(0); setPresentationAgentStates(Array(6).fill('等待')); setPresentationComplete(false); setPresentationBusy(false); setDesignStatementBusySections([]);
     setNotice('已新建空白项目；上一项目仍保留在历史记录。');
   }, []);
 
@@ -501,7 +520,7 @@ export default function Workbench() {
     setProjectId(fresh.projectId); setFormData(fresh.formData); setBlueprint(fresh.blueprint); blueprintRef.current = fresh.blueprint;
     setVersions(fresh.versions); setViewedStep(0); setCurrentStep(-1); setRunState('idle'); setRunMode('roadshow');
     setVisualWorkflowStep(0); setOutputWorkflowStep(0); setConceptRequirement(''); setProjectInputStep(0); setProjectInputLoading(false); setProjectInputLoadingStep(0);
-    setPresentationMode(true); setPresentationStage(0); setPresentationAgentStates(Array(6).fill('等待')); setPresentationComplete(false); setPresentationBusy(false);
+    setPresentationMode(true); setPresentationStage(0); setPresentationAgentStates(Array(6).fill('等待')); setPresentationComplete(false); setPresentationBusy(false); setDesignStatementBusySections([]);
     setNotice('已进入路演流程，请先载入或填写项目资料。');
   }, []);
 
@@ -513,9 +532,61 @@ export default function Workbench() {
     setProjectId(fresh.projectId); setFormData(demo); setBlueprint(next); blueprintRef.current = next;
     setVersions(createBlueprintVersion(next, [], '重新开始路演演示')); setViewedStep(0); setCurrentStep(-1); setRunState('idle'); setRunMode('roadshow');
     setVisualWorkflowStep(0); setOutputWorkflowStep(0); setConceptRequirement(''); setProjectInputStep(0);
-    setPresentationMode(true); setPresentationStage(0); setPresentationAgentStates(Array(6).fill('等待')); setPresentationComplete(false); setPresentationBusy(false);
+    setPresentationMode(true); setPresentationStage(0); setPresentationAgentStates(Array(6).fill('等待')); setPresentationComplete(false); setPresentationBusy(false); setDesignStatementBusySections([]);
     setNotice('路演案例与模拟资料已载入，请点击“开始整理项目资料”。');
   }, []);
+
+  const handleReviewDesignStatementSection = useCallback((sectionKey, review) => {
+    const result = reviewDesignStatementSection(blueprintRef.current, sectionKey, review);
+    commitBlueprint(result.blueprint, review.reviewStatus === 'approved' ? '通过设计说明书分项' : '提交设计说明书修改意见');
+    setNotice(review.reviewStatus === 'approved' ? '该设计说明书分项已通过，内容可信状态保持不变。' : '设计师意见已写入执行轨迹。');
+    return result;
+  }, [commitBlueprint]);
+
+  const handleRegenerateDesignStatementSection = useCallback(async (sectionKey, comment) => {
+    const review = reviewDesignStatementSection(blueprintRef.current, sectionKey, {
+      reviewStatus: 'needsRevision',
+      comment,
+      reviewedBy: 'designer',
+    });
+    commitBlueprint(review.blueprint, '设计师提交设计说明书分项修改意见');
+    setDesignStatementBusySections((keys) => [...new Set([...keys, sectionKey])]);
+    setNotice('设计师意见已记录，Agent 4 正在只重新生成对应分项。');
+    const controller = new AbortController();
+    controllerRef.current = controller;
+    try {
+      const scopedResult = await mockAgentProvider.runAgent(4, review.blueprint, {
+        signal: controller.signal,
+        delayMs: 720,
+        scope: 'sections',
+        sectionKeys: [sectionKey],
+        reviewComments: { [sectionKey]: comment },
+        traceId: review.traceId,
+      });
+      const next = regenerateDesignStatementSections(review.blueprint, scopedResult);
+      commitBlueprint(next, 'Agent 4 完成设计说明书分项重新生成');
+      setNotice('目标 Blueprint 源字段和设计说明书分项已重新生成，请再次复核。');
+      return next;
+    } catch (error) {
+      if (error.name !== 'AbortError') {
+        setNotice(`设计说明书分项重新生成失败：${error.message}`);
+      }
+      throw error;
+    } finally {
+      setDesignStatementBusySections((keys) => keys.filter((key) => key !== sectionKey));
+      if (controllerRef.current === controller) controllerRef.current = null;
+    }
+  }, [commitBlueprint]);
+
+  const handleApproveRemainingDesignStatementSections = useCallback(() => {
+    const next = approvePendingDesignStatementSections(blueprintRef.current, 'designer');
+    if (next === blueprintRef.current) {
+      setNotice('当前没有可批量通过的待复核分项。');
+      return;
+    }
+    commitBlueprint(next, '通过其余待复核设计说明书分项');
+    setNotice('其余待复核分项已通过；需调整项未被覆盖。');
+  }, [commitBlueprint]);
 
   const handleConfirmCheckpoint = useCallback((checkpointId, payload = {}) => {
     let source = blueprintRef.current;
@@ -534,12 +605,15 @@ export default function Workbench() {
     const next = confirmCheckpoint(source, checkpointId, { source: '工作台人工确认' });
     commitBlueprint(next, `设计师完成${next.checkpoints.find((item) => item.id === checkpointId)?.name}`);
     if (checkpointId === 'checkpoint-4') setRunState('done');
-    else if (runMode === 'roadshow') {
+    else if (presentationMode && ['checkpoint-2', 'checkpoint-3'].includes(checkpointId)) {
+      setRunState('ready');
+      setTimeout(runPresentationUntilCheckpoint, 360);
+    } else if (runMode === 'roadshow') {
       setRunState('ready');
       setTimeout(runRoadshowFlow, 360);
     } else setRunState('ready');
     setNotice(checkpointId === 'checkpoint-4' ? '演示方案已完成｜正式成果可继续深化' : '设计师确认已写入项目设计蓝本。');
-  }, [commitBlueprint, runMode, runRoadshowFlow]);
+  }, [commitBlueprint, presentationMode, runMode, runPresentationUntilCheckpoint, runRoadshowFlow]);
 
   const handleUpdateDecision = useCallback((patch) => {
     const next = updateDesignerDecision(blueprintRef.current, patch, '设计师更新概念选择 / 融合意见');
@@ -600,6 +674,7 @@ export default function Workbench() {
     setPresentationAgentStates(Array.isArray(record.presentationAgentStates) && record.presentationAgentStates.length === 6 ? record.presentationAgentStates : Array(6).fill('等待'));
     setPresentationComplete(Boolean(record.presentationComplete));
     setPresentationBusy(false);
+    setDesignStatementBusySections([]);
     setNotice('已恢复历史项目状态。');
   }, []);
 
@@ -639,9 +714,9 @@ export default function Workbench() {
     if (!presentationMode || presentationStage !== 2 || presentationComplete || presentationBusy) return undefined;
     const hasRunningStatus = presentationAgentStates.some((status) => status === '执行中');
     if (hasRunningStatus) return undefined;
-    const timer = setTimeout(handleConfirmPresentation, 320);
+    const timer = setTimeout(runPresentationUntilCheckpoint, 320);
     return () => clearTimeout(timer);
-  }, [handleConfirmPresentation, presentationAgentStates, presentationBusy, presentationComplete, presentationMode, presentationStage]);
+  }, [presentationAgentStates, presentationBusy, presentationComplete, presentationMode, presentationStage, runPresentationUntilCheckpoint]);
 
   useEffect(() => {
     if (presentationMode && presentationStage === 3) setPresentationStage(2);
@@ -721,6 +796,10 @@ export default function Workbench() {
             onExportMarkdown={handleExportMarkdown}
             onNavigate={setViewedStep}
             onRegenerateConcepts={handleRegenerateConcepts}
+            onReviewDesignStatementSection={handleReviewDesignStatementSection}
+            onRegenerateDesignStatementSection={handleRegenerateDesignStatementSection}
+            onApproveRemainingDesignStatementSections={handleApproveRemainingDesignStatementSections}
+            designStatementBusySections={designStatementBusySections}
             onNotice={setNotice}
             onOpenBlueprint={() => setFullBlueprintOpen(true)}
           />
@@ -737,7 +816,7 @@ export default function Workbench() {
             presentationAgentStates={presentationAgentStates}
             presentationBusy={presentationBusy}
             onModifyPresentation={handleModifyPresentationInputs}
-            onConfirmPresentation={handleConfirmPresentation}
+            onConfirmPresentation={runPresentationUntilCheckpoint}
             onOpenResults={handleOpenPresentationResults}
             onRunNext={handleRunNext}
             onPause={handlePause}

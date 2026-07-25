@@ -253,6 +253,45 @@ export function selectAgentExecution(blueprint, agentId) {
   return [...(blueprint?.agentExecutions || [])].reverse().find((item) => item.agentId === `agent-${agentId}` || item.agentId === Number(agentId)) || null;
 }
 
+export function selectDesignExecutionTrace(blueprint) {
+  const reviewEvents = (blueprint?.changeLog || []).filter((event) => (
+    event.type === 'design-statement-section-review'
+    && event.action === 'needsRevision'
+    && event.traceId
+  ));
+  const executions = (blueprint?.agentExecutions || []).filter((execution) => (
+    execution.executionType === 'section-regeneration'
+    && execution.traceId
+  ));
+  const traceIds = [...new Set([
+    ...reviewEvents.map((event) => event.traceId),
+    ...executions.map((execution) => execution.traceId),
+  ])];
+  return traceIds.map((traceId) => {
+    const review = reviewEvents.find((event) => event.traceId === traceId) || null;
+    const execution = executions.find((event) => event.traceId === traceId) || null;
+    return {
+      traceId,
+      type: 'design-statement-revision',
+      sectionKey: review?.sectionKey || execution?.sectionKeys?.[0] || '',
+      sectionTitle: review?.sectionTitle || '',
+      before: review?.before || execution?.before || null,
+      comment: review?.comment || execution?.trigger?.comment || '',
+      after: execution?.after || null,
+      requestedBy: review?.sourceAgent || '设计师',
+      regeneratedBy: execution?.agentName || '',
+      requestedAt: review?.modifiedAt || '',
+      startedAt: execution?.startedAt || '',
+      completedAt: execution?.completedAt || '',
+      inputRevision: execution?.inputRevision ?? review?.blueprintRevision ?? null,
+      outputRevision: execution?.outputRevision ?? null,
+      statementRevisionBefore: execution?.statementRevisionBefore ?? review?.statementRevision ?? null,
+      statementRevisionAfter: execution?.statementRevisionAfter ?? null,
+      status: execution?.status || 'awaiting-regeneration',
+    };
+  }).sort((a, b) => new Date(a.requestedAt || a.startedAt || 0) - new Date(b.requestedAt || b.startedAt || 0));
+}
+
 export function selectAgent1ExecutionSummary(blueprint) {
   const execution = selectAgentExecution(blueprint, 1);
   if (!execution) return '等待整理项目资料';
@@ -316,7 +355,10 @@ export function isRoadshowResultsReady(blueprint) {
   if (!blueprint) return false;
   const allAgentsDone = [1, 2, 3, 4, 5, 6].every((agentId) => blueprint.agentRuns?.[agentId]?.status === 'done');
   const pptOutline = asArray(blueprint.pptOutline || blueprint.pptStructure);
-  return allAgentsDone && pptOutline.length > 0;
+  const gate3Confirmed = blueprint.checkpoints?.find((checkpoint) => checkpoint.id === 'checkpoint-3')?.status === '已确认';
+  const designStatement = blueprint.deliverableArtifacts?.designStatement;
+  const designStatementReady = !designStatement || designStatement.status === 'approved';
+  return allAgentsDone && pptOutline.length > 0 && gate3Confirmed && designStatementReady;
 }
 
 function selectPptImage(page, index, assets) {

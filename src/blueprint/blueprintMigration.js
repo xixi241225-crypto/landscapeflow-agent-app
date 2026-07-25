@@ -21,6 +21,18 @@ const FACT_KEYS_BY_LABEL = {
   业主单位: 'owner',
 };
 
+function normalizeCheckpoints(checkpoints) {
+  const existing = Array.isArray(checkpoints) ? checkpoints : [];
+  return CHECKPOINTS.map((definition) => ({
+    status: '未到达',
+    confirmedAt: null,
+    confirmedBy: null,
+    decision: null,
+    ...(existing.find((checkpoint) => checkpoint.id === definition.id) || {}),
+    ...definition,
+  }));
+}
+
 const englishStatus = (status) => {
   if (['confirmed', 'assumption', 'pending', 'conflict'].includes(status)) return status;
   if (status === '已确认') return BLUEPRINT_ITEM_STATUS.CONFIRMED;
@@ -266,6 +278,11 @@ export function migrateBlueprintToV2(existingBlueprint) {
       updatedBy: existingBlueprint.updatedBy || 'system',
       decisions: existingBlueprint.decisions || [],
       agentExecutions: existingBlueprint.agentExecutions || [],
+      checkpoints: normalizeCheckpoints(existingBlueprint.checkpoints),
+      deliverableArtifacts: {
+        ...(existingBlueprint.deliverableArtifacts || {}),
+        designStatement: existingBlueprint.deliverableArtifacts?.designStatement || null,
+      },
       chapters: {
         projectDefinition: existingBlueprint.chapters.projectDefinition
           ? { ...existingBlueprint.chapters.projectDefinition, facts: keyedFacts }
@@ -297,7 +314,11 @@ export function migrateBlueprintToV2(existingBlueprint) {
     delete next.conceptCandidates;
     next.decisions = next.decisions || [];
     next.agentExecutions = next.agentExecutions || [];
-    next.checkpoints = next.checkpoints || CHECKPOINTS.map((item) => ({ ...item, status: '未到达', confirmedAt: null, confirmedBy: null, decision: null }));
+    next.deliverableArtifacts = {
+      ...(next.deliverableArtifacts || {}),
+      designStatement: next.deliverableArtifacts?.designStatement || null,
+    };
+    next.checkpoints = normalizeCheckpoints(next.checkpoints);
     next.migratedFrom = {
       schemaVersion: existingBlueprint.schemaVersion || 'legacy',
       migrationId: MIGRATION_ID,

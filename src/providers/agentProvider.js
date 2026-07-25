@@ -1,7 +1,9 @@
 /**
  * Agent Provider contract.
- * A real LLM provider only needs to implement runAgent(agentId, blueprint, context)
- * and return a structured patch containing fields owned by that Agent.
+ * A real LLM provider implements runAgent(agentId, blueprint, context).
+ * Normal execution returns a structured patch containing fields owned by that Agent.
+ * Scoped execution may use context.scope === 'sections' and must return only the
+ * requested source-field updates;成果对象仍由 Blueprint service 编译。
  */
 export class AgentProvider {
   constructor(name = 'unknown') {

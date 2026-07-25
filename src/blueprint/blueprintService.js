@@ -298,6 +298,18 @@ export function confirmCheckpoint(blueprint, checkpointId, decision = {}, confir
   if (checkpointId === 'checkpoint-2' && !blueprint.designerDecision?.selectedConceptId) {
     throw new Error('请先选择 A / B / C 概念方向');
   }
+  if (checkpointId === 'checkpoint-3') {
+    const designStatement = blueprint.deliverableArtifacts?.designStatement;
+    if (!designStatement?.sections?.length) {
+      throw new Error('设计说明书尚未生成，无法完成专业复核');
+    }
+    if (['regenerating', 'needsRevision', 'stale'].includes(designStatement.status)) {
+      throw new Error('设计说明书仍有待修改或重新生成内容');
+    }
+    if (designStatement.sections.some((section) => section.reviewStatus !== 'approved')) {
+      throw new Error('请先完成设计说明书全部分项复核');
+    }
+  }
   if (checkpointId === 'checkpoint-4' && blueprint.invalidatedOutputs.length) {
     throw new Error('仍有需重新生成的下游成果，无法完成最终确认');
   }
@@ -322,21 +334,6 @@ export function confirmCheckpoint(blueprint, checkpointId, decision = {}, confir
     ['explicitRequirements', 'latentGoals', 'siteConditions', 'deliverableRequirements'].forEach((field) => {
       next[field] = (next[field] || []).map((item) => ({ ...item, status: CONTENT_STATUS.CONFIRMED, _meta: makeMeta(confirmedBy, '确认项目定义', version, CONTENT_STATUS.CONFIRMED) }));
     });
-  }
-  if (checkpointId === 'checkpoint-3') {
-    ['coreNarrative', 'spatialStructure', 'circulationStrategy'].forEach((field) => {
-      if (next[field]) {
-        next[field].status = CONTENT_STATUS.CONFIRMED;
-        next[field]._meta = makeMeta(confirmedBy, '确认项目设计蓝本', version, CONTENT_STATUS.CONFIRMED);
-      }
-    });
-    next.functionalZones = next.functionalZones.map((item) => ({ ...item, status: CONTENT_STATUS.CONFIRMED, _meta: makeMeta(confirmedBy, '确认项目设计蓝本', version, CONTENT_STATUS.CONFIRMED) }));
-    next.featureNodes = next.featureNodes.map((item) => ({ ...item, status: CONTENT_STATUS.CONFIRMED, _meta: makeMeta(confirmedBy, '确认项目设计蓝本', version, CONTENT_STATUS.CONFIRMED) }));
-    next.professionalStrategies = {
-      ...next.professionalStrategies,
-      status: CONTENT_STATUS.CONFIRMED,
-      _meta: makeMeta(confirmedBy, '确认项目设计蓝本', version, CONTENT_STATUS.CONFIRMED),
-    };
   }
   if (checkpointId === 'checkpoint-4') next.officialPackageStatus = '演示方案已完成｜正式成果可继续深化';
   next.changeLog.unshift({

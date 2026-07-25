@@ -10,7 +10,7 @@ const AGENTS = [
   { id: '06', name: '成果输出', detail: '形成文案、图集与 12 页 PPT' },
 ];
 
-const CHECKPOINTS = ['项目事实确认', '概念方向确认', '空间方案确认', '最终成果确认'];
+const CHECKPOINTS = ['项目理解确认', '方案方向决策', '设计说明书分项确认'];
 
 export default function Hero() {
   const navigate = useNavigate();
@@ -52,7 +52,7 @@ export default function Hero() {
             <div className="mt-9 flex justify-center">
               <button onClick={() => navigate('/workbench', { state: { newProject: true, presentationMode: true } })} className="btn-primary min-w-[210px] px-9 py-4 text-base">开始方案设计</button>
             </div>
-            <p className="mt-5 text-sm text-[var(--lf-muted)]">从项目资料开始，六阶段推进；四个关键判断始终由设计师确认。</p>
+            <p className="mt-5 text-sm text-[var(--lf-muted)]">从项目资料开始，六阶段推进；关键判断始终由设计师确认。</p>
           </motion.div>
         </section>
 
@@ -83,7 +83,7 @@ export default function Hero() {
                 ))}
               </div>
               <div className="mt-8 rounded-2xl border border-amber-200 bg-[var(--lf-gold-soft)] p-5">
-                <div className="grid gap-2 md:grid-cols-4">
+                <div className="grid gap-2 md:grid-cols-3">
                   {CHECKPOINTS.map((item, index) => (
                     <div key={item} className="rounded-xl border border-amber-100 bg-white px-4 py-3 text-sm font-semibold text-[var(--lf-text)]">
                       <span className="mr-2 text-[var(--lf-gold)]">0{index + 1}</span>{item}
