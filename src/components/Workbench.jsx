@@ -383,7 +383,7 @@ export default function Workbench() {
           let next = updateDesignerDecision(blueprintRef.current, {
             selectedConceptId: recommendationId,
             acceptedRecommendation: true,
-            fusionRequirements: '采用预缓存路演决策，保持低维护与全年龄共享方向。',
+            fusionRequirements: '保持所选概念的核心策略，并在待确认资料补齐后深化空间尺度与节点内容。',
             modificationNotes: '',
             decisionReason: '路演模式采用已准备的设计师决策',
           }, '路演预设概念决策');
@@ -423,7 +423,7 @@ export default function Workbench() {
       visualWorkflowStep: 3, outputWorkflowStep: 4, conceptRequirement, projectInputStep, presentationMode: true,
       presentationStage: 2, presentationAgentStates: Array(6).fill('已完成'), presentationComplete: true,
     });
-    navigate('/roadshow', { state: { openResults: true, fromWorkbench: true } });
+    navigate('/roadshow');
   }, [conceptRequirement, currentStep, formData, navigate, projectId, projectInputStep, versions, viewedStep]);
 
   const handleRunNext = useCallback(() => {
@@ -634,17 +634,6 @@ export default function Workbench() {
     handleRestartDemo();
     navigate('/workbench', { replace: true, state: null });
   }, [handleRestartDemo, location.state, navigate]);
-
-  useEffect(() => {
-    if (!location.state?.returnToTrack) return;
-    setPresentationMode(true);
-    setPresentationStage(2);
-    setPresentationAgentStates(Array(6).fill('已完成'));
-    setPresentationComplete(true);
-    setRunMode('roadshow');
-    setRunState('done');
-    navigate('/workbench', { replace: true, state: null });
-  }, [location.state, navigate]);
 
   useEffect(() => {
     if (!presentationMode || presentationStage !== 2 || presentationComplete || presentationBusy) return undefined;

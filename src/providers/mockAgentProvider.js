@@ -7,8 +7,6 @@ import {
   selectProjectInputForAgents,
 } from '../blueprint/blueprintSelectors.js';
 
-const northernPattern = /北京|河北|天津|山西|内蒙古|辽宁|吉林|黑龙江/;
-
 function parseArea(area) {
   const parsed = Number(String(area || '').replace(/[^0-9.]/g, ''));
   return Number.isFinite(parsed) && parsed > 0 ? parsed : 5000;
@@ -151,27 +149,32 @@ function spatialPatch(blueprint) {
   const concept = selectedConcept(blueprint);
   if (!concept) throw new Error('空间推演前必须由设计师确认概念方向');
   const area = parseArea(project.area);
-  const areaLabel = compact(project.area, `${area}㎡`);
-  const structureById = {
-    A: '复合绿环 + 共享核心 + 多点织补',
-    B: '弹性核心 + 主题分区 + 多向连接',
-    C: '森林基底 + 漫游主线 + 生态节点',
-  };
-  const conceptCode = concept.code || concept.id;
-  const structure = structureById[conceptCode];
-  const zoneTemplates = {
-    A: ['共享活动核心', '全龄活动节点', '林下会客节点', '安静康养节点', '生态雨水节点'],
-    B: ['弹性活动核心', '亲子活力区', '邻里会客区', '林荫康养区', '形象展示区'],
-    C: ['森氧体验区', '自然探索区', '雨水花园区', '林下康养区', '自然教育区'],
-  };
-  const ratios = [0.32, 0.2, 0.16, 0.17, 0.15];
-  const zones = zoneTemplates[conceptCode].map((name, index) => ({
+  const rawAreaLabel = compact(project.area, String(area));
+  const areaLabel = /㎡|平方米|平米|m²/i.test(rawAreaLabel) ? rawAreaLabel : `${rawAreaLabel}㎡`;
+  const keyScenes = concept.keyScenes?.length ? concept.keyScenes : ['共享活动界面', '日常停留节点', '连续到达路径'];
+  const strategyText = [concept.strategicFocus, concept.spatialHypothesis, ...keyScenes].filter(Boolean).join('；');
+  const structure = compact(concept.spatialHypothesis, `${concept.name}的空间骨架待深化`);
+  const ratios = keyScenes.map((_, index) => {
+    if (keyScenes.length === 1) return 1;
+    if (index === 0) return 0.34;
+    return 0.66 / (keyScenes.length - 1);
+  });
+  const confirmedUsers = selectProjectDefinitionDetails(blueprint).stakeholders
+    .filter((item) => ['confirmed', CONTENT_STATUS.CONFIRMED].includes(item.status))
+    .map((item) => compact(item.value || item.label, ''))
+    .filter(Boolean);
+  const targetUsers = confirmedUsers.length ? confirmedUsers.join('、') : '待确认的主要使用者';
+  const zones = keyScenes.map((name, index) => ({
     name,
     area: `约 ${Math.round(area * ratios[index] / 10) * 10}㎡（演示估算）`,
-    function: index === 0 ? '承载核心叙事与主要公共活动' : `回应${compact(project.targetUsers, '主要使用者')}的分层需求`,
+    function: index === 0 ? `承载“${concept.name}”的核心空间体验` : `为${targetUsers}提供与“${name}”相符的弹性使用界面`,
     status: CONTENT_STATUS.AI_SUGGESTED,
   }));
-  const northern = northernPattern.test(project.city || '');
+  const circulationTitle = /慢行|漫游|连续/.test(strategyText)
+    ? '连续慢行与节点串联'
+    : /活动|聚场|聚核|核心/.test(strategyText)
+      ? '公共核心与多向连接'
+      : '清晰到达与弹性连接';
   const blueprintVersion = blueprint.currentVersion + 1;
   const planAsset = {
     id: 'SP01',
@@ -191,31 +194,31 @@ function spatialPatch(blueprint) {
       value: `${concept.proposition || concept.narrative}${blueprint.designerDecision.fusionRequirements ? ` 融合要求：${blueprint.designerDecision.fusionRequirements}` : ''}`,
     },
     spatialStructure: {
-      title: structure,
-      value: `${structure}。基于${areaLabel}进行概念级面积分配，所有尺度需待真实测绘资料复核。`,
+      title: `${concept.name}｜空间骨架`,
+      value: `${structure} 基于${areaLabel}进行概念级面积分配，所有尺度、边界与现状关系需待真实测绘资料复核。`,
       planImage: './demo-images/plan.jpg',
       planAsset,
       analysisAssets: [
         { id: 'AN01', title: '功能分区图', assetType: '功能分区分析图', aspectRatio: '4:3', status: '待深化', sourceAgent: 'Agent 4｜空间推演', blueprintVersion, isDemoAsset: false },
         { id: 'AN02', title: '动线组织图', assetType: '动线组织分析图', aspectRatio: '4:3', status: '待深化', sourceAgent: 'Agent 4｜空间推演', blueprintVersion, isDemoAsset: false },
-        { id: 'AN03', title: '生态与植物策略图', assetType: '生态/植物策略分析图', aspectRatio: '4:3', status: '待深化', sourceAgent: 'Agent 4｜空间推演', blueprintVersion, isDemoAsset: false },
+        { id: 'AN03', title: '环境策略图', assetType: '环境策略分析图', aspectRatio: '4:3', status: '待深化', sourceAgent: 'Agent 4｜空间推演', blueprintVersion, isDemoAsset: false },
       ],
       isDemoAsset: true,
     },
     functionalZones: zones,
     circulationStrategy: {
-      title: conceptCode === 'A' ? '连续慢行绿环' : conceptCode === 'B' ? '核心放射 + 环向补充' : '林下漫游 + 生态观察支线',
-      value: '主路径组织连续无障碍通行，次路径连接主题节点；入口数量、消防与竖向关系待真实图纸复核。',
+      title: circulationTitle,
+      value: `以“${concept.strategicFocus || concept.name}”为组织依据，串联${keyScenes.join('、')}；入口数量、消防、无障碍与竖向关系待真实图纸复核。`,
     },
     professionalStrategies: {
-      plant: `${northern ? '耐寒乡土骨架树种' : '适地乡土常绿与季相树种'} + 低维护多年生地被，建立四季层次。`,
-      material: '主路径采用耐久防滑、可维护材料；节点材料服从概念主题并控制全生命周期成本。',
-      ecology: conceptCode === 'C' ? '以近自然群落、雨水花园和生境连续性为重点。' : '以树荫覆盖、透水铺装和小微生境织补为重点。',
-      grading: '当前仅提出缓坡无障碍与场地排水方向，待现状标高和土方数据接入后计算。',
-      drainage: '采用源头减排—过程滞蓄—安全溢流的海绵策略，具体指标待当地规范与降雨数据复核。',
-      operations: conceptCode === 'B' ? '以平日休憩、周末亲子和社区活动三种模式组织弹性空间，建立低成本预约与维护机制。' : '以日常开放、主题活动和季节运营组织空间使用，明确分区维护责任。',
+      plant: '植物配置遵循适地适树、季相连续和便于维护原则；具体保留植物、树种、规格及数量需在现状植物调查后确认。',
+      material: '材料选择遵循耐久、防滑、易维护和与概念气质一致的原则；具体品类、颜色及构造做法待造价与样板确认。',
+      ecology: '生态策略以提升环境舒适度与场地适应性为原则；现状生境、水体及可采用的生态设施需经专项调查确认。',
+      grading: '竖向策略仅提出安全可达与场地衔接原则，具体标高、坡度及土方关系待测绘数据复核。',
+      drainage: '排水策略遵循安全排放与源头减排原则；汇水分区、设施类型和技术指标待标高、土壤及市政排水条件复核。',
+      operations: `围绕${keyScenes.join('、')}建立日常开放与弹性使用原则；具体活动、人群容量、开放时段和维护机制待运营需求确认。`,
     },
-    featureNodes: zones.slice(0, 4).map((zone, index) => ({ name: zone.name, value: `${concept.name}的特色节点 ${index + 1}，需在下一轮深化中落实尺度、活动与材料。` })),
+    featureNodes: zones.map((zone, index) => ({ name: zone.name, value: `${concept.name}的方案节点 ${index + 1}，需在下一轮深化中落实尺度、活动、材料与场地适配。` })),
     risks: [{ title: '空间成果精度', value: '当前总平面采用演示案例视觉素材，空间结论以项目设计蓝本文本为准。', status: CONTENT_STATUS.PENDING }],
     nextTasks: [{ title: '蓝本确认', value: '确认核心叙事、空间结构、分区、动线与五项专业策略。', status: CONTENT_STATUS.PENDING }],
   };
@@ -225,15 +228,25 @@ function visualPatch(blueprint) {
   const concept = selectedConcept(blueprint);
   const project = getProject(blueprint);
   const structure = blueprint.spatialStructure?.title || getRecordValue(blueprint.spatialStructure, '空间结构待确认');
+  const definition = selectProjectDefinitionDetails(blueprint);
+  const confirmedUsers = definition.stakeholders
+    .filter((item) => ['confirmed', CONTENT_STATUS.CONFIRMED].includes(item.status))
+    .map((item) => compact(item.value || item.label, ''))
+    .filter(Boolean);
+  const people = confirmedUsers.length
+    ? confirmedUsers.join('、')
+    : '适量社区使用者，具体人群结构待确认';
+  const keyScenes = concept?.keyScenes?.length ? concept.keyScenes : ['核心公共场景', '安静休憩场景', '自然体验场景'];
+  const sceneTitles = Array.from({ length: 3 }, (_, index) => keyScenes[index] || ['核心公共场景', '安静休憩场景', '自然体验场景'][index]);
   const blueprintVersion = blueprint.currentVersion + 1;
   const tasks = [
     ['V01', '鸟瞰总览', '45°鸟瞰', './demo-images/aerial.jpg'],
-    ['V02', '主入口人视', '1.6m 人视', './demo-images/entrance.jpg'],
-    ['V03', '核心公共场景', '1.6m 人视', './demo-images/awn.jpg'],
-    ['V04', '全龄活动场景', '1.4m 人视', './demo-images/children.jpg'],
-    ['V05', '林下康养场景', '1.6m 人视', './demo-images/elderly.jpg'],
+    ['V02', '到达与公共界面', '1.6m 人视', './demo-images/entrance.jpg'],
+    ['V03', sceneTitles[0], '1.6m 人视', './demo-images/awn.jpg'],
+    ['V04', sceneTitles[1], '1.6m 人视', './demo-images/children.jpg'],
+    ['V05', sceneTitles[2], '1.6m 人视', './demo-images/elderly.jpg'],
     ['V06', '夜景氛围', '蓝调时刻', './demo-images/night.jpg'],
-    ['V07', '植物策略', '分析图', './demo-images/planting.jpg'],
+    ['V07', '植物与环境策略', '分析图', './demo-images/planting.jpg'],
     ['V08', '空间策略总平', '正投影', './demo-images/plan.jpg'],
   ];
   return {
@@ -243,12 +256,12 @@ function visualPatch(blueprint) {
       angle,
       season: index === 5 ? '夏季' : '春末至初夏',
       time: index === 5 ? '蓝调时刻' : index === 0 ? '上午' : '午后',
-      light: index === 5 ? '暖色场景照明与自然余晖' : '柔和侧光，树影层次清晰',
-      people: index === 0 ? '适量全龄使用者' : '老人、儿童与社区家庭，密度适中',
-      activity: title.includes('入口') ? '到达、停留与导视识别' : title.includes('活动') ? '亲子互动与全龄活动' : '漫步、休憩与自然体验',
-      plant: '乡土乔木骨架、低维护多年生地被与四季层次',
-      material: '耐久防滑铺装、温暖木色设施与克制金属收边',
-      atmosphere: '自然、专业、温暖、可实施，具有社区活力',
+      light: index === 5 ? '场景照明与自然余晖协调，具体照度待专项确认' : '以清晰空间层次为原则，具体光照条件待场地复核',
+      people,
+      activity: title.includes('到达') ? '到达、停留与导视识别' : `围绕“${title}”表达日常使用，具体活动内容待需求确认`,
+      plant: blueprint.professionalStrategies?.plant || '遵循适地适树原则，具体植物条件待调查确认',
+      material: blueprint.professionalStrategies?.material || '遵循耐久、防滑和易维护原则，具体材料待样板确认',
+      atmosphere: '专业、克制、可实施，并符合当前项目与概念气质',
       mustInclude: `${concept?.name || '已确认概念'}的核心空间特征、真实尺度关系与主要使用人群`,
       avoid: '禁止脱离总平面的夸张构筑物、过度商业化设施、错误植物季相与不合理高差',
       prompt: `${compact(project.projectName, '景观项目')}，概念“${concept?.name}”，空间结构“${structure}”，${title}，体现${compact(project.stylePreference, '自然、专业、可实施')}，人物与材料服从蓝本。`,
@@ -297,7 +310,7 @@ function outputPatch(blueprint) {
     ['08', '功能分区与游线组织', `功能分区：${zones || '待生成'}；动线：${blueprint.circulationStrategy?.value || '待生成'}`, '分区色块图 + 游线箭头', ['functionalZones', 'circulationStrategy']],
     ['09', '植物、材料与生态策略', `植物：${strategy.plant || '待生成'}；材料：${strategy.material || '待生成'}；生态：${strategy.ecology || '待生成'}；竖向与排水：${strategy.grading || '待生成'} ${strategy.drainage || ''}`, '植物群落 + 材料样板 + 生态剖面', ['professionalStrategies']],
     ['10', '特色节点与场景设计', nodes || '特色节点待生成', '节点索引图 + 2–3 张重点场景', ['featureNodes', 'visualTasks']],
-    ['11', '视觉成果展示', `${blueprint.visualTasks.length} 项视觉任务已组织，展示鸟瞰、入口、核心场景、全龄活动与夜景等演示案例视觉成果。`, '多图网格 + 大图强调', ['visualTasks', 'visualAssets']],
+    ['11', '视觉成果展示', `${blueprint.visualTasks.length} 项视觉任务已组织，展示鸟瞰、到达界面、概念关键场景、策略分析与夜景等演示案例视觉成果。`, '多图网格 + 大图强调', ['visualTasks', 'visualAssets']],
     ['12', '项目价值与下一步工作', `以一份可演进蓝本统一概念、空间、视觉与汇报；信息来源：${sources || '设计师输入'}；下一步：${blueprint.nextTasks.map((item) => item.value).join('、')}`, '价值总结 + 下一步时间线', ['qualityReview', 'risks', 'nextTasks']],
   ];
   const pptOutline = pages.map(([page, title, content, suggestedVisual, sourceFields]) => ({

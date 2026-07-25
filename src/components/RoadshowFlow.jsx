@@ -1,12 +1,10 @@
-import { roadshowProject } from '../data/roadshowProject';
 import {
   BLUEPRINT_STATUS_LABELS,
-  selectAgent1ExecutionSummary,
-  selectAgent2ExecutionSummary,
   selectCoreConstraints,
   selectDesignPrinciples,
   selectProjectDefinitionDetails,
   selectProjectGoals,
+  selectRoadshowAgentSummaries,
 } from '../blueprint/blueprintSelectors';
 
 const GLOBAL_STAGES = ['项目资料', '设计蓝本', 'Agent 协作', '完整成果'];
@@ -121,6 +119,7 @@ export function RoadshowBlueprintDraft({ blueprint, onOpenBlueprint }) {
 export function RoadshowAgentTrack({ states, blueprint }) {
   const completed = states.filter((status) => status === '已完成').length;
   const running = states.some((status) => status === '执行中');
+  const agents = selectRoadshowAgentSummaries(blueprint);
   return (
     <div className="roadshow-track-page">
       <div className="text-center">
@@ -132,15 +131,14 @@ export function RoadshowAgentTrack({ states, blueprint }) {
         <span style={{ width: `${completed / 6 * 100}%` }} />
       </div>
       <div className="roadshow-track-list">
-        {roadshowProject.agentExecution.map((agent, index) => {
+        {agents.map((agent, index) => {
           const status = states[index] || '等待';
-          const result = agent.id === 1 ? selectAgent1ExecutionSummary(blueprint) : agent.id === 2 ? selectAgent2ExecutionSummary(blueprint) : agent.result;
           return (
             <article key={agent.id} className={`roadshow-track-row ${status === '执行中' ? 'working' : ''} ${status === '已完成' ? 'done' : ''}`}>
               <span className="roadshow-track-number">0{agent.id}</span>
               <div className="min-w-0 flex-1">
                 <h3>{agent.name}</h3>
-                <p>{result}</p>
+                <p>{agent.result}</p>
               </div>
               <span className="roadshow-track-status">
                 {status === '已完成' ? '✓' : status === '执行中' ? '●' : '○'} {status}

@@ -267,6 +267,183 @@ export function selectAgent2ExecutionSummary(blueprint) {
   return execution.summary || `已基于项目设计蓝本 ${execution.inputVersion || 'v2'} 生成 ${execution.candidateCount || 3} 个概念候选`;
 }
 
+export function selectRoadshowAgentSummaries(blueprint) {
+  const selected = selectConceptCandidate(blueprint, blueprint?.designerDecision?.selectedConceptId);
+  const zones = asArray(blueprint?.functionalZones);
+  const visualTasks = asArray(blueprint?.visualTasks);
+  const visualAssets = asArray(blueprint?.visualAssets);
+  const pptOutline = asArray(blueprint?.pptOutline || blueprint?.pptStructure);
+  const artifacts = asArray(blueprint?.outputArtifacts);
+  const definitions = [
+    { id: 1, name: '前期分析', result: selectAgent1ExecutionSummary(blueprint) },
+    { id: 2, name: '概念生成', result: selectAgent2ExecutionSummary(blueprint) },
+    {
+      id: 3,
+      name: '方案比选',
+      result: selected
+        ? `已完成概念比选，设计师最终选择 ${selected.code || selected.id}｜${selected.name}`
+        : '已形成概念比选，等待设计师确认方向',
+    },
+    {
+      id: 4,
+      name: '空间推演',
+      result: blueprint?.spatialStructure
+        ? `已形成“${blueprint.spatialStructure.title || text(blueprint.spatialStructure)}”及 ${zones.length} 个功能/场景分区`
+        : '等待形成空间结构与功能分区',
+    },
+    {
+      id: 5,
+      name: '视觉表达',
+      result: visualTasks.length
+        ? `已组织 ${visualTasks.length} 项视觉任务，并关联 ${visualAssets.length} 项视觉成果`
+        : '等待组织视觉任务与成果',
+    },
+    {
+      id: 6,
+      name: '成果输出',
+      result: pptOutline.length
+        ? `已生成 ${pptOutline.length} 页汇报结构与 ${artifacts.length} 类成果清单`
+        : '等待生成汇报结构与成果清单',
+    },
+  ];
+  return definitions.map((agent) => ({
+    ...agent,
+    status: blueprint?.agentRuns?.[agent.id]?.status || 'pending',
+  }));
+}
+
+export function isRoadshowResultsReady(blueprint) {
+  if (!blueprint) return false;
+  const allAgentsDone = [1, 2, 3, 4, 5, 6].every((agentId) => blueprint.agentRuns?.[agentId]?.status === 'done');
+  const pptOutline = asArray(blueprint.pptOutline || blueprint.pptStructure);
+  return allAgentsDone && pptOutline.length > 0;
+}
+
+function selectPptImage(page, index, assets) {
+  const sourceText = `${asArray(page?.sourceFields).join(' ')} ${page?.title || ''} ${page?.suggestedVisual || ''}`;
+  if (/conceptGeneration|designerDecision|概念|方案比选/.test(sourceText)) return assets.concept;
+  if (/spatialStructure|functionalZones|circulationStrategy|总平|空间结构|功能分区|游线/.test(sourceText)) return assets.plan;
+  if (/professionalStrategies|植物|材料|生态|环境策略/.test(sourceText)) return assets.analysis[0] || assets.plan;
+  if (/visualTasks|visualAssets|视觉|场景/.test(sourceText) && assets.renderings.length) {
+    return assets.renderings[index % assets.renderings.length];
+  }
+  return assets.renderings[index % Math.max(assets.renderings.length, 1)] || assets.concept || assets.plan || null;
+}
+
+export function selectRoadshowResults(blueprint) {
+  const projectInput = selectProjectInputForAgents(blueprint);
+  const definitionDetails = selectProjectDefinitionDetails(blueprint);
+  const selectedConcept = selectConceptCandidate(blueprint, blueprint?.designerDecision?.selectedConceptId);
+  const candidates = selectConceptCandidates(blueprint);
+  const schemeSections = asArray(blueprint?.schemeNarrative?.sections);
+  const positioning = schemeSections.find((item) => item.title === '设计定位')?.value
+    || selectedConcept?.proposition
+    || selectedConcept?.narrative
+    || '项目设计定位待 Blueprint 完善';
+  const spatialStructure = blueprint?.spatialStructure || null;
+  const functionalZones = asArray(blueprint?.functionalZones);
+  const featureNodes = asArray(blueprint?.featureNodes);
+  const professionalStrategies = blueprint?.professionalStrategies || {};
+  const planAsset = spatialStructure?.planAsset
+    || (spatialStructure?.planImage ? {
+      id: 'legacy-plan',
+      title: spatialStructure.title || '空间策略总平面',
+      assetType: '总平面图',
+      url: spatialStructure.planImage,
+      isDemoAsset: Boolean(spatialStructure.isDemoAsset),
+    } : null);
+  const analysisAssets = asArray(spatialStructure?.analysisAssets).map((asset) => {
+    const content = /功能分区/.test(`${asset.title} ${asset.assetType}`)
+      ? functionalZones.map((item) => item.name || text(item)).filter(Boolean).join('、')
+      : /动线|交通|游线/.test(`${asset.title} ${asset.assetType}`)
+        ? text(blueprint?.circulationStrategy)
+        : [professionalStrategies.ecology, professionalStrategies.plant].filter(Boolean).join('；');
+    return {
+      ...asset,
+      content: content || '分析结论待 Blueprint 进一步深化',
+    };
+  });
+  const visualTasks = asArray(blueprint?.visualTasks);
+  const visualAssets = asArray(blueprint?.visualAssets);
+  const planVisuals = visualAssets.filter((asset) => /总平|正投影/.test(`${asset.assetType || ''} ${asset.angle || ''}`));
+  const analysisVisuals = visualAssets.filter((asset) => /分析/.test(`${asset.assetType || ''} ${asset.angle || ''}`));
+  const renderings = visualAssets.filter((asset) => !planVisuals.includes(asset) && !analysisVisuals.includes(asset));
+  const pptOutline = asArray(blueprint?.pptOutline || blueprint?.pptStructure);
+  const pptArtifact = asArray(blueprint?.outputArtifacts).find((item) => item.action === 'ppt' || /PPT/i.test(item.type || ''));
+  const imageSources = {
+    concept: selectedConcept?.referenceVisual || null,
+    plan: planAsset || planVisuals[0] || null,
+    analysis: analysisVisuals,
+    renderings,
+  };
+  const slides = pptOutline.map((page, index) => {
+    const imageAsset = selectPptImage(page, index, imageSources);
+    return {
+      number: page.page || index + 1,
+      title: page.title || `第 ${index + 1} 页`,
+      content: page.content || page.upScreenCopy || '',
+      upScreenCopy: page.upScreenCopy || page.content || '',
+      suggestedVisual: page.suggestedVisual || '视觉内容待深化',
+      sourceFields: asArray(page.sourceFields),
+      image: imageAsset?.url || '',
+      imageAsset,
+    };
+  });
+  const project = {
+    projectName: projectInput.projectName,
+    location: projectInput.city,
+    city: projectInput.city,
+    area: projectInput.area,
+    projectType: projectInput.projectType,
+  };
+  const summary = [
+    { key: 'definition', value: blueprint?.chapters?.projectDefinition ? 1 : 0, label: '份项目定义' },
+    { key: 'concepts', value: candidates.length, label: '个概念候选' },
+    { key: 'masterplan', value: planAsset ? 1 : 0, label: '张总平面' },
+    { key: 'analysis', value: analysisAssets.length, label: '项分析内容' },
+    { key: 'visual', value: visualAssets.length, label: '项视觉成果' },
+    { key: 'ppt', value: pptOutline.length, label: '页 PPT 结构' },
+  ];
+  return {
+    project,
+    summary,
+    definition: {
+      positioning,
+      selectedConcept,
+      selectedConceptId: blueprint?.designerDecision?.selectedConceptId || '',
+      conceptImage: selectedConcept?.referenceVisual || null,
+      strategies: [selectedConcept?.strategicFocus, ...asArray(selectedConcept?.keyScenes)].filter(Boolean),
+      projectDefinition: definitionDetails,
+    },
+    spatial: {
+      coreNarrative: blueprint?.coreNarrative || null,
+      spatialStructure,
+      functionalZones,
+      circulationStrategy: blueprint?.circulationStrategy || null,
+      professionalStrategies,
+      featureNodes,
+      planAsset,
+      analysisAssets,
+    },
+    visual: {
+      visualTasks,
+      visualAssets,
+      renderings,
+      analysisAssets: analysisVisuals,
+      planAssets: planVisuals,
+      professionalStrategies,
+    },
+    ppt: {
+      pageCount: pptOutline.length,
+      fileName: `${project.projectName || '景观方案'}｜方案汇报.pptx`,
+      fileUrl: pptArtifact?.fileUrl || '',
+      status: pptArtifact?.fileUrl ? '可下载' : `${pptOutline.length} 页内容结构已生成；可编辑 PPTX 待后续接入`,
+      slides,
+      outline: pptOutline,
+    },
+  };
+}
+
 export function deriveRoadshowStateFromBlueprint(blueprint) {
   const milestone = Number(String(blueprint?.milestoneVersion || 'v0').replace('v', '')) || 0;
   if (milestone <= 0) return { presentationStage: 0, presentationComplete: false, presentationAgentStates: Array(6).fill('等待') };

@@ -104,7 +104,7 @@ function BasicInfoStep({ formData, onFormUpdate, onFillDemo, onNext, onNotice })
         </label>
         <label className="form-label">项目面积
           <span className="relative mt-1.5 block">
-            <input data-testid="field-area" type="number" min="0" value={formData.area || ''} onChange={(event) => onFormUpdate('area', event.target.value)} className="form-input pr-12" placeholder="28000" />
+            <input data-testid="field-area" type="number" min="0" value={formData.area || ''} onChange={(event) => onFormUpdate('area', event.target.value)} className="form-input pr-12" placeholder="例如：10000" />
             <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-sm font-semibold text-[var(--lf-muted)]">㎡</span>
           </span>
         </label>
@@ -236,19 +236,33 @@ function ReviewStep({
     ['参考案例', categories.has('参考案例') || files.some((file) => /参考|案例|风格/.test(file.name))],
     ['汇报资料', categories.has('原有 PPT 或文本提纲')],
   ];
+  const areaText = formData.area
+    ? (/㎡|平方米|平米|m²/i.test(String(formData.area)) ? String(formData.area) : `约 ${formData.area}㎡`)
+    : '待补充';
+  const detectedCategories = [...categories].filter(Boolean);
+  const siteConditionText = [formData.constraints, formData.siteConditions]
+    .filter(Boolean)
+    .map(String)
+    .find((value) => /植被|乔木|树木|出入口|入口/.test(value));
   const recognized = [
-    '已识别社区居民、儿童和老年人为核心使用人群',
-    '已识别自然生态、邻里共享和低维护设计目标',
-    '已识别场地红线、主要出入口和现状植被',
-    '已识别造价控制和后期维护要求',
-    '已识别参考案例偏好为自然生态、轻介入设计',
+    { status: formData.projectName ? 'confirmed' : 'pending', text: formData.projectName ? `已确认项目名称：${formData.projectName}` : '项目名称：待补充' },
+    { status: formData.city ? 'confirmed' : 'pending', text: formData.city ? `已确认项目地点：${formData.city}` : '项目地点：待补充' },
+    { status: formData.area ? 'confirmed' : 'pending', text: formData.area ? `已确认项目面积：${areaText}` : '项目面积：待补充' },
+    { status: formData.projectType ? 'confirmed' : 'pending', text: formData.projectType ? `已确认项目类型：${formData.projectType}` : '项目类型：待补充' },
+    { status: files.length ? 'confirmed' : 'pending', text: files.length ? `已上传 ${files.length} 份项目资料` : '项目资料：待上传' },
+    { status: detectedCategories.length ? 'confirmed' : 'pending', text: detectedCategories.length ? `已检测到资料类型：${detectedCategories.join('、')}` : '资料类型：待上传后检测' },
+    { status: formData.targetUsers ? 'confirmed' : 'pending', text: formData.targetUsers ? `已识别服务人群：${formData.targetUsers}` : '服务人群：待补充 / 待解析' },
+    { status: formData.designGoals ? 'confirmed' : 'pending', text: formData.designGoals ? `已识别设计目标：${formData.designGoals}` : '设计目标：待补充 / 待解析' },
+    { status: siteConditionText ? 'confirmed' : 'pending', text: siteConditionText ? `已识别场地条件：${siteConditionText}` : '场地植被与出入口：待解析' },
+    { status: formData.maintenance ? 'confirmed' : 'pending', text: formData.maintenance ? `已识别运维要求：${formData.maintenance}` : '运维要求：待补充 / 待解析' },
+    { status: formData.budgetCondition ? 'confirmed' : 'pending', text: formData.budgetCondition ? `已识别造价要求：${formData.budgetCondition}` : '造价要求：待补充' },
   ];
   const suggestions = ['详细现状高程数据', '地下管线资料', '精确投资控制指标'];
   const summary = [
     ['项目名称', formData.projectName || '待补充'],
     ['项目地点', formData.city || '待补充'],
     ['项目类型', formData.projectType || '待补充'],
-    ['项目面积', formData.area ? `${formData.area}㎡` : '待补充'],
+    ['项目面积', areaText],
     ['设计阶段', formData.designStage || '待补充'],
     ['预算条件', formData.budgetCondition || '待补充'],
     ['已上传资料', `${files.length} 份`],
@@ -268,9 +282,14 @@ function ReviewStep({
 
       <div className="mt-5 grid gap-5 xl:grid-cols-[1.05fr_0.95fr]">
         <section className="rounded-2xl border border-violet-100 bg-[var(--lf-brand-50)] p-5">
-          <h4 className="text-base font-bold text-[var(--lf-brand-950)]">已识别信息</h4>
+          <h4 className="text-base font-bold text-[var(--lf-brand-950)]">当前确认与待解析信息</h4>
           <div className="mt-3 space-y-2.5">
-            {recognized.map((item) => <p key={item} className="flex gap-2 text-sm leading-6 text-[var(--lf-text)]"><span className="text-emerald-600">✓</span>{item}</p>)}
+            {recognized.map((item) => (
+              <p key={item.text} className="flex gap-2 text-sm leading-6 text-[var(--lf-text)]">
+                <span className={item.status === 'confirmed' ? 'text-emerald-600' : 'text-amber-500'}>{item.status === 'confirmed' ? '✓' : '○'}</span>
+                {item.text}
+              </p>
+            ))}
           </div>
         </section>
         <section className="grid gap-4 sm:grid-cols-2">
