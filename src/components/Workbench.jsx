@@ -146,7 +146,7 @@ export default function Workbench() {
   }, []);
 
   const validateProject = useCallback((data = formData) => {
-    const missing = [['projectName', '项目名称'], ['city', '项目地点'], ['projectType', '项目类型'], ['area', '场地面积'], ['designGoals', '设计目标'], ['constraints', '核心约束']].filter(([key]) => !data[key]?.trim()).map(([, label]) => label);
+    const missing = [['projectName', '项目名称'], ['city', '项目地点'], ['projectType', '项目类型'], ['area', '场地面积']].filter(([key]) => !data[key]?.trim()).map(([, label]) => label);
     if (missing.length) {
       setNotice(`缺少关键项目条件，暂不能整理资料：${missing.join('、')}`);
       return false;
@@ -187,8 +187,8 @@ export default function Workbench() {
   }, [commitBlueprint]);
 
   const handleFillDemoBasic = useCallback(() => {
-    const { projectName, city, area, projectType, designGoals, constraints, designStage, budgetCondition } = DEMO_CASE;
-    applyProjectInputPatch({ projectName, city, area, projectType, designGoals, constraints, designStage, budgetCondition }, '填入演示案例基本信息');
+    const { siteFiles: _siteFiles, ...demoBasicInfo } = DEMO_CASE;
+    applyProjectInputPatch(demoBasicInfo, '填入演示案例基本信息');
     setNotice('演示案例基本信息已填入，仍可继续修改。');
   }, [applyProjectInputPatch]);
 
@@ -204,8 +204,7 @@ export default function Workbench() {
   }, [applyProjectInputPatch, mergeDemoFiles]);
 
   const handleFillDemoAll = useCallback(() => {
-    const { projectName, city, area, projectType, designGoals, constraints, designStage, budgetCondition } = DEMO_CASE;
-    applyProjectInputPatch({ projectName, city, area, projectType, designGoals, constraints, designStage, budgetCondition, siteFiles: mergeDemoFiles() }, '补齐演示案例资料');
+    applyProjectInputPatch({ ...DEMO_CASE, siteFiles: mergeDemoFiles() }, '补齐演示案例资料');
     setNotice('演示案例基本信息与项目资料已补齐，仍需手动确认提交。');
   }, [applyProjectInputPatch, mergeDemoFiles]);
 

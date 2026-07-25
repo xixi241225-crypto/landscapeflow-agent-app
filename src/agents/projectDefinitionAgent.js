@@ -5,7 +5,11 @@ import {
   newEntityId,
 } from '../blueprint/blueprintModel.js';
 import { migrateBlueprintToV2 } from '../blueprint/blueprintMigration.js';
-import { DEMO_PARSED_PROJECT_DEFINITION } from '../data/demoCase.js';
+import {
+  DEMO_CASE,
+  DEMO_CASE_ID,
+  DEMO_PARSED_PROJECT_DEFINITION,
+} from '../data/demoCase.js';
 
 export const agentWriteScopes = {
   'agent-1': ['chapters.projectDefinition'],
@@ -16,7 +20,7 @@ export const agentWriteScopes = {
   'agent-6': ['chapters.deliverables'],
 };
 
-const requiredFields = ['projectName', 'city', 'projectType', 'area', 'designGoals', 'constraints'];
+const requiredFields = ['projectName', 'city', 'projectType', 'area'];
 const now = () => new Date().toISOString();
 const split = (value) => String(value || '').split(/[，,；;、\n。]/).map((item) => item.trim()).filter(Boolean);
 const formRef = (field) => [{ fileId: 'project-form', fileName: '项目条件表单', location: field }];
@@ -47,7 +51,7 @@ function sourceDocuments(projectInput) {
     fileSize: file.size || '未知大小',
     category: file.category || '项目资料',
     uploadedAt: file.uploadedAt || '',
-    status: file.demo ? '演示资料已结构化' : '已上传，待内容解析',
+    status: file.status || (file.demo ? '演示资料待复核' : '已上传，待内容解析'),
     isDemoAsset: Boolean(file.demo),
   }));
 }
@@ -73,13 +77,31 @@ function factsFromInput(projectInput) {
 }
 
 function userInputDefinition(projectInput) {
-  const stakeholders = split(projectInput.targetUsers).map((value) => ({ label: '主要使用者', value, sourceRefs: formRef('服务人群') }));
-  const explicitGoals = split(projectInput.designGoals).map((value) => ({ label: '显性目标', value, sourceRefs: formRef('设计目标') }));
-  const constraints = split(projectInput.constraints).map((value) => ({ label: '核心约束', value, sourceRefs: formRef('核心约束') }));
-  const principleSeeds = [
+  const userValues = split(projectInput.targetUsers);
+  const goalValues = split(projectInput.designGoals);
+  const constraintValues = split(projectInput.constraints);
+  const stakeholders = userValues.length
+    ? userValues.map((value) => ({ label: '主要使用者', value, sourceRefs: formRef('服务人群') }))
+    : [{ label: '服务人群', value: '具体服务人群及使用时段待补充', status: BLUEPRINT_ITEM_STATUS.PENDING, sourceRefs: [], confidence: 0.3 }];
+  const explicitGoals = goalValues.length
+    ? goalValues.map((value) => ({ label: '显性目标', value, sourceRefs: formRef('设计目标') }))
+    : [{ label: '设计目标', value: '具体设计目标待设计师或任务书补充', status: BLUEPRINT_ITEM_STATUS.PENDING, sourceRefs: [], confidence: 0.3 }];
+  const constraints = constraintValues.length
+    ? constraintValues.map((value) => ({ label: '核心约束', value, sourceRefs: formRef('核心约束') }))
+    : [{ label: '核心约束', value: '建设预算、功能边界与实施约束待补充', status: BLUEPRINT_ITEM_STATUS.PENDING, sourceRefs: [], confidence: 0.3 }];
+  let principleSeeds = [
     ...split(projectInput.stylePreference).map((value) => ({ label: '风格与体验原则', value, sourceRefs: formRef('风格偏好') })),
     ...split(projectInput.maintenance).map((value) => ({ label: '运维原则', value, sourceRefs: formRef('维护要求') })),
   ];
+  if (!principleSeeds.length) {
+    principleSeeds = [{
+      label: '概念推演原则',
+      value: `暂以${projectInput.projectType}的公共性、安全可达与弹性使用作为概念推演原则，待项目目标补充后复核`,
+      status: BLUEPRINT_ITEM_STATUS.ASSUMPTION,
+      sourceRefs: formRef('项目类型'),
+      confidence: 0.65,
+    }];
+  }
   const uploadedPending = (projectInput.siteFiles || []).filter((file) => !file.demo).map((file) => ({
     label: '资料待解析',
     value: `${file.name} 已上传，但本原型尚未读取文件内容`,
@@ -99,7 +121,13 @@ function userInputDefinition(projectInput) {
     })),
     siteConditions: {
       existingAssets: [],
-      existingProblems: [],
+      existingProblems: [{
+        label: '场地条件',
+        value: '场地现状资源、问题与建设边界待上传资料解析及现场复核',
+        status: BLUEPRINT_ITEM_STATUS.PENDING,
+        sourceRefs: [],
+        confidence: 0.3,
+      }],
       surroundings: [],
       climateAndEcology: [],
       accessAndMobility: [],
@@ -108,7 +136,9 @@ function userInputDefinition(projectInput) {
     },
     constraints,
     designPrinciples: principleSeeds,
-    successCriteria: explicitGoals.map((goal) => ({ ...goal, label: '成功标准', value: `方案应有效回应：${goal.value}` })),
+    successCriteria: goalValues.length
+      ? explicitGoals.map((goal) => ({ ...goal, label: '成功标准', value: `方案应有效回应：${goal.value}` }))
+      : [{ label: '成功标准', value: '项目成功标准与验收口径待补充', status: BLUEPRINT_ITEM_STATUS.PENDING, sourceRefs: [], confidence: 0.3 }],
     coreQuestions: [{
       label: '核心设计问题',
       value: `如何在${projectInput.area}㎡的${projectInput.projectType}中，统筹使用需求、场地条件与实施约束？`,
@@ -118,15 +148,27 @@ function userInputDefinition(projectInput) {
     }],
     openItems: [
       ...uploadedPending,
+      ...(!goalValues.length ? [{ label: '设计目标', value: '具体设计目标与成果优先级待补充', status: BLUEPRINT_ITEM_STATUS.PENDING, sourceRefs: [], confidence: 0.3 }] : []),
+      ...(!constraintValues.length ? [{ label: '核心约束', value: '建设预算、功能边界与实施约束待补充', status: BLUEPRINT_ITEM_STATUS.PENDING, sourceRefs: [], confidence: 0.3 }] : []),
+      ...(!userValues.length ? [{ label: '服务人群', value: '主要使用者、人群结构与使用时段待补充', status: BLUEPRINT_ITEM_STATUS.PENDING, sourceRefs: [], confidence: 0.3 }] : []),
       { label: '场地解析', value: '红线、竖向、现状资源和市政接口需在接入真实解析能力后复核', status: BLUEPRINT_ITEM_STATUS.PENDING, sourceRefs: [], confidence: 0.3 },
     ],
     conflicts: [],
   };
 }
 
+function matchesCurrentDemoDataset(projectInput) {
+  const matchesFacts = ['projectName', 'city', 'area', 'projectType']
+    .every((key) => String(projectInput?.[key] || '').trim() === String(DEMO_CASE[key] || '').trim());
+  const explicitlyBoundFiles = (projectInput.siteFiles || [])
+    .filter((file) => file.demo && file.demoCaseId === DEMO_CASE_ID);
+  return matchesFacts && explicitlyBoundFiles.length > 0;
+}
+
 function normalizeDefinition(projectInput) {
-  const isDemo = (projectInput.siteFiles || []).some((file) => file.demo);
-  const source = isDemo ? DEMO_PARSED_PROJECT_DEFINITION : userInputDefinition(projectInput);
+  const source = matchesCurrentDemoDataset(projectInput)
+    ? DEMO_PARSED_PROJECT_DEFINITION
+    : userInputDefinition(projectInput);
   const conditions = source.siteConditions || {};
   return {
     facts: factsFromInput(projectInput),
@@ -244,12 +286,11 @@ export function runProjectDefinitionAgent(projectInput, currentBlueprint) {
   };
 }
 
-const confirmItems = (records = []) => records.map((entry) => ({
-  ...entry,
-  status: BLUEPRINT_ITEM_STATUS.CONFIRMED,
-  updatedBy: 'designer',
-  updatedAt: now(),
-}));
+const confirmItems = (records = []) => records.map((entry) => (
+  entry.status === BLUEPRINT_ITEM_STATUS.CONFIRMED
+    ? { ...entry, updatedBy: 'designer', updatedAt: now() }
+    : entry
+));
 
 export function confirmProjectDefinitionBlueprint(currentBlueprint) {
   const source = migrateBlueprintToV2(currentBlueprint);

@@ -1,26 +1,30 @@
 /**
- * 工作台演示案例数据
- * 统一使用“松林社区公园更新设计”，避免不同页面混用项目名称。
+ * Demo-0A 唯一默认项目输入。
+ * 只有 DEMO_CASE 中明确提供的字段可作为项目事实；其余信息必须在
+ * DEMO_PARSED_PROJECT_DEFINITION 中保持待补充、待复核或假设状态。
  */
+export const DEMO_CASE_ID = 'beijing-happy-valley-community-park-demo';
+
 export const DEMO_CASE = {
-  projectName: '松林社区公园更新设计',
-  city: '上海市浦东新区',
-  area: '28000',
-  projectType: '社区公园',
-  targetUsers: '社区居民、儿童、老人',
-  designGoals: '满足儿童、老人和社区居民日常活动，营造自然生态、邻里共享的社区公共空间，同时兼顾景观品质与全年龄使用需求。',
-  constraints: '控制总体造价与后期维护成本，减少高维护水景和大面积石材铺装，保留核心活动空间，并满足安全、无障碍和生态设计要求。',
-  stylePreference: '自然生态、邻里共享、轻介入',
-  maintenance: '低维护、乡土植物、耐久材料',
-  clientFocus: '造价控制、全年龄使用、生态品质',
-  designStage: '概念方案',
+  projectName: '北京市欢乐谷社区公园景观设计',
+  city: '北京市朝阳区',
+  area: '10000',
+  projectType: '社区公园景观设计',
+  targetUsers: '',
+  designGoals: '',
+  constraints: '',
+  stylePreference: '',
+  maintenance: '',
+  clientFocus: '',
+  designStage: '',
   deliveryDate: '',
-  budgetCondition: '中档造价｜约500元/㎡',
+  budgetCondition: '',
   presentationAudience: '',
   siteFiles: [], // { name, size, type }
 };
 
 export const PROJECT_TYPES = [
+  '社区公园景观设计',
   '社区公园',
   '城市公园',
   '湿地公园',
@@ -45,69 +49,64 @@ export const BUDGET_OPTIONS = [
 ];
 
 export const DEMO_FILES = [
-  { id: 'file-01', name: '松林社区公园项目任务书.pdf', size: '1.8 MB', type: 'PDF', category: '项目任务书', status: '演示资料已结构化', demo: true },
-  { id: 'file-02', name: '松林社区公园甲方需求与汇报要点.docx', size: '620 KB', type: 'DOCX', category: '甲方需求文件', status: '演示资料已结构化', demo: true },
-  { id: 'file-03', name: '松林社区公园现状照片.zip', size: '8.4 MB', type: 'ZIP', category: '场地照片', status: '演示资料已结构化', demo: true },
-  { id: 'file-04', name: '松林社区公园区位及周边关系图.jpg', size: '2.4 MB', type: 'JPG', category: '区位资料', status: '演示资料已结构化', demo: true },
-  { id: 'file-05', name: '松林社区公园红线底图.dwg', size: '4.9 MB', type: 'DWG', category: 'CAD／红线／总平底图', status: '演示资料已结构化', demo: true },
-  { id: 'file-06', name: '松林社区公园原有汇报提纲.pptx', size: '3.1 MB', type: 'PPTX', category: '原有 PPT 或文本提纲', status: '演示资料已结构化', demo: true },
+  { id: 'file-01', name: '北京市欢乐谷社区公园项目资料目录.pdf', size: '1.2 MB', type: 'PDF', category: '项目任务书', status: '演示资料待复核', demo: true, demoCaseId: DEMO_CASE_ID },
+  { id: 'file-02', name: '北京市欢乐谷社区公园项目沟通纪要.docx', size: '520 KB', type: 'DOCX', category: '甲方需求文件', status: '演示资料待复核', demo: true, demoCaseId: DEMO_CASE_ID },
+  { id: 'file-03', name: '北京市欢乐谷社区公园场地现状照片.zip', size: '8.1 MB', type: 'ZIP', category: '场地照片', status: '演示资料待复核', demo: true, demoCaseId: DEMO_CASE_ID },
+  { id: 'file-04', name: '北京市欢乐谷社区公园区位资料.jpg', size: '2.1 MB', type: 'JPG', category: '区位资料', status: '演示资料待复核', demo: true, demoCaseId: DEMO_CASE_ID },
+  { id: 'file-05', name: '北京市欢乐谷社区公园红线及现状底图.dwg', size: '4.6 MB', type: 'DWG', category: 'CAD／红线／总平底图', status: '演示资料待复核', demo: true, demoCaseId: DEMO_CASE_ID },
+  { id: 'file-06', name: '北京市欢乐谷社区公园原始汇报资料.pptx', size: '2.9 MB', type: 'PPTX', category: '原有 PPT 或文本提纲', status: '演示资料待复核', demo: true, demoCaseId: DEMO_CASE_ID },
 ];
 
 const ref = (fileId, fileName, location = '') => ({ fileId, fileName, location });
 
 export const DEMO_PARSED_PROJECT_DEFINITION = {
   stakeholders: [
-    { label: '主要使用者', value: '社区居民', sourceRefs: [ref('file-01', '松林社区公园项目任务书.pdf', '项目需求资料')], confidence: 0.98 },
-    { label: '重点使用者', value: '儿童与陪护家庭', sourceRefs: [ref('file-02', '松林社区公园甲方需求与汇报要点.docx', '甲方需求资料')], confidence: 0.96 },
-    { label: '重点使用者', value: '老年居民', sourceRefs: [ref('file-02', '松林社区公园甲方需求与汇报要点.docx', '甲方需求资料')], confidence: 0.96 },
+    { label: '服务人群', value: '具体服务人群及使用时段待项目资料补充', status: 'pending', sourceRefs: [], confidence: 0.3 },
   ],
   explicitGoals: [
-    { label: '全龄活动', value: '满足儿童、老人和社区居民日常活动', sourceRefs: [ref('file-01', '松林社区公园项目任务书.pdf', '项目需求资料')], confidence: 0.97 },
-    { label: '自然体验', value: '营造自然生态的公共空间体验', sourceRefs: [ref('file-01', '松林社区公园项目任务书.pdf', '项目需求资料')], confidence: 0.95 },
-    { label: '成本控制', value: '控制造价与后期维护成本', sourceRefs: [ref('file-02', '松林社区公园甲方需求与汇报要点.docx', '甲方需求资料')], confidence: 0.95 },
+    { label: '设计目标', value: '具体设计目标待项目任务书或设计师补充', status: 'pending', sourceRefs: [], confidence: 0.3 },
   ],
-  latentGoals: [
-    { label: '深层诉求', value: '在有限投入下形成可持续且具有社区识别性的公共空间', status: 'assumption', sourceRefs: [ref('file-02', '松林社区公园甲方需求与汇报要点.docx', '甲方需求资料')], confidence: 0.82 },
-  ],
+  latentGoals: [],
   siteConditions: {
     existingAssets: [
-      { label: '现状资源', value: '场地现状松林构成可保留的生态与空间骨架', sourceRefs: [ref('file-03', '松林社区公园现状照片.zip', '场地现状资料'), ref('file-05', '松林社区公园红线底图.dwg', '场地基础资料')], confidence: 0.9 },
+      { label: '现状资源', value: '现状植物、构筑物及其他可保留资源待现场资料复核', status: 'pending', sourceRefs: [ref('file-03', '北京市欢乐谷社区公园场地现状照片.zip', '场地现状资料'), ref('file-05', '北京市欢乐谷社区公园红线及现状底图.dwg', '场地基础资料')], confidence: 0.4 },
     ],
     existingProblems: [
-      { label: '现状问题', value: '活动空间品质与全龄共享能力需要提升', sourceRefs: [ref('file-01', '松林社区公园项目任务书.pdf', '项目需求资料')], confidence: 0.9 },
-      { label: '运维问题', value: '高维护景观内容与后期管理成本需要控制', sourceRefs: [ref('file-02', '松林社区公园甲方需求与汇报要点.docx', '甲方需求资料')], confidence: 0.92 },
+      { label: '现状问题', value: '场地现状问题与改造重点待调研和任务书复核', status: 'pending', sourceRefs: [], confidence: 0.3 },
     ],
     surroundings: [
-      { label: '周边关系', value: '项目服务周边社区日常公共活动', sourceRefs: [ref('file-04', '松林社区公园区位及周边关系图.jpg', '区位资料')], confidence: 0.94 },
+      { label: '周边关系', value: '周边用地、社区界面与公共交通关系待区位资料复核', status: 'pending', sourceRefs: [ref('file-04', '北京市欢乐谷社区公园区位资料.jpg', '区位资料')], confidence: 0.4 },
     ],
     climateAndEcology: [
-      { label: '生态条件', value: '优先保护现状乔木并提升林下生态稳定性', sourceRefs: [ref('file-03', '松林社区公园现状照片.zip', '场地现状资料')], confidence: 0.86 },
+      { label: '生态条件', value: '现状植物、生境与生态敏感条件待专项资料复核', status: 'pending', sourceRefs: [], confidence: 0.3 },
     ],
-    accessAndMobility: [],
-    terrainAndWater: [],
-    interfaces: [],
+    accessAndMobility: [
+      { label: '出入口与交通', value: '现状出入口、消防及慢行衔接条件待底图复核', status: 'pending', sourceRefs: [ref('file-05', '北京市欢乐谷社区公园红线及现状底图.dwg', '场地基础资料')], confidence: 0.4 },
+    ],
+    terrainAndWater: [
+      { label: '竖向与水系', value: '地形高程、排水方向及现状水体条件待测绘资料复核', status: 'pending', sourceRefs: [], confidence: 0.3 },
+    ],
+    interfaces: [
+      { label: '市政接口', value: '给排水、电力、地下管线等市政接口待补充', status: 'pending', sourceRefs: [], confidence: 0.3 },
+    ],
   },
   constraints: [
-    { label: '功能约束', value: '保留主要活动功能', sourceRefs: [ref('file-01', '松林社区公园项目任务书.pdf', '项目需求资料')], confidence: 0.96 },
-    { label: '造价与运维', value: '减少高维护水景和大面积石材铺装', sourceRefs: [ref('file-02', '松林社区公园甲方需求与汇报要点.docx', '甲方需求资料')], confidence: 0.95 },
-    { label: '规范与生态', value: '满足安全、无障碍和生态设计要求', sourceRefs: [ref('file-01', '松林社区公园项目任务书.pdf', '项目需求资料')], confidence: 0.94 },
+    { label: '核心约束', value: '建设预算、功能边界、工期与专项规范要求待补充', status: 'pending', sourceRefs: [], confidence: 0.3 },
   ],
   designPrinciples: [
-    { label: '全龄共享', value: '全龄共享', sourceRefs: [ref('file-01', '松林社区公园项目任务书.pdf', '项目需求资料')], confidence: 0.96 },
-    { label: '低维护优先', value: '低维护优先', sourceRefs: [ref('file-02', '松林社区公园甲方需求与汇报要点.docx', '甲方需求资料')], confidence: 0.95 },
-    { label: '保留现状资源', value: '保留现状松林', sourceRefs: [ref('file-03', '松林社区公园现状照片.zip', '场地现状资料')], confidence: 0.9 },
-    { label: '控制硬质铺装', value: '控制大面积硬质铺装', sourceRefs: [ref('file-02', '松林社区公园甲方需求与汇报要点.docx', '甲方需求资料')], confidence: 0.94 },
-    { label: '投入聚焦', value: '核心投入集中于高频使用空间', status: 'assumption', sourceRefs: [ref('file-02', '松林社区公园甲方需求与汇报要点.docx', '甲方需求资料')], confidence: 0.82 },
+    { label: '概念推演原则', value: '暂以社区公园的公共性、安全可达与弹性使用作为概念推演原则，待项目目标补充后复核', status: 'assumption', sourceRefs: [], confidence: 0.65 },
   ],
   successCriteria: [
-    { label: '使用价值', value: '儿童、老人和社区居民均能安全、便捷地开展日常活动', sourceRefs: [ref('file-01', '松林社区公园项目任务书.pdf', '项目需求资料')], confidence: 0.92 },
-    { label: '实施价值', value: '方案在既定造价与低维护目标下具备实施可行性', sourceRefs: [ref('file-02', '松林社区公园甲方需求与汇报要点.docx', '甲方需求资料')], confidence: 0.9 },
-    { label: '生态价值', value: '现状松林得到保留并形成稳定的林下生态空间', sourceRefs: [ref('file-03', '松林社区公园现状照片.zip', '场地现状资料')], confidence: 0.86 },
+    { label: '成功标准', value: '项目成功标准及可量化验收口径待补充', status: 'pending', sourceRefs: [], confidence: 0.3 },
   ],
   coreQuestions: [
-    { label: '核心设计问题', value: '如何以现状松林为基础，统筹全龄活动、低维护与社区识别性？', sourceRefs: [ref('file-01', '松林社区公园项目任务书.pdf', '项目需求资料'), ref('file-03', '松林社区公园现状照片.zip', '场地现状资料')], confidence: 0.9 },
+    { label: '核心设计问题', value: '在目标、使用需求和场地条件尚待补充的情况下，如何建立可复核、可调整的社区公园概念方向？', status: 'assumption', sourceRefs: [], confidence: 0.65 },
   ],
   openItems: [
+    { label: '设计目标', value: '具体设计目标与成果优先级待补充', status: 'pending', sourceRefs: [], confidence: 0.3 },
+    { label: '服务人群', value: '主要使用者、人群结构与使用时段待补充', status: 'pending', sourceRefs: [], confidence: 0.3 },
+    { label: '功能需求', value: '必选功能、可选功能及面积需求待补充', status: 'pending', sourceRefs: [], confidence: 0.3 },
+    { label: '投资与工期', value: '建设预算、分期计划与交付时间待补充', status: 'pending', sourceRefs: [], confidence: 0.3 },
     { label: '竖向条件', value: '现状高程、排水方向与土方条件待补充', status: 'pending', sourceRefs: [], confidence: 0.45 },
     { label: '市政接口', value: '地下管线及给排水、电力接口资料待补充', status: 'pending', sourceRefs: [], confidence: 0.4 },
   ],

@@ -49,59 +49,182 @@ function dependencyFromOpenItem(item) {
   };
 }
 
+function confirmedTexts(items = []) {
+  return items
+    .filter((item) => item?.status === BLUEPRINT_ITEM_STATUS.CONFIRMED)
+    .map(itemText)
+    .filter(Boolean);
+}
+
+function parseArea(value) {
+  const parsed = Number(String(value || '').replace(/[^0-9.]/g, ''));
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
+}
+
+function deriveConceptProfile(input) {
+  const projectType = compact(input.project.projectType, '公共景观空间');
+  const evidence = [
+    projectType,
+    ...confirmedTexts(input.explicitGoals),
+    ...confirmedTexts(input.latentGoals),
+    ...confirmedTexts(input.flattenedSiteConditions),
+    ...confirmedTexts(input.constraints),
+    ...confirmedTexts(input.designPrinciples),
+    ...confirmedTexts(input.stakeholders),
+  ].join(' ');
+  const waterfront = /滨水|水岸|滨江|滨河|河道|湖滨|岸线/.test(evidence);
+  const commercial = /商业|街区|消费|零售|市集/.test(evidence);
+  const community = /社区|居住|邻里/.test(evidence);
+  const ecological = /生态修复|湿地|生境|自然保护/.test(evidence);
+  const area = parseArea(input.project.area);
+  const scale = area && area <= 15000
+    ? { label: '紧凑尺度', spatial: '以短距离、复合节点和清晰环线控制空间效率' }
+    : area && area >= 50000
+      ? { label: '较大尺度', spatial: '以分段组织、层级路径和多核心协同控制空间节奏' }
+      : { label: '中等尺度', spatial: '以连续骨架和分区节点平衡整体性与使用弹性' };
+
+  if (waterfront && commercial) {
+    return {
+      family: '滨水商业街区',
+      place: '滨水商业公共空间',
+      everyday: { name: '岸线缝合｜连续慢行界面', noun: '岸线缝合', scene: '连续滨水步行界面', material: '可停留的沿街灰空间' },
+      active: { name: '活力聚核｜商业复合客厅', noun: '活力聚核', scene: '弹性活动与消费核心', material: '可切换的公共活动界面' },
+      nature: { name: '蓝绿漫游｜滨水生态廊', noun: '蓝绿漫游', scene: '滨水生态体验廊', material: '亲水但边界可控的观察节点' },
+      tags: ['岸线关系', '商业界面', '步行连续'],
+      scale,
+    };
+  }
+  if (commercial) {
+    return {
+      family: '商业街区',
+      place: '商业公共空间',
+      everyday: { name: '街区缝合｜连续步行界面', noun: '街区缝合', scene: '连续步行与停留界面', material: '沿街可停留灰空间' },
+      active: { name: '活力聚核｜商业共享客厅', noun: '活力聚核', scene: '复合活动与展示核心', material: '可切换的公共事件界面' },
+      nature: { name: '绿荫漫游｜舒缓体验廊', noun: '绿荫漫游', scene: '慢行休憩体验廊', material: '遮荫与季相体验节点' },
+      tags: ['街区连通', '界面激活', '复合经营'],
+      scale,
+    };
+  }
+  if (ecological || waterfront) {
+    return {
+      family: waterfront ? '滨水公共空间' : '生态景观空间',
+      place: waterfront ? '滨水公共景观' : '生态景观空间',
+      everyday: { name: '低扰织补｜日常共享路径', noun: '低扰织补', scene: '低干预共享路径', material: '分散式日常停留节点' },
+      active: { name: '弹性聚点｜复合活动驿站', noun: '弹性聚点', scene: '复合活动驿站', material: '可收可放的公共活动节点' },
+      nature: { name: waterfront ? '蓝绿漫游｜水岸体验环' : '生境漫游｜自然观察环', noun: waterfront ? '蓝绿漫游' : '生境漫游', scene: waterfront ? '水岸自然体验环' : '生境观察与学习环', material: '低干扰自然观察节点' },
+      tags: waterfront ? ['岸线连续', '安全亲水', '蓝绿协同'] : ['生境连续', '低扰动', '自然观察'],
+      scale,
+    };
+  }
+  if (community) {
+    return {
+      family: '社区公共空间',
+      place: projectType,
+      everyday: { name: '日常织补｜社区共享网络', noun: '日常织补', scene: '社区日常共享网络', material: '小尺度邻里停留节点' },
+      active: { name: '复合聚场｜弹性公共客厅', noun: '复合聚场', scene: '弹性公共活动核心', material: '可切换的复合活动界面' },
+      nature: { name: '绿意漫游｜社区自然环', noun: '绿意漫游', scene: '社区慢行自然环', material: '安静观察与季相体验节点' },
+      tags: ['社区日常', '公共共享', '弹性使用'],
+      scale,
+    };
+  }
+  return {
+    family: '公共景观空间',
+    place: projectType,
+    everyday: { name: '轻量织补｜日常使用网络', noun: '轻量织补', scene: '连续日常使用网络', material: '小尺度共享节点' },
+    active: { name: '公共聚核｜弹性复合中心', noun: '公共聚核', scene: '弹性复合活动中心', material: '可切换的公共界面' },
+    nature: { name: '自然漫游｜慢行体验环', noun: '自然漫游', scene: '慢行自然体验环', material: '季相观察与安静停留节点' },
+    tags: ['使用连续', '空间弹性', '自然体验'],
+    scale,
+  };
+}
+
+function sourceCondition(item, confirmedText, unresolvedText) {
+  return item?.status === BLUEPRINT_ITEM_STATUS.CONFIRMED
+    ? confirmedText(itemText(item))
+    : unresolvedText(itemText(item));
+}
+
 function conceptCandidates(input, designerBrief, generatedAt) {
   const projectName = compact(input.project.projectName, '当前景观项目');
   const location = compact(input.project.location, '项目所在地');
   const projectType = compact(input.project.projectType, '公共景观空间');
-  const users = input.stakeholders.map(itemText).filter(Boolean);
-  const userLabel = users.length ? users.join('、') : '主要使用者';
+  const area = compact(input.project.area, '面积待确认');
+  const users = confirmedTexts(input.stakeholders);
+  const userLabel = users.length ? users.join('、') : '待确认的主要使用者';
   const required = pickRequired(input);
+  const profile = deriveConceptProfile(input);
   const sharedDependencies = input.openItems.map(dependencyFromOpenItem);
-  const sharedResponseMappings = (responses) => [
-    responseMapping('chapters.projectDefinition.explicitGoals', required.goal, responses.goal),
-    responseMapping('chapters.projectDefinition.constraints', required.constraint, responses.constraint),
-    responseMapping('chapters.projectDefinition.designPrinciples', required.principle, responses.principle),
+  const siteSourcePath = input.flattenedSiteConditions.length
+    ? 'chapters.projectDefinition.siteConditions'
+    : 'chapters.projectDefinition.successCriteria';
+  const openItemSummary = input.openItems.slice(0, 3).map((item) => item.label || itemText(item)).filter(Boolean).join('、');
+  const dependencyRisk = openItemSummary
+    ? `${openItemSummary}尚未确认，空间位置、规模和实施方式需随资料更新。`
+    : '后续仍需用现场资料校核空间尺度与实施条件。';
+  const normalizedBrief = designerBrief.replace(/[。！？!?]+$/g, '');
+  const briefSuffix = normalizedBrief ? `同时回应设计师补充要求：“${normalizedBrief}”。` : '';
+  const factSummary = `${location}、约${area}㎡的${projectType}`;
+
+  const sharedResponseMappings = (direction) => [
+    responseMapping('chapters.projectDefinition.explicitGoals', required.goal, sourceCondition(
+      required.goal,
+      (value) => `围绕已确认目标“${value}”，以${direction.goalAction}形成可核对的空间回应。`,
+      (value) => `“${value}”尚未确认，本方向先以${direction.goalAction}建立可调整的概念框架，不把目标假设当作项目事实。`,
+    )),
+    responseMapping('chapters.projectDefinition.constraints', required.constraint, sourceCondition(
+      required.constraint,
+      (value) => `针对已确认约束“${value}”，通过${direction.constraintAction}控制实施风险。`,
+      (value) => `“${value}”仍待补充，暂以${direction.constraintAction}保持方案弹性，待边界明确后复核。`,
+    )),
+    responseMapping('chapters.projectDefinition.designPrinciples', required.principle, sourceCondition(
+      required.principle,
+      (value) => `落实“${value}”，以${direction.principleAction}组织概念表达。`,
+      (value) => `“${value}”属于待复核原则，本方向以${direction.principleAction}作为概念假设，并保留调整空间。`,
+    )),
     responseMapping(
-      input.flattenedSiteConditions.length ? 'chapters.projectDefinition.siteConditions' : 'chapters.projectDefinition.successCriteria',
+      siteSourcePath,
       required.site,
-      responses.site,
+      sourceCondition(
+        required.site,
+        (value) => `依据已确认条件“${value}”，以${direction.siteAction}组织空间骨架。`,
+        (value) => `“${value}”尚待复核，空间骨架暂采用${direction.siteAction}，不预设具体植物、水体、地形或构筑物。`,
+      ),
     ),
   ];
-  const briefSuffix = designerBrief ? `同时回应设计师补充要求：“${designerBrief}”。` : '';
 
   return [
     {
       id: 'concept-A',
       code: 'A',
-      name: '林下织补｜松林共享客厅',
+      name: profile.everyday.name,
       status: 'candidate',
-      proposition: '保留松林骨架，以轻介入织补日常邻里生活。',
-      narrative: `${projectName}以现状树荫和林下空间为起点，通过小尺度修补形成属于${userLabel}的共享客厅。${briefSuffix}`,
-      strategicFocus: '现状保留优先、林下轻介入、日常共享、低维护和分期实施。',
-      spatialHypothesis: '以连续林下共享带串联入口、会客、全龄活动与安静休憩，节点采用可分期的小尺度织补。',
-      experienceIntent: '形成亲切、松弛、可日常反复使用的林下邻里体验。',
+      proposition: `以${profile.everyday.noun}减少一次性定型，让${profile.family}优先承载连续、可调整的日常使用。`,
+      narrative: `${projectName}位于${factSummary}。本方向不预设具体场地资源，以${profile.everyday.scene}串联${userLabel}的日常活动，并根据后续资料逐点确认保留、更新与新增内容。${briefSuffix}`,
+      strategicFocus: `日常使用优先、轻量介入、连续可达、分步校核；${profile.scale.label}下${profile.scale.spatial}。`,
+      spatialHypothesis: `以${profile.everyday.scene}作为基本骨架，将入口、共享停留和必要服务组织成可分期调整的节点系统；具体边界服从后续现状资料。`,
+      experienceIntent: `形成尺度亲切、路径清楚、能够被反复使用的${profile.place}日常体验。`,
       targetUsers: users,
-      keyScenes: ['林下共享客厅', '邻里会客节点', '全龄活动口袋', '树荫慢行连接'],
-      differentiationTags: ['保留优先', '轻介入', '日常共享', '分期友好'],
+      keyScenes: [profile.everyday.scene, profile.everyday.material, '清晰连续的到达路径', `${profile.scale.label}共享节点`],
+      differentiationTags: ['日常优先', '轻量介入', profile.tags[0], profile.scale.label],
       responseMappings: sharedResponseMappings({
-        goal: '以林下复合活动兼顾全龄日常使用，并保留社区交往的弹性。',
-        constraint: '通过减少新建硬质界面和高维护设施，控制建造与长期运维压力。',
-        principle: '以现状资源为设计骨架，采用可逆、低干扰的节点织补。',
-        site: '将现状松林与已有活动基础转化为可持续使用的空间资源。',
+        goalAction: `${profile.everyday.scene}与复合停留节点`,
+        constraintAction: '小尺度、可逆和可分期的空间单元',
+        principleAction: '连续路径连接日常共享节点',
+        siteAction: '可调整的轻量织补网络',
       }),
-      advantages: ['现状保留度高', '投资与维护可控', '分期实施友好', '日常使用稳定'],
-      risks: ['轻介入可能降低首轮展示冲击力', '林下安全、照度和根系保护需后续复核'],
-      applicableConditions: ['适合重视现状保护、低维护和渐进式更新的项目条件'],
+      advantages: [`对${profile.scale.label}项目具有较强适配性`, '便于随新增资料逐步校正', `有利于建立${profile.tags[0]}与日常使用连续性`, '实施节奏可拆分'],
+      risks: ['轻量策略的形象集中度可能有限', dependencyRisk],
+      applicableConditions: [`适用于强调日常使用、渐进实施，或现状资源尚待进一步确认的${profile.place}`],
       dependencies: sharedDependencies,
       conceptDiagramBrief: {
-        purpose: '表达现状松林如何通过轻介入节点转化为共享生活网络',
-        mustShow: ['保留树木基底', '林下共享带', '四类日常节点', '分期实施逻辑'],
-        avoid: ['大拆大建', '高维护水景', '过度商业化构筑物'],
+        purpose: `表达${profile.everyday.scene}如何通过轻量节点形成日常使用网络`,
+        mustShow: [profile.everyday.scene, profile.everyday.material, '可调整节点', '分步校核逻辑'],
+        avoid: ['把待复核条件画成既有事实', '未经输入支持的大型设施', '无法随资料调整的刚性结论'],
       },
       referenceVisual: {
         assetId: 'concept-reference-A',
         url: './demo-images/aerial.jpg',
-        title: '林下织补概念意向',
+        title: `${profile.everyday.name}概念意向`,
         assetType: '演示概念意向素材',
         aspectRatio: '16:9',
         status: 'demo-reference',
@@ -114,35 +237,35 @@ function conceptCandidates(input, designerBrief, generatedAt) {
     {
       id: 'concept-B',
       code: 'B',
-      name: '全龄聚场｜弹性邻里核心',
+      name: profile.active.name,
       status: 'candidate',
-      proposition: '以可切换的全龄公共核心，聚合社区日常与公共事件。',
-      narrative: `${projectName}将高频活动集中为具有识别度的邻里核心，在平日、周末与社区活动之间灵活切换。${briefSuffix}`,
-      strategicFocus: '高频活动优先、弹性公共核心、全龄共享关系与较强公共展示性。',
-      spatialHypothesis: '以一个弹性聚场为中心，连接儿童、老人、陪护家庭和社区活动界面，外围以林荫缓冲带衔接。',
-      experienceIntent: '形成活跃、可见、可参与，且不同人群能够彼此照看的公共生活体验。',
+      proposition: `以${profile.active.noun}集中公共资源，用可切换界面承载多时段复合使用。`,
+      narrative: `${projectName}位于${factSummary}。本方向将有限空间组织为${profile.active.scene}，通过开放、活动与事件三种状态提高公共使用效率；活动类型与人群规模等待真实需求确认。${briefSuffix}`,
+      strategicFocus: `公共核心优先、活动聚合、复合使用、状态切换；${profile.scale.label}下集中关键投入并保留外围缓冲。`,
+      spatialHypothesis: `以${profile.active.scene}为中心，连接到达、停留、服务与弹性活动界面，外围空间承担疏散、缓冲和日常开放。`,
+      experienceIntent: `形成可见、可参与、能够在日常与公共事件之间切换的${profile.place}体验。`,
       targetUsers: users,
-      keyScenes: ['弹性邻里核心', '全龄共享看台', '亲子互动边界', '社区活动界面'],
-      differentiationTags: ['活力优先', '弹性核心', '全龄共融', '公共展示'],
+      keyScenes: [profile.active.scene, profile.active.material, '公共服务与停留边界', '日常/活动双状态场景'],
+      differentiationTags: ['活动聚合', '弹性核心', profile.tags[1], '公共展示'],
       responseMappings: sharedResponseMappings({
-        goal: '将儿童、老人和家庭的高频需求集中组织，提高公共活动的可见性与共享效率。',
-        constraint: '以单一复合核心替代多个高投入节点，把有限资源集中在高频使用空间。',
-        principle: '通过可切换场景落实全龄共享，非活动时保持开放和低维护。',
-        site: '利用现状开敞空间或活动基础形成聚合核心，避免对完整林地进行大范围扰动。',
+        goalAction: `${profile.active.scene}与多时段切换机制`,
+        constraintAction: '集中核心投入并让外围空间保持通用',
+        principleAction: '弹性界面组织复合公共活动',
+        siteAction: '可根据场地边界移动和缩放的公共核心',
       }),
-      advantages: ['公共活力和识别度强', '复合使用效率高', '便于社区活动组织', '路演表达清晰'],
-      risks: ['活动高峰可能产生噪声和冲突', '核心空间的运营、耐久性与安全边界需明确'],
-      applicableConditions: ['适合强调公共活力、社区活动和高频空间投入的项目条件'],
+      advantages: ['公共识别度与活动可见性较强', `有利于提升${profile.tags[1]}和复合使用效率`, '关键投入相对集中', `适合${profile.scale.label}下建立明确空间重心`],
+      risks: ['活动强度、噪声和高峰疏散条件需要专项校核', dependencyRisk],
+      applicableConditions: [`适用于需要集中公共活动、强化复合使用或建立明确空间核心的${profile.place}`],
       dependencies: sharedDependencies,
       conceptDiagramBrief: {
-        purpose: '表达一个弹性核心如何组织全龄活动和多时段使用',
-        mustShow: ['弹性公共核心', '全龄关系', '平日/周末/活动日切换', '林荫缓冲'],
-        avoid: ['固定单一功能', '大面积无荫硬铺', '高维护活动设备堆叠'],
+        purpose: `表达${profile.active.scene}如何组织多时段公共使用`,
+        mustShow: [profile.active.scene, profile.active.material, '日常/活动状态切换', '外围缓冲与疏散'],
+        avoid: ['把未确认活动类型画成事实', '固定单一功能', '未经需求支持的设施堆叠'],
       },
       referenceVisual: {
         assetId: 'concept-reference-B',
         url: './demo-images/awn.jpg',
-        title: '全龄聚场概念意向',
+        title: `${profile.active.name}概念意向`,
         assetType: '演示概念意向素材',
         aspectRatio: '16:9',
         status: 'demo-reference',
@@ -155,35 +278,35 @@ function conceptCandidates(input, designerBrief, generatedAt) {
     {
       id: 'concept-C',
       code: 'C',
-      name: '生态漫游｜自然教育环',
+      name: profile.nature.name,
       status: 'candidate',
-      proposition: '以松林、生境与自然观察串联慢行漫游和安静康养。',
-      narrative: `${projectName}以${location}的生态条件为线索，将自然观察、环境教育与安静康养组织为连续漫游体验。${briefSuffix}`,
-      strategicFocus: '生态体验优先、生境连续、自然教育、慢行漫游和安静康养。',
-      spatialHypothesis: '以自然教育环串联松林、生境观察、雨水体验和康养停留点，活动强度由入口向安静区域逐渐降低。',
-      experienceIntent: '形成沉浸、安静、富有季相变化和自然学习价值的漫游体验。',
+      proposition: `以${profile.nature.noun}建立慢行体验骨架，在不预设现状生态资源的前提下预留自然策略接口。`,
+      narrative: `${projectName}位于${factSummary}。本方向以${profile.nature.scene}组织连续慢行、安静停留与自然感知；植物、生境、水体等具体内容仅在专项资料确认后落实。${briefSuffix}`,
+      strategicFocus: `自然体验优先、慢行连续、活动强度分级、生态条件复核；${profile.scale.label}下控制路径长度与节点密度。`,
+      spatialHypothesis: `以${profile.nature.scene}串联入口、安静停留和${profile.nature.material}，从公共界面向低强度空间形成体验梯度。`,
+      experienceIntent: `形成节奏舒缓、方向清晰、自然内容可随真实场地条件深化的${profile.place}漫游体验。`,
       targetUsers: users,
-      keyScenes: ['松林自然课堂', '生境观察点', '生态漫游环', '安静康养节点'],
-      differentiationTags: ['生态优先', '自然教育', '慢行漫游', '安静康养'],
+      keyScenes: [profile.nature.scene, profile.nature.material, '低强度安静停留点', '季相与环境感知界面'],
+      differentiationTags: ['自然体验', '慢行连续', profile.tags[2], '条件复核'],
       responseMappings: sharedResponseMappings({
-        goal: '以自然教育和慢行体验补充日常活动需求，提升生态公共空间的持续吸引力。',
-        constraint: '控制硬质建设，以生态化、可渗透和低干扰方式组织体验。',
-        principle: '保护松林并将生态资源转化为可感知、可学习的场所体验。',
-        site: `以${projectType}的生态基础组织生境连续性，所有生态判断等待现场与专业资料复核。`,
+        goalAction: `${profile.nature.scene}与分级体验节点`,
+        constraintAction: '低干扰、可渗透并可随生态资料调整的空间方式',
+        principleAction: '慢行体验连接自然感知节点',
+        siteAction: '不预设具体生态资源的自然体验骨架',
       }),
-      advantages: ['场所气质和生态价值突出', '自然教育延展性强', '微气候改善潜力高', '安静人群体验完整'],
-      risks: ['更依赖生态维护和场地条件复核', '成景周期、林下通透性和夜间安全需专业校核'],
-      applicableConditions: ['适合生态资源较好、重视自然教育和安静体验的项目条件'],
+      advantages: [`有利于强化${profile.tags[2]}与慢行体验`, '自然策略可随专项资料逐级深化', '活动强度梯度清晰', `能够形成区别于活动核心方案的${profile.nature.noun}叙事`],
+      risks: ['生态价值、植物策略和自然节点成立与否依赖真实场地资料', dependencyRisk],
+      applicableConditions: [`适用于重视慢行、自然感知，且愿意在场地资料确认后深化生态策略的${profile.place}`],
       dependencies: sharedDependencies,
       conceptDiagramBrief: {
-        purpose: '表达生态教育环如何串联松林、生境、雨水与康养体验',
-        mustShow: ['自然教育环', '生境节点', '活动强度梯度', '待复核生态条件'],
-        avoid: ['把生态假设当成已确认事实', '精确工程参数', '高干扰娱乐设施'],
+        purpose: `表达${profile.nature.scene}如何组织慢行、安静停留与自然感知`,
+        mustShow: [profile.nature.scene, profile.nature.material, '活动强度梯度', '待复核自然条件'],
+        avoid: ['把生态假设当成已确认事实', '未经资料支持的水体或植物结论', '精确工程参数'],
       },
       referenceVisual: {
         assetId: 'concept-reference-C',
         url: './demo-images/elderly.jpg',
-        title: '生态漫游概念意向',
+        title: `${profile.nature.name}概念意向`,
         assetType: '演示概念意向素材',
         aspectRatio: '16:9',
         status: 'demo-reference',

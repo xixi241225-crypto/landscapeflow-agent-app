@@ -4,6 +4,8 @@ import { migrateBlueprintToV2 } from '../src/blueprint/blueprintMigration.js';
 import {
   selectCoreConstraints,
   selectDesignPrinciples,
+  selectProjectDefinitionDetails,
+  selectProjectFactByKey,
   selectProjectGoals,
 } from '../src/blueprint/blueprintSelectors.js';
 import {
@@ -33,12 +35,24 @@ assert.equal(v1.chapters.conceptGeneration, null);
 assert.equal(v1.chapters.schemeDecision, null);
 assert.deepEqual(agentWriteScopes['agent-1'], ['chapters.projectDefinition']);
 assert.throws(() => assertAgentWriteScope('agent-1', ['chapters.conceptGeneration']), /无权写入/);
+assert.equal(selectProjectFactByKey(v1, 'projectName').value, '北京市欢乐谷社区公园景观设计');
+assert.equal(selectProjectFactByKey(v1, 'location').value, '北京市朝阳区');
+assert.equal(selectProjectFactByKey(v1, 'area').value, '10000');
+assert.equal(selectProjectFactByKey(v1, 'projectType').value, '社区公园景观设计');
+assert.equal(v1.chapters.projectDefinition.explicitGoals[0].status, 'pending');
+assert.equal(v1.chapters.projectDefinition.constraints[0].status, 'pending');
+assert.equal(v1.chapters.projectDefinition.designPrinciples[0].status, 'assumption');
+assert.ok(v1.chapters.projectDefinition.openItems.length >= 6);
+assert.doesNotMatch(JSON.stringify(v1.chapters.projectDefinition), /松林|上海市浦东新区|28000|2\.8公顷/);
 
 const confirmation = confirmProjectDefinitionBlueprint(v1);
 const v2 = confirmation.blueprint;
 assert.equal(v2.milestoneVersion, 'v2');
 assert.equal(v2.revision, 2);
 assert.equal(v2.checkpoints.find((item) => item.id === 'checkpoint-1').status, '已确认');
+assert.equal(v2.chapters.projectDefinition.explicitGoals[0].status, 'pending');
+assert.equal(v2.chapters.projectDefinition.constraints[0].status, 'pending');
+assert.equal(v2.chapters.projectDefinition.designPrinciples[0].status, 'assumption');
 
 const revisionOnly = applyDesignerPatch(v2, { projectBasicInfo: { ...v2.projectBasicInfo, presentationAudience: '项目决策方' } }, '验证内部修订');
 assert.equal(revisionOnly.milestoneVersion, 'v2');
@@ -58,22 +72,59 @@ assert.equal(migrated.chapters.projectDefinition.designPrinciples[0].value, '旧
 const migratedAgain = migrateBlueprintToV2(migrated);
 assert.equal(migratedAgain.changeLog.filter((item) => item.migrationId).length, 1);
 
+const alternateInput = {
+  ...DEMO_CASE,
+  projectName: '滨水商业街区景观设计',
+  city: '宁波市',
+  area: '22000',
+  projectType: '商业公共空间',
+  targetUsers: '周边居民、商业访客',
+  designGoals: '连接滨水慢行与商业公共界面',
+  constraints: '岸线安全边界与防洪条件待专项复核',
+  stylePreference: '开放、连续、复合使用',
+  siteFiles: DEMO_FILES,
+};
+const alternateV1 = runProjectDefinitionAgent(alternateInput, createBlueprint(alternateInput, 'alternate-agent1-project')).blueprint;
+assert.ok(alternateV1.chapters.projectDefinition.explicitGoals.some((item) => item.value.includes('连接滨水慢行')));
+assert.ok(alternateV1.chapters.projectDefinition.constraints.some((item) => item.value.includes('岸线安全边界')));
+assert.ok(alternateV1.chapters.projectDefinition.designPrinciples.some((item) => item.value.includes('复合使用')));
+const { sourceDocuments: _alternateSources, ...alternateDefinitionContent } = alternateV1.chapters.projectDefinition;
+assert.doesNotMatch(JSON.stringify(alternateDefinitionContent), /北京市欢乐谷社区公园|现状植物、构筑物及其他可保留资源待现场资料复核/);
+
 let versions = createBlueprintVersion(v1, [], '', { ...agentResult.version, changeSet: agentResult.changeSet });
 versions = createBlueprintVersion(v2, versions, '', { ...confirmation.version, changeSet: confirmation.changeSet });
 const restoredV1 = restoreBlueprintVersion(versions, 'v1', v2);
 assert.equal(restoredV1.milestoneVersion, 'v1');
 assert.deepEqual(restoredV1.chapters.projectDefinition.explicitGoals, v1.chapters.projectDefinition.explicitGoals);
 
-assert.ok(selectProjectGoals(v1).some((item) => item.value.includes('儿童')));
-assert.ok(selectCoreConstraints(v1).some((item) => item.value.includes('高维护水景')));
-assert.ok(selectDesignPrinciples(v1).some((item) => item.value === '保留现状松林'));
+assert.ok(selectProjectGoals(v1).some((item) => item.value.includes('待项目任务书或设计师补充')));
+assert.ok(selectCoreConstraints(v1).some((item) => item.value.includes('建设预算')));
+assert.ok(selectDesignPrinciples(v1).some((item) => item.status === 'assumption'));
+const statusValues = selectProjectDefinitionDetails(v1)
+  .facts
+  .concat(
+    selectProjectDefinitionDetails(v1).stakeholders,
+    selectProjectDefinitionDetails(v1).explicitGoals,
+    selectProjectDefinitionDetails(v1).latentGoals,
+    selectProjectDefinitionDetails(v1).siteConditions,
+    selectProjectDefinitionDetails(v1).constraints,
+    selectProjectDefinitionDetails(v1).designPrinciples,
+    selectProjectDefinitionDetails(v1).successCriteria,
+    selectProjectDefinitionDetails(v1).coreQuestions,
+    selectProjectDefinitionDetails(v1).openItems,
+    selectProjectDefinitionDetails(v1).conflicts,
+  )
+  .map((item) => item.status)
+  .filter(Boolean);
+assert.ok(statusValues.every((status) => ['confirmed', 'assumption', 'pending', 'conflict'].includes(status)));
 
 const markdown = generateBlueprintMarkdown(v1);
 assert.match(markdown, /^# 项目设计蓝本 v1/m);
 assert.match(markdown, /## 项目目标/);
-assert.match(markdown, /保留现状松林/);
+assert.match(markdown, /具体设计目标待项目任务书或设计师补充/);
 assert.match(markdown, /## 版本记录/);
 
 console.log('✓ Agent 1 输出符合 Blueprint v2 schema');
-console.log('✓ Agent 1 写入权限、v1/v2、revision、迁移与幂等校验通过');
-console.log('✓ 版本恢复、selectors 与 Markdown Blueprint 视图校验通过');
+console.log('✓ 默认项目四项事实、四态保留与旧松林内容清理校验通过');
+console.log('✓ Demo 文件显式绑定、跨项目防污染与 Agent 1 写入权限校验通过');
+console.log('✓ v1/v2、revision、迁移幂等、版本恢复与 Markdown 校验通过');
