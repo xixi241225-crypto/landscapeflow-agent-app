@@ -65,7 +65,7 @@ assert.equal(isRoadshowResultsReady(createBlueprint()), false);
 const results = selectRoadshowResults(blueprint);
 assert.equal(results.project.projectName, '北京市欢乐谷社区公园景观设计');
 assert.equal(results.project.location, '北京市朝阳区');
-assert.equal(results.project.area, '10000');
+assert.equal(results.project.area, '11037.66');
 assert.equal(results.project.projectType, '社区公园景观设计');
 assert.equal(results.ppt.pageCount, blueprint.pptOutline.length);
 assert.equal(results.ppt.pageCount, 12);

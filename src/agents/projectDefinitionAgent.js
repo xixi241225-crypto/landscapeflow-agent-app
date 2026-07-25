@@ -8,11 +8,20 @@ import { migrateBlueprintToV2 } from '../blueprint/blueprintMigration.js';
 import {
   DEMO_CASE,
   DEMO_CASE_ID,
-  DEMO_PARSED_PROJECT_DEFINITION,
 } from '../data/demoCase.js';
 
+const DEMO_INPUT_BLUEPRINT_FIELDS = [
+  'project',
+  'projectFacts',
+  'designPreferences',
+  'designerJudgments',
+  'pendingVerification',
+  'sourceRefs',
+  'demoPolicies',
+];
+
 export const agentWriteScopes = {
-  'agent-1': ['chapters.projectDefinition'],
+  'agent-1': ['chapters.projectDefinition', ...DEMO_INPUT_BLUEPRINT_FIELDS],
   'agent-2': ['chapters.conceptGeneration'],
   'agent-3': ['chapters.schemeDecision'],
   'agent-4': ['chapters.spatialDevelopment'],
@@ -33,6 +42,15 @@ function item(seed, id, defaultStatus = BLUEPRINT_ITEM_STATUS.CONFIRMED) {
     value: String(seed.value || '').trim(),
     status: seed.status || defaultStatus,
     sourceRefs: seed.sourceRefs || [],
+    ...(seed.sourceIds ? { sourceIds: seed.sourceIds } : {}),
+    ...(seed.evidenceType ? { evidenceType: seed.evidenceType } : {}),
+    ...(seed.inputStatus ? { inputStatus: seed.inputStatus } : {}),
+    ...(seed.unit ? { unit: seed.unit } : {}),
+    ...(seed.semanticType ? { semanticType: seed.semanticType } : {}),
+    ...(seed.provenance ? { provenance: seed.provenance } : {}),
+    ...(typeof seed.enforcement === 'boolean' ? { enforcement: seed.enforcement } : {}),
+    ...(typeof seed.confirmedDesignPrinciple === 'boolean' ? { confirmedDesignPrinciple: seed.confirmedDesignPrinciple } : {}),
+    ...(typeof seed.confirmedConstraint === 'boolean' ? { confirmedConstraint: seed.confirmedConstraint } : {}),
     confidence: seed.confidence ?? (seed.status === BLUEPRINT_ITEM_STATUS.PENDING ? 0.5 : 0.9),
     updatedBy: 'agent-1',
     updatedAt: now(),
@@ -41,6 +59,206 @@ function item(seed, id, defaultStatus = BLUEPRINT_ITEM_STATUS.CONFIRMED) {
 
 function items(seeds = [], prefix, defaultStatus) {
   return seeds.filter((seed) => String(seed?.value || '').trim()).map((seed, index) => item(seed, `${prefix}-${String(index + 1).padStart(2, '0')}`, defaultStatus));
+}
+
+const confidenceValue = (confidence) => ({
+  high: 0.95,
+  medium: 0.7,
+  low: 0.4,
+}[confidence] ?? 0.5);
+
+const inputStatus = (record) => {
+  if (record?.status === 'confirmed') return BLUEPRINT_ITEM_STATUS.CONFIRMED;
+  if (record?.status === 'observation') return BLUEPRINT_ITEM_STATUS.ASSUMPTION;
+  return BLUEPRINT_ITEM_STATUS.PENDING;
+};
+
+const sourceRefsFromIds = (sourceIds = []) => sourceIds.map((sourceId) => ({
+  fileId: sourceId,
+  fileName: sourceId,
+  location: 'project_input_v1.json',
+}));
+
+function structuredItem(record, overrides = {}) {
+  return {
+    label: overrides.label || record?.field || record?.topic || record?.id || '项目输入',
+    value: overrides.value ?? record?.value ?? record?.statement ?? record?.originalStatement ?? record?.note ?? '',
+    status: overrides.status || inputStatus(record),
+    sourceIds: record?.sourceIds || [],
+    sourceRefs: sourceRefsFromIds(record?.sourceIds),
+    evidenceType: record?.evidenceType || 'designerInput',
+    inputStatus: record?.status || 'pending',
+    unit: record?.unit,
+    confidence: confidenceValue(record?.confidence),
+    ...overrides,
+  };
+}
+
+function findInputFact(demoInput, field) {
+  return [
+    ...(demoInput.projectFacts?.confirmed || []),
+    ...(demoInput.projectFacts?.measurements || []),
+    ...(demoInput.projectFacts?.observations || []),
+  ].find((record) => record.field === field);
+}
+
+function factsFromDemoInput(demoInput) {
+  const definitions = [
+    ['projectName', '项目名称', 'projectName'],
+    ['location', '项目地点', 'location'],
+    ['area', '项目面积', 'siteArea'],
+    ['projectType', '项目类型', 'projectType'],
+    ['designStage', '设计阶段', 'designStage'],
+  ];
+  const facts = Object.fromEntries(definitions.map(([key, label, field], index) => {
+    const record = findInputFact(demoInput, field);
+    return [key, item({
+      key,
+      ...structuredItem(record, { label, value: record?.value ?? '' }),
+    }, `fact-${String(index + 1).padStart(2, '0')}`)];
+  }));
+  facts.budgetCondition = item({
+    key: 'budgetCondition',
+    label: '预算条件',
+    value: '投资上限待甲方正式确认',
+    status: BLUEPRINT_ITEM_STATUS.PENDING,
+    sourceIds: ['SRC-DESIGNER-01', 'SRC-TASK-01', 'SRC-PENDING-01'],
+    sourceRefs: sourceRefsFromIds(['SRC-DESIGNER-01', 'SRC-TASK-01', 'SRC-PENDING-01']),
+    evidenceType: 'document',
+    inputStatus: 'pending',
+    confidence: 0.5,
+  }, 'fact-06');
+  facts.owner = item({
+    key: 'owner',
+    label: '业主单位',
+    value: '具体业主单位待补充',
+    status: BLUEPRINT_ITEM_STATUS.PENDING,
+    sourceRefs: [],
+    evidenceType: 'document',
+    inputStatus: 'pending',
+    confidence: 0.3,
+  }, 'fact-07');
+  return facts;
+}
+
+function demoInputDefinition(projectInput) {
+  const demoInput = projectInput.demoProjectInput;
+  const judgments = demoInput.designerJudgments || [];
+  const preferences = demoInput.designPreferences || [];
+  const pending = demoInput.pendingVerification || [];
+  const measurements = demoInput.projectFacts?.measurements || [];
+  const observations = demoInput.projectFacts?.observations || [];
+  const judgment = (id) => judgments.find((record) => record.id === id);
+  const observation = (field) => observations.find((record) => record.field === field);
+  const elevation = measurements.find((record) => record.field === 'satelliteElevationEstimate');
+  const coreChallenge = judgment('DJ-01');
+  const tradeoff = judgment('DJ-06');
+  const scaleRisk = judgment('DJ-05');
+
+  return {
+    facts: factsFromDemoInput(demoInput),
+    stakeholders: [{
+      label: '服务人群',
+      value: '儿童、老人、年轻人活动需求在设计师项目判断中被提及；具体人群结构、数量、时段与行为需求待调研。',
+      status: BLUEPRINT_ITEM_STATUS.PENDING,
+      sourceIds: ['SRC-DESIGNER-01'],
+      sourceRefs: sourceRefsFromIds(['SRC-DESIGNER-01']),
+      evidenceType: 'designerInput',
+      inputStatus: 'pending',
+      confidence: 0.5,
+    }],
+    explicitGoals: [structuredItem(coreChallenge, {
+      label: '核心设计目标',
+      value: `${coreChallenge.originalStatement}：${coreChallenge.structuredExplanation}`,
+      status: BLUEPRINT_ITEM_STATUS.ASSUMPTION,
+    })],
+    latentGoals: [],
+    siteConditions: {
+      existingAssets: [],
+      existingProblems: [observation('visibleSurfaceCondition')].filter(Boolean).map((record) => structuredItem(record, { label: '可见地表状态' })),
+      surroundings: [observation('surroundingBuiltInterfaces')].filter(Boolean).map((record) => structuredItem(record, { label: '周边建成界面' })),
+      climateAndEcology: [{
+        label: '现状植物条件',
+        value: '现状乔木、树种、规格、数量与保留价值待专项调查；参考图中的高大乔木不是现状证据。',
+        status: BLUEPRINT_ITEM_STATUS.PENDING,
+        sourceIds: ['SRC-DESIGNER-01', 'SRC-SATELLITE-01'],
+        sourceRefs: sourceRefsFromIds(['SRC-DESIGNER-01', 'SRC-SATELLITE-01']),
+        evidenceType: 'observation',
+        inputStatus: 'pending',
+        confidence: 0.4,
+      }],
+      accessAndMobility: [observation('visibleRoadInterfaces')].filter(Boolean).map((record) => structuredItem(record, { label: '可见道路界面' })),
+      terrainAndWater: elevation ? [structuredItem(elevation, {
+        label: '卫星高程量测',
+        value: elevation.note,
+      })] : [],
+      interfaces: pending
+        .filter((record) => ['地下管线', '市政排水接口'].includes(record.topic))
+        .map((record) => structuredItem(record, { label: record.topic, value: record.note })),
+    },
+    constraints: pending.map((record) => structuredItem(record, {
+      label: record.topic,
+      value: record.note,
+      status: BLUEPRINT_ITEM_STATUS.PENDING,
+      inputStatus: 'pendingVerification',
+      semanticType: 'pendingVerification',
+      provenance: {
+        sourcePath: 'projectInput.pendingVerification',
+        sourceId: record.id,
+      },
+      enforcement: false,
+      confirmedConstraint: false,
+    })),
+    designPrinciples: preferences.map((record) => structuredItem(record, {
+      label: record.topic,
+      value: record.statement,
+      status: BLUEPRINT_ITEM_STATUS.ASSUMPTION,
+      semanticType: 'designPreference',
+      provenance: {
+        sourcePath: 'projectInput.designPreferences',
+        sourceId: record.id,
+        sourceStatus: record.status,
+      },
+      enforcement: false,
+      confirmedDesignPrinciple: false,
+    })),
+    successCriteria: [structuredItem(coreChallenge, {
+      label: '方案复核重点',
+      value: '在有限场地内协调不同功能，避免简单分区拼盘；具体方案仍需经 Gate 2 与 Gate 3 人工判断。',
+      status: BLUEPRINT_ITEM_STATUS.ASSUMPTION,
+    })],
+    coreQuestions: [
+      structuredItem(coreChallenge, {
+        label: '核心设计问题',
+        value: `如何实现“${coreChallenge.originalStatement}”，并避免简单分区拼盘？`,
+        status: BLUEPRINT_ITEM_STATUS.ASSUMPTION,
+      }),
+      structuredItem(tradeoff, {
+        label: '多年龄需求取舍',
+        value: tradeoff.originalStatement,
+        status: BLUEPRINT_ITEM_STATUS.ASSUMPTION,
+      }),
+      structuredItem(scaleRisk, {
+        label: 'AI 尺度风险',
+        value: `${scaleRisk.originalStatement}：${scaleRisk.structuredExplanation}`,
+        status: BLUEPRINT_ITEM_STATUS.ASSUMPTION,
+      }),
+    ],
+    openItems: pending.map((record) => structuredItem(record, {
+      label: record.topic,
+      value: record.note,
+      status: BLUEPRINT_ITEM_STATUS.PENDING,
+      inputStatus: 'pendingVerification',
+      semanticType: 'pendingVerification',
+      provenance: {
+        sourcePath: 'projectInput.pendingVerification',
+        sourceId: record.id,
+      },
+      enforcement: false,
+      confirmedConstraint: false,
+    })),
+    conflicts: [],
+  };
 }
 
 function sourceDocuments(projectInput) {
@@ -90,8 +308,26 @@ function userInputDefinition(projectInput) {
     ? constraintValues.map((value) => ({ label: '核心约束', value, sourceRefs: formRef('核心约束') }))
     : [{ label: '核心约束', value: '建设预算、功能边界与实施约束待补充', status: BLUEPRINT_ITEM_STATUS.PENDING, sourceRefs: [], confidence: 0.3 }];
   let principleSeeds = [
-    ...split(projectInput.stylePreference).map((value) => ({ label: '风格与体验原则', value, sourceRefs: formRef('风格偏好') })),
-    ...split(projectInput.maintenance).map((value) => ({ label: '运维原则', value, sourceRefs: formRef('维护要求') })),
+    ...split(projectInput.stylePreference).map((value) => ({
+      label: '风格与体验原则',
+      value,
+      sourceRefs: formRef('风格偏好'),
+      status: BLUEPRINT_ITEM_STATUS.PENDING,
+      inputStatus: 'designerProvidedPendingConfirmation',
+      semanticType: 'designPrincipleCandidate',
+      enforcement: false,
+      confirmedDesignPrinciple: false,
+    })),
+    ...split(projectInput.maintenance).map((value) => ({
+      label: '运维原则',
+      value,
+      sourceRefs: formRef('维护要求'),
+      status: BLUEPRINT_ITEM_STATUS.PENDING,
+      inputStatus: 'designerProvidedPendingConfirmation',
+      semanticType: 'designPrincipleCandidate',
+      enforcement: false,
+      confirmedDesignPrinciple: false,
+    })),
   ];
   if (!principleSeeds.length) {
     principleSeeds = [{
@@ -100,6 +336,9 @@ function userInputDefinition(projectInput) {
       status: BLUEPRINT_ITEM_STATUS.ASSUMPTION,
       sourceRefs: formRef('项目类型'),
       confidence: 0.65,
+      semanticType: 'designAssumption',
+      enforcement: false,
+      confirmedDesignPrinciple: false,
     }];
   }
   const uploadedPending = (projectInput.siteFiles || []).filter((file) => !file.demo).map((file) => ({
@@ -162,16 +401,18 @@ function matchesCurrentDemoDataset(projectInput) {
     .every((key) => String(projectInput?.[key] || '').trim() === String(DEMO_CASE[key] || '').trim());
   const explicitlyBoundFiles = (projectInput.siteFiles || [])
     .filter((file) => file.demo && file.demoCaseId === DEMO_CASE_ID);
-  return matchesFacts && explicitlyBoundFiles.length > 0;
+  return matchesFacts
+    && explicitlyBoundFiles.length > 0
+    && projectInput.demoProjectInput?.project?.sourceCaseId === 'L2-001';
 }
 
 function normalizeDefinition(projectInput) {
   const source = matchesCurrentDemoDataset(projectInput)
-    ? DEMO_PARSED_PROJECT_DEFINITION
+    ? demoInputDefinition(projectInput)
     : userInputDefinition(projectInput);
   const conditions = source.siteConditions || {};
   return {
-    facts: factsFromInput(projectInput),
+    facts: source.facts || factsFromInput(projectInput),
     stakeholders: items(source.stakeholders, 'stakeholder'),
     explicitGoals: items(source.explicitGoals, 'goal'),
     latentGoals: items(source.latentGoals, 'latent-goal', BLUEPRINT_ITEM_STATUS.ASSUMPTION),
@@ -203,7 +444,11 @@ export function assertAgentWriteScope(agentId, paths) {
 export function runProjectDefinitionAgent(projectInput, currentBlueprint) {
   const missing = requiredFields.filter((field) => !String(projectInput?.[field] || '').trim());
   if (missing.length) throw new Error(`Agent 1 缺少必填项目字段：${missing.join('、')}`);
-  assertAgentWriteScope('agent-1', ['chapters.projectDefinition']);
+  const hasStructuredDemoInput = matchesCurrentDemoDataset(projectInput);
+  assertAgentWriteScope('agent-1', [
+    'chapters.projectDefinition',
+    ...(hasStructuredDemoInput ? DEMO_INPUT_BLUEPRINT_FIELDS : []),
+  ]);
 
   const source = migrateBlueprintToV2(currentBlueprint);
   const next = cloneBlueprint(source);
@@ -219,8 +464,15 @@ export function runProjectDefinitionAgent(projectInput, currentBlueprint) {
     completedAt,
     inputVersion: source.milestoneVersion || BLUEPRINT_MILESTONES.DRAFT,
     outputVersion: BLUEPRINT_MILESTONES.PROJECT_DEFINED,
-    readSections: ['projectBasicInfo', 'projectBasicInfo.siteFiles'],
-    writtenSections: ['chapters.projectDefinition'],
+    readSections: [
+      'projectBasicInfo',
+      'projectBasicInfo.siteFiles',
+      ...(hasStructuredDemoInput ? ['projectBasicInfo.demoProjectInput'] : []),
+    ],
+    writtenSections: [
+      'chapters.projectDefinition',
+      ...(hasStructuredDemoInput ? DEMO_INPUT_BLUEPRINT_FIELDS : []),
+    ],
     status: 'completed',
     summary: `已将项目资料整理为项目设计蓝本 ${BLUEPRINT_MILESTONES.PROJECT_DEFINED}`,
     warnings: definition.openItems.map((entry) => entry.value),
@@ -229,6 +481,16 @@ export function runProjectDefinitionAgent(projectInput, currentBlueprint) {
   };
 
   next.projectBasicInfo = { ...next.projectBasicInfo, ...projectInput };
+  if (hasStructuredDemoInput) {
+    const demoInput = projectInput.demoProjectInput;
+    next.project = cloneBlueprint(demoInput.project);
+    next.projectFacts = cloneBlueprint(demoInput.projectFacts);
+    next.designPreferences = cloneBlueprint(demoInput.designPreferences);
+    next.designerJudgments = cloneBlueprint(demoInput.designerJudgments);
+    next.pendingVerification = cloneBlueprint(demoInput.pendingVerification);
+    next.sourceRefs = cloneBlueprint(demoInput.sourceRefs);
+    next.demoPolicies = cloneBlueprint(demoInput.demoPolicies);
+  }
   next.chapters = { ...next.chapters, projectDefinition: definition };
   next.revision = revision;
   next.currentVersion = revision;
@@ -262,7 +524,10 @@ export function runProjectDefinitionAgent(projectInput, currentBlueprint) {
     confirmationStatus: '待确认',
     version: revision,
     milestoneVersion: BLUEPRINT_MILESTONES.PROJECT_DEFINED,
-    fields: ['chapters.projectDefinition'],
+    fields: [
+      'chapters.projectDefinition',
+      ...(hasStructuredDemoInput ? DEMO_INPUT_BLUEPRINT_FIELDS : []),
+    ],
   }, ...(next.changeLog || [])];
 
   const changedSections = ['项目事实', '项目目标', '核心约束', '设计原则', '待补充事项'];
@@ -292,6 +557,21 @@ const confirmItems = (records = []) => records.map((entry) => (
     : entry
 ));
 
+const confirmDesignPrinciples = (records = []) => records.map((entry) => (
+  entry.semanticType === 'designPrincipleCandidate'
+    ? {
+        ...entry,
+        status: BLUEPRINT_ITEM_STATUS.CONFIRMED,
+        inputStatus: 'designerConfirmed',
+        semanticType: 'designPrinciple',
+        enforcement: true,
+        confirmedDesignPrinciple: true,
+        updatedBy: 'designer',
+        updatedAt: now(),
+      }
+    : entry
+));
+
 export function confirmProjectDefinitionBlueprint(currentBlueprint) {
   const source = migrateBlueprintToV2(currentBlueprint);
   if (!source.chapters?.projectDefinition) throw new Error('请先运行 Agent 1 形成项目定义');
@@ -303,7 +583,7 @@ export function confirmProjectDefinitionBlueprint(currentBlueprint) {
     ...definition,
     explicitGoals: confirmItems(definition.explicitGoals),
     constraints: confirmItems(definition.constraints),
-    designPrinciples: confirmItems(definition.designPrinciples),
+    designPrinciples: confirmDesignPrinciples(definition.designPrinciples),
   };
   next.revision = revision;
   next.currentVersion = revision;
@@ -318,7 +598,7 @@ export function confirmProjectDefinitionBlueprint(currentBlueprint) {
     status: '已确认',
     confirmedAt,
     confirmedBy: '设计师',
-    decision: { source: '路演唯一人工确认', scope: ['项目目标', '核心约束', '设计原则'] },
+    decision: { source: '路演唯一人工确认', scope: ['项目事实', '偏好与判断', '待复核项及其状态边界'] },
   } : checkpoint);
   next.decisions = [...(next.decisions || []), {
     id: newEntityId('decision'),
@@ -326,13 +606,13 @@ export function confirmProjectDefinitionBlueprint(currentBlueprint) {
     decidedBy: 'designer',
     decidedAt: confirmedAt,
     milestoneVersion: BLUEPRINT_MILESTONES.DIRECTION_CONFIRMED,
-    summary: '设计师确认项目目标、核心约束与设计原则',
+    summary: '设计师确认项目理解及事实、偏好、待复核项的状态边界',
   }];
   next.changeLog = [{
     id: newEntityId('change'),
     sourceAgent: '设计师',
     modifiedAt: confirmedAt,
-    reason: '确认项目目标、核心约束与设计原则',
+    reason: '确认项目理解及各类输入的状态边界',
     confirmationStatus: '已确认',
     version: revision,
     milestoneVersion: BLUEPRINT_MILESTONES.DIRECTION_CONFIRMED,
@@ -350,9 +630,9 @@ export function confirmProjectDefinitionBlueprint(currentBlueprint) {
       revision,
       createdAt: confirmedAt,
       createdBy: 'designer',
-      title: '设计方向已确认',
-      summary: '设计师确认项目目标、核心约束与设计原则',
-      changedSections: ['项目目标', '核心约束', '设计原则'],
+      title: '项目理解已确认',
+      summary: '设计师确认项目事实、偏好、判断与待复核项的状态边界',
+      changedSections: ['项目事实', '偏好与判断', '待复核项'],
     },
   };
 }

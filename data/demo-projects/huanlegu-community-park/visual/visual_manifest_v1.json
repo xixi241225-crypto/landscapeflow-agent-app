@@ -1,0 +1,145 @@
+{
+  "schemaVersion": "landscapeflow-visual-assets-v1",
+  "projectId": "L2-001",
+  "selectedConcept": "B-community-shared-loop",
+  "gate": {
+    "id": "Gate4",
+    "name": "视觉成果挑选",
+    "selectionCriteria": [
+      "masterplanConsistency",
+      "noUnsupportedElements",
+      "credibleScale",
+      "sceneIntentMatch",
+      "noAIOverdesign"
+    ]
+  },
+  "assets": [
+    {
+      "id": "V01",
+      "scene": "sharedLawnCore",
+      "file": "visuals/V01_shared_lawn_core.jpg",
+      "promptFile": "prompts/V01_shared_lawn_core_prompt.md",
+      "assetType": "VisualDemo",
+      "candidateStatus": "cached-candidate",
+      "priority": "primary",
+      "sourceBlueprintFields": [
+        "selectedConcept",
+        "spatialStructure",
+        "keyNodes",
+        "circulation",
+        "plantingStrategy"
+      ],
+      "riskChecks": [
+        "lawn-too-large",
+        "path-too-wide",
+        "theme-park-inference"
+      ]
+    },
+    {
+      "id": "V02",
+      "scene": "children",
+      "file": "visuals/V02_children_waterplay.jpg",
+      "promptFile": "prompts/V02_children_waterplay_prompt.md",
+      "assetType": "VisualDemo",
+      "candidateStatus": "preferred-candidate",
+      "priority": "primary",
+      "sourceBlueprintFields": [
+        "designPreferences",
+        "designerInput",
+        "selectedConcept",
+        "keyNodes",
+        "operationsStrategy"
+      ],
+      "riskChecks": [
+        "deep-water",
+        "commercial-waterpark",
+        "poor-parent-visibility",
+        "oversized-playground"
+      ]
+    },
+    {
+      "id": "V03",
+      "scene": "elderly",
+      "file": "visuals/V03_elderly_active_health.jpg",
+      "promptFile": "prompts/V03_elderly_active_health_prompt.md",
+      "assetType": "VisualDemo",
+      "candidateStatus": "cached-candidate",
+      "priority": "primary",
+      "sourceBlueprintFields": [
+        "designPreferences",
+        "selectedConcept",
+        "keyNodes",
+        "plantingStrategy",
+        "operationsStrategy"
+      ],
+      "riskChecks": [
+        "too-many-smart-devices",
+        "technology-showcase-overdesign"
+      ]
+    },
+    {
+      "id": "V04",
+      "scene": "mainEntrance",
+      "file": "visuals/V04_main_entrance.jpg",
+      "promptFile": "prompts/V04_main_entrance_prompt.md",
+      "assetType": "VisualDemo",
+      "candidateStatus": "cached-candidate",
+      "priority": "primary",
+      "sourceBlueprintFields": [
+        "keyNodes",
+        "spatialStructure",
+        "selectedConcept"
+      ],
+      "riskChecks": [
+        "theme-park-gate",
+        "oversized-landmark"
+      ]
+    },
+    {
+      "id": "V05",
+      "scene": "nightAerial",
+      "file": "visuals/V05_night_aerial.jpg",
+      "promptFile": "prompts/V05_night_aerial_prompt.md",
+      "assetType": "VisualDemo",
+      "candidateStatus": "cached-candidate-with-consistency-warning",
+      "priority": "secondary",
+      "sourceBlueprintFields": [
+        "selectedConcept",
+        "spatialStructure",
+        "circulation",
+        "keyNodes",
+        "visualSelections"
+      ],
+      "riskChecks": [
+        "unsupported-water-system",
+        "unsupported-play-equipment",
+        "lighting-overdesign"
+      ]
+    },
+    {
+      "id": "V06",
+      "scene": "children",
+      "file": "visuals/V06_children_backup.jpg",
+      "assetType": "VisualDemo",
+      "candidateStatus": "backup-candidate",
+      "priority": "backup",
+      "riskChecks": [
+        "water-maintenance",
+        "text-in-image"
+      ]
+    }
+  ],
+  "referenceAssets": [
+    {
+      "id": "R01",
+      "file": "references/R01_masterplan_function.jpg",
+      "role": "masterplan-consistency-reference"
+    },
+    {
+      "id": "R02",
+      "file": "references/R02_planting_strategy.jpg",
+      "role": "planting-strategy-reference",
+      "warning": "specific species are not automatically confirmed"
+    }
+  ]
+}

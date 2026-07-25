@@ -1,0 +1,126 @@
+{
+  "schemaVersion": "demo-source-index/1.0",
+  "packageId": "happy-valley-community-park-demo-input-v1",
+  "sources": [
+    {
+      "id": "SRC-DESIGNER-01",
+      "type": "designerBrief",
+      "title": "《欢乐谷社区公园 Demo Input v1 数据整理》编制要求与设计师输入",
+      "originalPath": "/Users/xi/.codex/attachments/6493eff7-9f61-4374-a21c-5c96d24ab1b4/pasted-text.txt",
+      "copiedPath": "raw/DemoInput_v1_编制要求_20260725.txt",
+      "note": "原文副本；是本版项目基础信息、设计偏好、设计师真实判断及防推断规则的优先来源。"
+    },
+    {
+      "id": "SRC-SATELLITE-01",
+      "type": "siteImage",
+      "title": "卫星图（含工具量测数据）",
+      "originalPath": "欢乐谷社区公园_前期资料包/02_场地基础资料/卫星图_含量测数据_20260510.jpeg",
+      "copiedPath": "assets/site/卫星图_含量测数据_20260510.jpeg",
+      "note": "原图副本；支持影像观察及面积、周长、卫星高程量测记录，不等同于红线图或正式测绘。"
+    },
+    {
+      "id": "SRC-TASK-01",
+      "type": "workingDocument",
+      "title": "项目设计任务书（工作版）",
+      "originalPath": "欢乐谷社区公园_前期资料包/01_项目任务书/项目设计任务书.md",
+      "copiedPath": "raw/项目设计任务书_工作版.md",
+      "note": "原文副本；甲方正式任务书尚未取得，文件内结论须按本输入包的证据状态重新分类。"
+    },
+    {
+      "id": "SRC-GAPS-01",
+      "type": "workingDocument",
+      "title": "场地基础资料缺口说明",
+      "originalPath": "欢乐谷社区公园_前期资料包/02_场地基础资料/场地基础资料_缺口说明.md",
+      "copiedPath": "raw/场地基础资料_缺口说明.md",
+      "note": "原文副本；用于追溯量测精度警告和资料缺口，不将其中推断自动升级为事实。"
+    },
+    {
+      "id": "SRC-SITE-PHOTO-01",
+      "type": "workingDocument",
+      "title": "现场照片拍摄清单",
+      "originalPath": "欢乐谷社区公园_前期资料包/03_现场照片/现场照片_拍摄清单.md",
+      "copiedPath": "raw/现场照片_拍摄清单.md",
+      "note": "原文副本；仅证明现场踏勘与照片仍需补充，不代表清单中的待拍内容已经确认。"
+    },
+    {
+      "id": "SRC-REF-NOTES-01",
+      "type": "workingDocument",
+      "title": "参考案例点评",
+      "originalPath": "欢乐谷社区公园_前期资料包/04_参考案例/参考案例_点评.md",
+      "copiedPath": "raw/参考案例_点评.md",
+      "note": "原文副本；用于理解既有参考图语境，其中分析性文字不视为最终设计决策。"
+    },
+    {
+      "id": "SRC-REF-COLLECT-01",
+      "type": "workingDocument",
+      "title": "参考案例采集说明",
+      "originalPath": "欢乐谷社区公园_前期资料包/04_参考案例/参考案例_采集说明.md",
+      "copiedPath": "raw/参考案例_采集说明.md",
+      "note": "原文副本；用于追溯五张参考图的采集用途。"
+    },
+    {
+      "id": "SRC-BASEINFO-01",
+      "type": "workingDocument",
+      "title": "项目基本信息（旧工作版）",
+      "originalPath": "欢乐谷社区公园_前期资料包/05_文字说明/项目基本信息.md",
+      "copiedPath": "raw/项目基本信息.md",
+      "note": "原文副本；与本次冻结口径冲突时以 SRC-DESIGNER-01 为准，量测与影像判读不得作为 confirmed fact。"
+    },
+    {
+      "id": "SRC-FACTS-01",
+      "type": "workingDocument",
+      "title": "已确认事实（旧工作版）",
+      "originalPath": "欢乐谷社区公园_前期资料包/05_文字说明/已确认事实.md",
+      "copiedPath": "raw/已确认事实_旧工作版.md",
+      "note": "原文副本；文件名不代表其全部内容在 Demo Input v1 中均为 confirmed，具体条目已重新归类。"
+    },
+    {
+      "id": "SRC-PENDING-01",
+      "type": "workingDocument",
+      "title": "待复核清单",
+      "originalPath": "欢乐谷社区公园_前期资料包/05_文字说明/待复核清单.md",
+      "copiedPath": "raw/待复核清单.md",
+      "note": "原文副本；用于识别当前缺口，不代表缺口已有答案。"
+    },
+    {
+      "id": "SRC-REF-ELDERLY-01",
+      "type": "referenceImage",
+      "title": "老人活动区参考图",
+      "originalPath": "欢乐谷社区公园_前期资料包/04_参考案例/老人活动.jpg",
+      "copiedPath": "assets/references/老人活动.jpg",
+      "note": "对应智能或互动性活动设施的设计偏好，不是最终设施清单。"
+    },
+    {
+      "id": "SRC-REF-CHILDREN-01",
+      "type": "referenceImage",
+      "title": "儿童活动区参考图",
+      "originalPath": "欢乐谷社区公园_前期资料包/04_参考案例/儿童乐园.webp",
+      "copiedPath": "assets/references/儿童乐园.webp",
+      "note": "对应儿童无动力活动设施的设计偏好，不得扩展为主题、卡通或 IP 乐园。"
+    },
+    {
+      "id": "SRC-REF-GREENWAY-01",
+      "type": "referenceImage",
+      "title": "公园绿道参考图",
+      "originalPath": "欢乐谷社区公园_前期资料包/04_参考案例/公园绿道.jpg",
+      "copiedPath": "assets/references/公园绿道.jpg",
+      "note": "对应慢行、骑行、起伏体验与林荫空间偏好；图中乔木不代表项目现状。"
+    },
+    {
+      "id": "SRC-REF-PLAN-01",
+      "type": "referenceImage",
+      "title": "社区公园平面参考图",
+      "originalPath": "欢乐谷社区公园_前期资料包/04_参考案例/社区公园平面图.jpg",
+      "copiedPath": "assets/references/社区公园平面图.jpg",
+      "note": "对应功能布点与环形步道组织偏好，不是本项目最终总平。"
+    },
+    {
+      "id": "SRC-REF-LAWN-01",
+      "type": "referenceImage",
+      "title": "草坪广场参考图",
+      "originalPath": "欢乐谷社区公园_前期资料包/04_参考案例/草坪广场.jpg",
+      "copiedPath": "assets/references/草坪广场.jpg",
+      "note": "对应中心草坪或中心共享广场偏好，不是最终面积与形态决定。"
+    }
+  ]
+}

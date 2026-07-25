@@ -30,6 +30,12 @@ function selectedConcept(blueprint) {
   return selectConceptCandidate(blueprint, selectedId);
 }
 
+function isHuanleguBlueprint(blueprint) {
+  return blueprint.project?.sourceCaseId === 'L2-001'
+    && blueprint.project?.excludedL2CaseIds?.includes('L2-001')
+    && blueprint.demoPolicies?.doNotInferFromProjectName === true;
+}
+
 function abortableDelay(ms, signal) {
   return new Promise((resolve, reject) => {
     const timer = setTimeout(resolve, ms);
@@ -106,6 +112,57 @@ function projectDefinitionPatch(blueprint) {
 }
 
 function comparisonPatch(blueprint) {
+  if (isHuanleguBlueprint(blueprint)) {
+    const dimensions = [
+      { key: 'functionFit', label: '功能满足度', weight: 0.2 },
+      { key: 'ageIntegration', label: '多年龄融合度', weight: 0.2 },
+      { key: 'scaleFit', label: '空间尺度适配', weight: 0.18 },
+      { key: 'plantPotential', label: '植物空间潜力', weight: 0.16 },
+      { key: 'constructionCost', label: '建设成本', weight: 0.14 },
+      { key: 'maintenance', label: '运维难度', weight: 0.12 },
+    ];
+    const scoreByCode = {
+      A: { functionFit: 8.6, ageIntegration: 6.2, scaleFit: 6.4, plantPotential: 7.0, constructionCost: 6.8, maintenance: 6.7 },
+      B: { functionFit: 9.2, ageIntegration: 9.3, scaleFit: 8.9, plantPotential: 8.7, constructionCost: 7.6, maintenance: 7.3 },
+      C: { functionFit: 6.8, ageIntegration: 7.1, scaleFit: 8.3, plantPotential: 9.2, constructionCost: 8.5, maintenance: 8.2 },
+    };
+    const schemes = selectConceptCandidates(blueprint).map((concept) => {
+      const code = concept.code || concept.id;
+      const scores = scoreByCode[code];
+      const total = dimensions.reduce((sum, dimension) => sum + scores[dimension.key] * dimension.weight, 0);
+      return {
+        id: concept.id,
+        code,
+        name: concept.name,
+        scores,
+        total: Number(total.toFixed(2)),
+      };
+    });
+    const recommended = schemes.find((scheme) => scheme.code === 'B');
+    return {
+      comparison: {
+        dimensions,
+        schemes,
+        method: '依据 L2-001 设计总监决策档案进行 Demo 级定性比选；分值只用于表达相对判断，不代表正式造价或运营测算。',
+      },
+      agentRecommendation: {
+        conceptId: recommended.id,
+        conceptName: recommended.name,
+        score: recommended.total,
+        reason: '不是平均分配空间，而是把共性需求放进共享空间，把差异需求放进功能节点。',
+      },
+      risks: [{
+        title: '推荐边界',
+        value: 'Agent 3 仅推荐 B｜社区共享环，必须在 Gate 2 由设计师主动选择，不自动写入最终方向。',
+        status: CONTENT_STATUS.PENDING,
+      }],
+      nextTasks: [{
+        title: '方案方向决策',
+        value: '设计师在 Gate 2 主动选择 A / B / C，并记录融合要求与专业判断。',
+        status: CONTENT_STATUS.PENDING,
+      }],
+    };
+  }
   const project = getProject(blueprint);
   const text = `${project.designGoals || ''} ${project.constraints || ''} ${project.clientFocus || ''} ${project.maintenance || ''}`;
   const dimensions = [
@@ -166,7 +223,9 @@ function spatialPatch(blueprint) {
   const targetUsers = confirmedUsers.length ? confirmedUsers.join('、') : '待确认的主要使用者';
   const zones = keyScenes.map((name, index) => ({
     name,
-    area: `约 ${Math.round(area * ratios[index] / 10) * 10}㎡（演示估算）`,
+    area: isHuanleguBlueprint(blueprint)
+      ? '概念级相对关系，具体面积待正式红线与总平尺度复核'
+      : `约 ${Math.round(area * ratios[index] / 10) * 10}㎡（演示估算）`,
     function: index === 0 ? `承载“${concept.name}”的核心空间体验` : `为${targetUsers}提供与“${name}”相符的弹性使用界面`,
     status: CONTENT_STATUS.AI_SUGGESTED,
   }));
@@ -195,7 +254,9 @@ function spatialPatch(blueprint) {
     },
     spatialStructure: {
       title: `${concept.name}｜空间骨架`,
-      value: `${structure} 基于${areaLabel}进行概念级面积分配，所有尺度、边界与现状关系需待真实测绘资料复核。`,
+      value: isHuanleguBlueprint(blueprint)
+        ? `${structure} 当前 ${areaLabel} 仅为 measurement / pendingVerification，不作为法定红线面积；所有尺度、边界与现状关系需待正式红线和测绘资料复核。`
+        : `${structure} 基于${areaLabel}进行概念级面积分配，所有尺度、边界与现状关系需待真实测绘资料复核。`,
       planImage: './demo-images/plan.jpg',
       planAsset,
       analysisAssets: [

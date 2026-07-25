@@ -232,13 +232,18 @@ function ReviewStep({
     ['项目任务书', categories.has('项目任务书')],
     ['场地基础资料', categories.has('场地照片') || categories.has('原有设计资料')],
     ['项目目标与约束', Boolean(formData.designGoals && formData.constraints)],
-    ['区位及红线资料', categories.has('区位资料') || categories.has('CAD／红线／总平底图')],
+    ['区位资料', categories.has('区位资料')],
+    ['正式红线／总平底图', categories.has('CAD／红线／总平底图')],
     ['参考案例', categories.has('参考案例') || files.some((file) => /参考|案例|风格/.test(file.name))],
     ['汇报资料', categories.has('原有 PPT 或文本提纲')],
   ];
   const areaText = formData.area
     ? (/㎡|平方米|平米|m²/i.test(String(formData.area)) ? String(formData.area) : `约 ${formData.area}㎡`)
     : '待补充';
+  const areaPendingVerification = formData.areaStatus === 'pendingVerification';
+  const areaDisplay = areaPendingVerification
+    ? `${areaText}（工具量测，待正式红线复核）`
+    : areaText;
   const detectedCategories = [...categories].filter(Boolean);
   const siteConditionText = [formData.constraints, formData.siteConditions]
     .filter(Boolean)
@@ -247,7 +252,14 @@ function ReviewStep({
   const recognized = [
     { status: formData.projectName ? 'confirmed' : 'pending', text: formData.projectName ? `已确认项目名称：${formData.projectName}` : '项目名称：待补充' },
     { status: formData.city ? 'confirmed' : 'pending', text: formData.city ? `已确认项目地点：${formData.city}` : '项目地点：待补充' },
-    { status: formData.area ? 'confirmed' : 'pending', text: formData.area ? `已确认项目面积：${areaText}` : '项目面积：待补充' },
+    {
+      status: formData.area && !areaPendingVerification ? 'confirmed' : 'pending',
+      text: formData.area
+        ? areaPendingVerification
+          ? `已量测项目面积：${areaDisplay}`
+          : `已确认项目面积：${areaText}`
+        : '项目面积：待补充',
+    },
     { status: formData.projectType ? 'confirmed' : 'pending', text: formData.projectType ? `已确认项目类型：${formData.projectType}` : '项目类型：待补充' },
     { status: files.length ? 'confirmed' : 'pending', text: files.length ? `已上传 ${files.length} 份项目资料` : '项目资料：待上传' },
     { status: detectedCategories.length ? 'confirmed' : 'pending', text: detectedCategories.length ? `已检测到资料类型：${detectedCategories.join('、')}` : '资料类型：待上传后检测' },
@@ -257,12 +269,12 @@ function ReviewStep({
     { status: formData.maintenance ? 'confirmed' : 'pending', text: formData.maintenance ? `已识别运维要求：${formData.maintenance}` : '运维要求：待补充 / 待解析' },
     { status: formData.budgetCondition ? 'confirmed' : 'pending', text: formData.budgetCondition ? `已识别造价要求：${formData.budgetCondition}` : '造价要求：待补充' },
   ];
-  const suggestions = ['详细现状高程数据', '地下管线资料', '精确投资控制指标'];
+  const suggestions = ['正式红线与测绘资料', '详细现状高程数据', '地下管线资料', '精确投资控制指标'];
   const summary = [
     ['项目名称', formData.projectName || '待补充'],
     ['项目地点', formData.city || '待补充'],
     ['项目类型', formData.projectType || '待补充'],
-    ['项目面积', areaText],
+    ['项目面积', areaDisplay],
     ['设计阶段', formData.designStage || '待补充'],
     ['预算条件', formData.budgetCondition || '待补充'],
     ['已上传资料', `${files.length} 份`],

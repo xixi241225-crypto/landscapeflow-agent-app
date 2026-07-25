@@ -100,8 +100,51 @@ export function selectCoreConstraints(blueprint) {
   return asArray(selectProjectDefinition(blueprint).constraints);
 }
 
+export function selectConfirmedConstraints(blueprint) {
+  return selectCoreConstraints(blueprint).filter((item) => (
+    item?.status === BLUEPRINT_ITEM_STATUS.CONFIRMED
+    && item?.semanticType !== 'pendingVerification'
+    && item?.enforcement !== false
+    && item?.confirmedConstraint !== false
+  ));
+}
+
+export function selectPendingConstraints(blueprint) {
+  return selectCoreConstraints(blueprint).filter((item) => (
+    item?.semanticType === 'pendingVerification'
+    || item?.inputStatus === 'pendingVerification'
+    || item?.status === BLUEPRINT_ITEM_STATUS.PENDING
+    || item?.enforcement === false
+  ));
+}
+
 export function selectDesignPrinciples(blueprint) {
   return asArray(selectProjectDefinition(blueprint).designPrinciples);
+}
+
+export function selectConfirmedDesignPrinciples(blueprint) {
+  return selectDesignPrinciples(blueprint).filter((item) => (
+    item?.status === BLUEPRINT_ITEM_STATUS.CONFIRMED
+    && item?.semanticType !== 'designPreference'
+    && item?.enforcement !== false
+    && item?.confirmedDesignPrinciple !== false
+  ));
+}
+
+export function selectDesignPreferences(blueprint) {
+  return asArray(blueprint?.designPreferences).map((item) => ({
+    ...item,
+    label: item.label || item.topic || '设计偏好',
+    value: item.value || item.statement || '',
+    semanticType: 'designPreference',
+    enforcement: false,
+    confirmedDesignPrinciple: false,
+    provenance: item.provenance || {
+      sourcePath: 'projectInput.designPreferences',
+      sourceId: item.id || '',
+      sourceStatus: item.status || 'preference',
+    },
+  }));
 }
 
 export function selectProjectDefinitionDetails(blueprint) {
@@ -144,6 +187,9 @@ export function selectProjectInputForAgents(blueprint) {
   const project = blueprint?.projectBasicInfo || {};
   const details = selectProjectDefinitionDetails(blueprint);
   const stakeholders = details.stakeholders.map(text).filter(Boolean);
+  const confirmedConstraints = selectConfirmedConstraints(blueprint);
+  const pendingConstraints = selectPendingConstraints(blueprint);
+  const confirmedDesignPrinciples = selectConfirmedDesignPrinciples(blueprint);
   return {
     ...project,
     projectName: facts.projectName || project.projectName || '',
@@ -155,8 +201,12 @@ export function selectProjectInputForAgents(blueprint) {
     targetUsers: stakeholders.length ? stakeholders.join('、') : project.targetUsers || '',
     designGoals: details.explicitGoals.map(text).filter(Boolean).join('；') || project.designGoals || '',
     clientFocus: details.latentGoals.map(text).filter(Boolean).join('；') || project.clientFocus || '',
-    constraints: details.constraints.map(text).filter(Boolean).join('；') || project.constraints || '',
-    designPrinciples: details.designPrinciples.map(text).filter(Boolean),
+    constraints: confirmedConstraints.map(text).filter(Boolean).join('；') || project.constraints || '',
+    confirmedConstraints,
+    pendingConstraints,
+    designPrinciples: confirmedDesignPrinciples.map(text).filter(Boolean),
+    confirmedDesignPrinciples,
+    designPreferences: selectDesignPreferences(blueprint),
     successCriteria: details.successCriteria.map(text).filter(Boolean),
     openItems: details.openItems,
     sourceDocuments: details.sourceDocuments,
@@ -234,14 +284,25 @@ export function selectConceptGenerationInput(blueprint) {
       designStage: text(facts.designStage),
       budgetCondition: text(facts.budgetCondition),
       owner: text(facts.owner),
+      sourceCaseId: blueprint?.project?.sourceCaseId || '',
+      excludedL2CaseIds: blueprint?.project?.excludedL2CaseIds || [],
     },
+    projectFacts: blueprint?.projectFacts || { confirmed: [], measurements: [], observations: [] },
+    designPreferences: selectDesignPreferences(blueprint),
+    designerJudgments: asArray(blueprint?.designerJudgments),
+    pendingVerification: asArray(blueprint?.pendingVerification),
+    sourceRefs: asArray(blueprint?.sourceRefs),
+    demoPolicies: blueprint?.demoPolicies || {},
     stakeholders: asArray(definition.stakeholders),
     explicitGoals: asArray(definition.explicitGoals),
     latentGoals: asArray(definition.latentGoals),
     siteConditions: definition.siteConditions || {},
     flattenedSiteConditions: details.siteConditions,
     constraints: asArray(definition.constraints),
+    confirmedConstraints: selectConfirmedConstraints(blueprint),
+    pendingConstraints: selectPendingConstraints(blueprint),
     designPrinciples: asArray(definition.designPrinciples),
+    confirmedDesignPrinciples: selectConfirmedDesignPrinciples(blueprint),
     successCriteria: asArray(definition.successCriteria),
     coreQuestions: asArray(definition.coreQuestions),
     openItems: asArray(definition.openItems),

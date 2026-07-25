@@ -86,7 +86,7 @@ export default function CheckpointPanel({
 
       {checkpoint.id === 'checkpoint-1' && (
         <div className="rounded-xl border border-violet-100 bg-white p-4">
-          <p className="text-sm font-semibold text-[var(--lf-brand-950)]">请确认上方项目目标、核心约束与设计原则。</p>
+          <p className="text-sm font-semibold text-[var(--lf-brand-950)]">请确认上方项目事实、设计偏好、专业判断与待复核项的状态边界。</p>
           <p className="mt-2 text-xs leading-6 text-[var(--lf-muted)]">待补充信息和合理假设会保留在蓝本中，不会被伪装为已确认事实。确认后将形成 v2，供后续五个 Agent 统一读取。</p>
         </div>
       )}

@@ -276,6 +276,13 @@ export function migrateBlueprintToV2(existingBlueprint) {
       stage: existingBlueprint.stage || 'project-input',
       status: existingBlueprint.status || 'draft',
       updatedBy: existingBlueprint.updatedBy || 'system',
+      project: existingBlueprint.project || null,
+      projectFacts: existingBlueprint.projectFacts || { confirmed: [], measurements: [], observations: [] },
+      designPreferences: existingBlueprint.designPreferences || [],
+      designerJudgments: existingBlueprint.designerJudgments || [],
+      pendingVerification: existingBlueprint.pendingVerification || [],
+      sourceRefs: existingBlueprint.sourceRefs || [],
+      demoPolicies: existingBlueprint.demoPolicies || {},
       decisions: existingBlueprint.decisions || [],
       agentExecutions: existingBlueprint.agentExecutions || [],
       checkpoints: normalizeCheckpoints(existingBlueprint.checkpoints),
@@ -310,6 +317,13 @@ export function migrateBlueprintToV2(existingBlueprint) {
     next.stage = next.stage || (next.milestoneVersion === 'v0' ? 'project-input' : 'project-definition');
     next.status = next.status || 'draft';
     next.updatedBy = next.updatedBy || 'migration';
+    next.project = next.project || null;
+    next.projectFacts = next.projectFacts || { confirmed: [], measurements: [], observations: [] };
+    next.designPreferences = next.designPreferences || [];
+    next.designerJudgments = next.designerJudgments || [];
+    next.pendingVerification = next.pendingVerification || [];
+    next.sourceRefs = next.sourceRefs || [];
+    next.demoPolicies = next.demoPolicies || {};
     next.chapters = legacyChapters(next, projectDefinition);
     delete next.conceptCandidates;
     next.decisions = next.decisions || [];

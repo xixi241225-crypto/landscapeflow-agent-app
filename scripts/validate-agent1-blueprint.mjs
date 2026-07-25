@@ -33,13 +33,26 @@ assert.equal(v1.revision, 1);
 assert.ok(v1.chapters.projectDefinition);
 assert.equal(v1.chapters.conceptGeneration, null);
 assert.equal(v1.chapters.schemeDecision, null);
-assert.deepEqual(agentWriteScopes['agent-1'], ['chapters.projectDefinition']);
+assert.deepEqual(agentWriteScopes['agent-1'], [
+  'chapters.projectDefinition',
+  'project',
+  'projectFacts',
+  'designPreferences',
+  'designerJudgments',
+  'pendingVerification',
+  'sourceRefs',
+  'demoPolicies',
+]);
 assert.throws(() => assertAgentWriteScope('agent-1', ['chapters.conceptGeneration']), /无权写入/);
 assert.equal(selectProjectFactByKey(v1, 'projectName').value, '北京市欢乐谷社区公园景观设计');
 assert.equal(selectProjectFactByKey(v1, 'location').value, '北京市朝阳区');
-assert.equal(selectProjectFactByKey(v1, 'area').value, '10000');
+assert.equal(selectProjectFactByKey(v1, 'area').value, '11037.66');
+assert.equal(selectProjectFactByKey(v1, 'area').status, 'pending');
+assert.equal(selectProjectFactByKey(v1, 'area').evidenceType, 'measurement');
+assert.equal(selectProjectFactByKey(v1, 'area').inputStatus, 'pendingVerification');
+assert.equal(selectProjectFactByKey(v1, 'area').confidence, 0.7);
 assert.equal(selectProjectFactByKey(v1, 'projectType').value, '社区公园景观设计');
-assert.equal(v1.chapters.projectDefinition.explicitGoals[0].status, 'pending');
+assert.equal(v1.chapters.projectDefinition.explicitGoals[0].status, 'assumption');
 assert.equal(v1.chapters.projectDefinition.constraints[0].status, 'pending');
 assert.equal(v1.chapters.projectDefinition.designPrinciples[0].status, 'assumption');
 assert.ok(v1.chapters.projectDefinition.openItems.length >= 6);
@@ -50,7 +63,8 @@ const v2 = confirmation.blueprint;
 assert.equal(v2.milestoneVersion, 'v2');
 assert.equal(v2.revision, 2);
 assert.equal(v2.checkpoints.find((item) => item.id === 'checkpoint-1').status, '已确认');
-assert.equal(v2.chapters.projectDefinition.explicitGoals[0].status, 'pending');
+assert.equal(v2.chapters.projectDefinition.explicitGoals[0].status, 'assumption');
+assert.equal(selectProjectFactByKey(v2, 'area').status, 'pending');
 assert.equal(v2.chapters.projectDefinition.constraints[0].status, 'pending');
 assert.equal(v2.chapters.projectDefinition.designPrinciples[0].status, 'assumption');
 
@@ -97,8 +111,8 @@ const restoredV1 = restoreBlueprintVersion(versions, 'v1', v2);
 assert.equal(restoredV1.milestoneVersion, 'v1');
 assert.deepEqual(restoredV1.chapters.projectDefinition.explicitGoals, v1.chapters.projectDefinition.explicitGoals);
 
-assert.ok(selectProjectGoals(v1).some((item) => item.value.includes('待项目任务书或设计师补充')));
-assert.ok(selectCoreConstraints(v1).some((item) => item.value.includes('建设预算')));
+assert.ok(selectProjectGoals(v1).some((item) => item.value.includes('多种实用功能交叉融合')));
+assert.ok(selectCoreConstraints(v1).some((item) => item.label === '投资上限'));
 assert.ok(selectDesignPrinciples(v1).some((item) => item.status === 'assumption'));
 const statusValues = selectProjectDefinitionDetails(v1)
   .facts
@@ -121,10 +135,10 @@ assert.ok(statusValues.every((status) => ['confirmed', 'assumption', 'pending', 
 const markdown = generateBlueprintMarkdown(v1);
 assert.match(markdown, /^# 项目设计蓝本 v1/m);
 assert.match(markdown, /## 项目目标/);
-assert.match(markdown, /具体设计目标待项目任务书或设计师补充/);
+assert.match(markdown, /多种实用功能交叉融合/);
 assert.match(markdown, /## 版本记录/);
 
 console.log('✓ Agent 1 输出符合 Blueprint v2 schema');
-console.log('✓ 默认项目四项事实、四态保留与旧松林内容清理校验通过');
+console.log('✓ 欢乐谷真实输入、面积待复核状态、四态保留与旧松林内容清理校验通过');
 console.log('✓ Demo 文件显式绑定、跨项目防污染与 Agent 1 写入权限校验通过');
 console.log('✓ v1/v2、revision、迁移幂等、版本恢复与 Markdown 校验通过');

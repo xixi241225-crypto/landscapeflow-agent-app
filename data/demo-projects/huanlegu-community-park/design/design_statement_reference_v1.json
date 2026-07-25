@@ -1,0 +1,83 @@
+{
+  "schemaVersion": "landscapeflow-design-statement-reference-v1",
+  "projectId": "beijing-happy-valley-community-park",
+  "sourceCaseId": "L2-001",
+  "selectedConceptId": "B",
+  "selectedConceptName": "社区共享环",
+  "assetIdentity": "Reference",
+  "sourceDocument": "B_社区共享环_设计说明母稿_v1.md",
+  "usagePolicy": {
+    "runtimeSource": "Blueprint",
+    "mayBeHardcodedIntoUi": false,
+    "role": "Agent 4 内容质量参考与自动验证目标",
+    "sectionCountMustRemain": 11
+  },
+  "sections": [
+    {
+      "key": "coreNarrative",
+      "title": "设计定位与核心叙事",
+      "validationFocus": "社区共享生活客厅；有限场地中的共享效率与有分有合。",
+      "contentStatus": "designJudgment"
+    },
+    {
+      "key": "spatialStructure",
+      "title": "总体空间结构",
+      "validationFocus": "一心、一环、多点、渗透共享。",
+      "contentStatus": "designJudgment"
+    },
+    {
+      "key": "functionalZones",
+      "title": "功能分区",
+      "validationFocus": "共享核心加专属节点；具体面积待尺度复核。",
+      "contentStatus": "designJudgment"
+    },
+    {
+      "key": "circulation",
+      "title": "主次游线",
+      "validationFocus": "全龄共享体验环；宽度、坡度与无障碍做法待深化。",
+      "contentStatus": "designJudgment"
+    },
+    {
+      "key": "featureNodes",
+      "title": "核心节点与场景",
+      "validationFocus": "草坪、儿童、老人和入口节点均不虚构设施数量与工程参数。",
+      "contentStatus": "designJudgment"
+    },
+    {
+      "key": "plant",
+      "title": "植物策略",
+      "validationFocus": "空间骨架与四季连续性；树种、规格、数量及现状树待专项深化。",
+      "contentStatus": "pending"
+    },
+    {
+      "key": "material",
+      "title": "材料策略",
+      "validationFocus": "耐久、易维护、安全；不锁定品牌与构造。",
+      "contentStatus": "pending"
+    },
+    {
+      "key": "ecology",
+      "title": "生态策略",
+      "validationFocus": "环境舒适与雨洪方向；技术结论待资料复核。",
+      "contentStatus": "pending"
+    },
+    {
+      "key": "grading",
+      "title": "竖向策略",
+      "validationFocus": "卫星高程不得作为正式竖向依据。",
+      "contentStatus": "pendingVerification"
+    },
+    {
+      "key": "drainage",
+      "title": "排水策略",
+      "validationFocus": "真实高程、地下管线及市政接口仍待复核。",
+      "contentStatus": "pendingVerification"
+    },
+    {
+      "key": "operations",
+      "title": "运营维护策略",
+      "validationFocus": "投资上限与运维主体待确认，不输出设备清单。",
+      "contentStatus": "pending"
+    }
+  ]
+}

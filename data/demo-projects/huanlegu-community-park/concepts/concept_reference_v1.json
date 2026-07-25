@@ -1,0 +1,199 @@
+{
+  "schemaVersion": "landscapeflow-demo-concept-reference-v1",
+  "projectId": "beijing-happy-valley-community-park",
+  "sourceCaseId": "L2-001",
+  "assetIdentity": "Reference",
+  "sourceDocument": "L2-001_欢乐谷社区公园_设计总监决策档案_v1.md",
+  "candidates": [
+    {
+      "id": "A",
+      "code": "A",
+      "name": "邻里分区型",
+      "candidateOrigin": "demoReconstructed",
+      "assetIdentity": "DemoReconstructedCandidate",
+      "proposition": "通过明确功能分区，让不同年龄群体拥有相对独立、互不干扰的活动空间。",
+      "narrative": "以儿童、老人、青年与家庭、安静休憩等功能分区回应差异化需求，并通过主路系统连接各区。",
+      "strategicFocus": "功能独立、动静分区、边界清楚、管理直接。",
+      "spatialHypothesis": "将场地组织为若干相对独立的功能分区，以主路连接；在约 1.1 公顷量级的场地中必须重点防止空间切碎和单区尺度不足。",
+      "experienceIntent": "形成识别清楚、互相干扰较少的邻里活动分区体验。",
+      "keyScenes": [
+        "儿童活动分区",
+        "老人康体分区",
+        "青年与家庭活动分区",
+        "安静休憩分区"
+      ],
+      "differentiationTags": [
+        "功能独立",
+        "明确分区",
+        "动静控制",
+        "尺度风险"
+      ],
+      "advantages": [
+        "功能边界清楚",
+        "动静分区容易控制",
+        "后期管理相对直接",
+        "各人群空间识别度高"
+      ],
+      "risks": [
+        "有限场地容易被切碎",
+        "各功能区可能都不够大",
+        "共享公共核心不足",
+        "路径可能退化为单纯交通空间"
+      ],
+      "applicableConditions": [
+        "适合功能冲突强、场地尺度更大、需要明确管理边界的项目"
+      ],
+      "conceptDiagramBrief": {
+        "purpose": "表达不同人群功能分区及主路连接关系，并同步提示有限场地中的尺度风险。",
+        "mustShow": [
+          "相对独立的功能分区",
+          "主路连接",
+          "共享核心不足风险",
+          "尺度校核"
+        ],
+        "avoid": [
+          "把候选方向表述成真实历史方案",
+          "虚构功能面积",
+          "虚构设施型号与数量"
+        ]
+      },
+      "referenceVisual": {
+        "assetId": "concept-reference-A",
+        "url": "./demo-images/aerial.jpg",
+        "title": "邻里分区型概念意向",
+        "assetType": "演示概念意向素材",
+        "aspectRatio": "16:9",
+        "status": "demo-reference",
+        "source": "demo-runtime-reference",
+        "isDemoAsset": true
+      }
+    },
+    {
+      "id": "B",
+      "code": "B",
+      "name": "社区共享环",
+      "candidateOrigin": "projectReferenceDirection",
+      "referenceRole": "historicalFinalDirection",
+      "assetIdentity": "Reference",
+      "proposition": "以中央共享草坪为公共核心，以全龄慢行环串联功能节点，让不同年龄群体既有各自活动空间，又自然产生共享与交流。",
+      "narrative": "不是平均分配空间，而是把共性需求放进共享空间，把差异需求放进功能节点。",
+      "strategicFocus": "共享融合、一心一环多点、节点有边界、空间有联系。",
+      "spatialHypothesis": "以中央共享草坪形成社区公共客厅，以全龄共享慢行环串联儿童、老人、林下休憩与入口等节点，并通过草坪、林荫、路径和停留空间建立渗透共享关系。",
+      "experienceIntent": "形成高频日常使用、全龄慢行与邻里共享融合的社区公共空间体验。",
+      "keyScenes": [
+        "中央共享草坪",
+        "全龄共享慢行环",
+        "儿童无动力活动节点",
+        "老人林荫康体节点",
+        "林下邻里休憩节点"
+      ],
+      "differentiationTags": [
+        "共享融合",
+        "一心一环多点",
+        "全龄慢行",
+        "空间效率"
+      ],
+      "advantages": [
+        "空间效率较高",
+        "共享核心明确",
+        "多年龄关系自然",
+        "环线可同时承担交通、运动、儿童骑行和社交"
+      ],
+      "risks": [
+        "儿童活动与安静休憩存在声环境冲突",
+        "环线可能退化为单调道路",
+        "中央草坪可能被视觉表达过度放大",
+        "节点过多会再次造成拥挤"
+      ],
+      "applicableConditions": [
+        "适合需要在有限场地内协调多年龄、高频日常使用与共享关系的社区公园"
+      ],
+      "conceptDiagramBrief": {
+        "purpose": "表达一心、一环、多点及渗透共享的空间关系。",
+        "mustShow": [
+          "中央共享核心",
+          "全龄慢行环",
+          "嵌入式功能节点",
+          "共性需求与差异需求的空间关系"
+        ],
+        "avoid": [
+          "自动替代设计师选择",
+          "把偏好写成已确认工程清单",
+          "虚构草坪、路径或节点的精确尺度"
+        ]
+      },
+      "referenceVisual": {
+        "assetId": "concept-reference-B",
+        "url": "./demo-images/plan.jpg",
+        "title": "社区共享环概念意向",
+        "assetType": "演示概念意向素材",
+        "aspectRatio": "16:9",
+        "status": "demo-reference",
+        "source": "demo-runtime-reference",
+        "isDemoAsset": true
+      }
+    },
+    {
+      "id": "C",
+      "code": "C",
+      "name": "自然漫游型",
+      "candidateOrigin": "demoReconstructed",
+      "assetIdentity": "DemoReconstructedCandidate",
+      "proposition": "减少固定设施，将更多面积留给林荫、草坪、自然体验和慢行系统，形成整体性更强的自然化社区公园。",
+      "narrative": "以林荫慢行、开敞草坪、林下停留、季相空间和少量自然探索节点组织连续的自然体验。",
+      "strategicFocus": "自然优先、慢行连续、设施克制、植物空间整体化。",
+      "spatialHypothesis": "以林荫慢行系统串联开敞草坪、林下停留和少量自然探索节点，减少固定设施对空间连续性的切割。",
+      "experienceIntent": "形成节奏舒缓、绿量连续、自然体验优先的社区漫游空间。",
+      "keyScenes": [
+        "林荫慢行系统",
+        "开敞草坪",
+        "林下停留空间",
+        "季相体验节点"
+      ],
+      "differentiationTags": [
+        "自然优先",
+        "设施克制",
+        "植物空间",
+        "慢行连续"
+      ],
+      "advantages": [
+        "绿量与整体景观感较强",
+        "植物空间潜力大",
+        "场地连续性好",
+        "固定设施较少"
+      ],
+      "risks": [
+        "儿童活动和老人康体等明确需求响应不足",
+        "可能好看但不够好用",
+        "社区高频活动支撑不足"
+      ],
+      "applicableConditions": [
+        "适合生态展示、低干预或自然体验优先的项目"
+      ],
+      "conceptDiagramBrief": {
+        "purpose": "表达自然体验与慢行系统如何形成连续空间。",
+        "mustShow": [
+          "林荫慢行",
+          "开敞草坪",
+          "林下停留",
+          "设施克制"
+        ],
+        "avoid": [
+          "把候选方向表述成真实历史方案",
+          "虚构现状高大乔木",
+          "虚构树种、规格与数量"
+        ]
+      },
+      "referenceVisual": {
+        "assetId": "concept-reference-C",
+        "url": "./demo-images/planting.jpg",
+        "title": "自然漫游型概念意向",
+        "assetType": "演示概念意向素材",
+        "aspectRatio": "16:9",
+        "status": "demo-reference",
+        "source": "demo-runtime-reference",
+        "isDemoAsset": true
+      }
+    }
+  ]
+}

@@ -1,0 +1,112 @@
+{
+  "schemaVersion": "landscapeflow-analysis-assets-v1",
+  "projectId": "L2-001",
+  "selectedConcept": "B-community-shared-loop",
+  "assets": [
+    {
+      "id": "A01",
+      "name": "总体空间结构",
+      "title": "一心 · 一环 · 多点｜总体空间结构",
+      "type": "analysis",
+      "purpose": "说明B方案的总体空间骨架",
+      "status": "ready-for-production",
+      "sourceBlueprintFields": [
+        "selectedConcept",
+        "spatialStructure",
+        "functionalZones",
+        "circulation",
+        "keyNodes",
+        "designerDecision"
+      ],
+      "constraints": [
+        "do-not-redesign-masterplan",
+        "do-not-invent-dimensions",
+        "do-not-infer-theme-park-from-project-name"
+      ]
+    },
+    {
+      "id": "A02",
+      "name": "全龄功能关系",
+      "title": "有分有合｜全龄共享关系",
+      "type": "analysis",
+      "purpose": "说明儿童、老人、家庭等人群如何通过共享层与专属节点协调",
+      "status": "ready-for-production",
+      "sourceBlueprintFields": [
+        "userGroups",
+        "functionalZones",
+        "keyNodes",
+        "designerJudgments",
+        "designPreferences",
+        "selectedConcept"
+      ],
+      "constraints": [
+        "do-not-invent-user-ratios",
+        "do-not-create-youth-zone-by-default",
+        "do-not-infer-tourist-or-theme-park-users"
+      ]
+    },
+    {
+      "id": "A03",
+      "name": "慢行系统",
+      "title": "全龄共享体验环｜慢行系统",
+      "type": "analysis",
+      "purpose": "说明环线兼具通行、运动、骑行、无障碍和功能串联作用",
+      "status": "ready-for-production",
+      "sourceBlueprintFields": [
+        "circulation",
+        "accessibility",
+        "functionalZones",
+        "keyNodes",
+        "designPreferences"
+      ],
+      "constraints": [
+        "do-not-invent-path-width",
+        "do-not-invent-slope",
+        "do-not-redesign-circulation"
+      ]
+    },
+    {
+      "id": "A04",
+      "name": "植物空间结构",
+      "title": "开敞核心 · 连续林荫 · 节点季相｜植物空间策略",
+      "type": "analysis",
+      "purpose": "表达植物作为空间骨架而非绿化填充",
+      "status": "ready-for-production",
+      "sourceBlueprintFields": [
+        "plantingStrategy",
+        "spatialStructure",
+        "functionalZones",
+        "pendingVerification"
+      ],
+      "constraints": [
+        "do-not-invent-species-counts",
+        "do-not-convert-reference-preference-to-site-fact",
+        "do-not-claim-existing-tall-trees"
+      ]
+    },
+    {
+      "id": "A05",
+      "name": "尺度与功能校核",
+      "title": "尺度不失真｜空间与功能校核",
+      "type": "analysis-review",
+      "purpose": "检查草坪比例、节点密度、环线连续性、动静冲突和视觉成果一致性",
+      "status": "ready-for-production",
+      "sourceBlueprintFields": [
+        "projectFacts",
+        "spatialStructure",
+        "functionalZones",
+        "circulation",
+        "keyNodes",
+        "designerJudgments.aiRisk",
+        "pendingVerification",
+        "sourceRefs"
+      ],
+      "constraints": [
+        "measurement-area-is-pending-verification",
+        "do-not-invent-subarea-values",
+        "do-not-invent-path-width",
+        "do-not-make-fake-code-compliance-claims"
+      ]
+    }
+  ]
+}

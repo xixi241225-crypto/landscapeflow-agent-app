@@ -1,0 +1,553 @@
+{
+  "schemaVersion": "demo-project-input/1.0",
+  "packageId": "happy-valley-community-park-demo-input-v1",
+  "compiledDate": "2026-07-25",
+  "project": {
+    "projectId": "beijing-happy-valley-community-park",
+    "displayName": "北京市欢乐谷社区公园景观设计",
+    "sourceCaseId": "L2-001",
+    "excludedL2CaseIds": [
+      "L2-001"
+    ],
+    "sourceIds": [
+      "SRC-DESIGNER-01",
+      "SRC-TASK-01"
+    ]
+  },
+  "projectFacts": {
+    "confirmed": [
+      {
+        "id": "PF-C-01",
+        "field": "projectName",
+        "value": "北京市欢乐谷社区公园景观设计",
+        "unit": null,
+        "evidenceType": "designerInput",
+        "status": "confirmed",
+        "confidence": "high",
+        "sourceIds": [
+          "SRC-DESIGNER-01"
+        ],
+        "note": "当前 Demo Input v1 的冻结项目名称。"
+      },
+      {
+        "id": "PF-C-02",
+        "field": "location",
+        "value": "北京市朝阳区",
+        "unit": null,
+        "evidenceType": "designerInput",
+        "status": "confirmed",
+        "confidence": "high",
+        "sourceIds": [
+          "SRC-DESIGNER-01",
+          "SRC-BASEINFO-01"
+        ],
+        "note": "具体路名、门牌及法定用地位置仍待正式资料补充。"
+      },
+      {
+        "id": "PF-C-03",
+        "field": "projectType",
+        "value": "社区公园景观设计",
+        "unit": null,
+        "evidenceType": "designerInput",
+        "status": "confirmed",
+        "confidence": "high",
+        "sourceIds": [
+          "SRC-DESIGNER-01",
+          "SRC-TASK-01"
+        ],
+        "note": "不得由“欢乐谷”项目名扩展成主题乐园或旅游服务项目。"
+      },
+      {
+        "id": "PF-C-04",
+        "field": "designStage",
+        "value": "概念方案",
+        "unit": null,
+        "evidenceType": "designerInput",
+        "status": "confirmed",
+        "confidence": "high",
+        "sourceIds": [
+          "SRC-DESIGNER-01",
+          "SRC-TASK-01"
+        ],
+        "note": "本输入包服务于概念方案阶段的项目资料编译。"
+      }
+    ],
+    "measurements": [
+      {
+        "id": "PF-M-01",
+        "field": "siteArea",
+        "value": 11037.66,
+        "unit": "㎡",
+        "evidenceType": "measurement",
+        "status": "pendingVerification",
+        "confidence": "medium",
+        "sourceIds": [
+          "SRC-SATELLITE-01",
+          "SRC-DESIGNER-01",
+          "SRC-GAPS-01"
+        ],
+        "note": "卫星影像工具人工描点量测值，不是法定红线面积；待正式红线及测绘资料复核。"
+      },
+      {
+        "id": "PF-M-02",
+        "field": "measuredPerimeter",
+        "value": 491.76,
+        "unit": "m",
+        "evidenceType": "measurement",
+        "status": "pendingVerification",
+        "confidence": "medium",
+        "sourceIds": [
+          "SRC-SATELLITE-01",
+          "SRC-GAPS-01"
+        ],
+        "note": "卫星影像工具人工描点量测值，不得作为正式红线周长或工程算量依据。"
+      },
+      {
+        "id": "PF-M-03",
+        "field": "satelliteElevationEstimate",
+        "value": {
+          "minimum": 35.62,
+          "median": 36.35,
+          "maximum": 36.97,
+          "estimatedRange": 1.35
+        },
+        "unit": "m",
+        "evidenceType": "measurement",
+        "status": "pendingVerification",
+        "confidence": "low",
+        "sourceIds": [
+          "SRC-SATELLITE-01",
+          "SRC-GAPS-01"
+        ],
+        "note": "卫星高程显示整体高差不大，但精度不足以作为真实竖向设计依据，是否基本平坦仍待正式测绘确认。"
+      }
+    ],
+    "observations": [
+      {
+        "id": "PF-O-01",
+        "field": "approximateSiteShape",
+        "value": "卫星图所示量测轮廓呈南北向狭长的不规则多边形，边界折线较多。",
+        "unit": null,
+        "evidenceType": "observation",
+        "status": "observation",
+        "confidence": "medium",
+        "sourceIds": [
+          "SRC-SATELLITE-01"
+        ],
+        "note": "仅为影像与人工描点轮廓判读，正式边界以红线资料为准。"
+      },
+      {
+        "id": "PF-O-02",
+        "field": "visibleRoadInterfaces",
+        "value": "卫星图中场地东侧与南侧可见城市道路界面。",
+        "unit": null,
+        "evidenceType": "observation",
+        "status": "observation",
+        "confidence": "medium",
+        "sourceIds": [
+          "SRC-SATELLITE-01"
+        ],
+        "note": "道路权属、等级、车流、人行条件及可开设出入口位置均待正式资料和现场踏勘确认。"
+      },
+      {
+        "id": "PF-O-03",
+        "field": "surroundingBuiltInterfaces",
+        "value": "卫星图中场地西侧及东侧周边可见成片建筑界面。",
+        "unit": null,
+        "evidenceType": "observation",
+        "status": "observation",
+        "confidence": "medium",
+        "sourceIds": [
+          "SRC-SATELLITE-01",
+          "SRC-BASEINFO-01"
+        ],
+        "note": "建筑功能、住户结构、产权边界与实际使用关系不能仅凭影像确认。"
+      },
+      {
+        "id": "PF-O-04",
+        "field": "visibleSurfaceCondition",
+        "value": "卫星图中场地内部以浅色裸露或硬质表面为主，可见局部条带状肌理。",
+        "unit": null,
+        "evidenceType": "observation",
+        "status": "observation",
+        "confidence": "low",
+        "sourceIds": [
+          "SRC-SATELLITE-01",
+          "SRC-FACTS-01"
+        ],
+        "note": "具体地表材质、既有使用、建渣、基础残留及植被状况均待现场踏勘确认。"
+      }
+    ]
+  },
+  "designPreferences": [
+    {
+      "id": "DP-01",
+      "topic": "elderlyActivityArea",
+      "statement": "老人活动区希望考虑智能活动设施或互动性活动设施。",
+      "evidenceType": "referencePreference",
+      "status": "designPreference",
+      "confidence": "high",
+      "sourceIds": [
+        "SRC-DESIGNER-01",
+        "SRC-REF-ELDERLY-01"
+      ],
+      "isFinalDecision": false,
+      "note": "这是体验与设施方向偏好，不是最终设施清单；供电、网络、维保与造价仍需后续复核。"
+    },
+    {
+      "id": "DP-02",
+      "topic": "childrenActivityArea",
+      "statement": "儿童活动区偏向无动力活动设施。",
+      "evidenceType": "referencePreference",
+      "status": "designPreference",
+      "confidence": "high",
+      "sourceIds": [
+        "SRC-DESIGNER-01",
+        "SRC-REF-CHILDREN-01"
+      ],
+      "isFinalDecision": false,
+      "note": "不得扩展为主题乐园、卡通乐园或 IP 乐园；具体年龄、设施、尺度与安全要求待深化。"
+    },
+    {
+      "id": "DP-03",
+      "topic": "parkGreenway",
+      "statement": "公园绿道考虑步行、塑胶道路或慢行运动体验、儿童骑行、起伏空间体验，并希望以高大乔木形成林荫环境。",
+      "evidenceType": "referencePreference",
+      "status": "designPreference",
+      "confidence": "high",
+      "sourceIds": [
+        "SRC-DESIGNER-01",
+        "SRC-REF-GREENWAY-01"
+      ],
+      "isFinalDecision": false,
+      "note": "“高大乔木”描述的是希望形成的空间体验，不代表现状已存在高大乔木；塑胶材料、地形、树种与可实施性仍待复核。"
+    },
+    {
+      "id": "DP-04",
+      "topic": "overallPlan",
+      "statement": "公园总体平面偏向功能布点与环形步道组织。",
+      "evidenceType": "referencePreference",
+      "status": "designPreference",
+      "confidence": "high",
+      "sourceIds": [
+        "SRC-DESIGNER-01",
+        "SRC-REF-PLAN-01"
+      ],
+      "isFinalDecision": false,
+      "note": "空间原型须结合正式边界和尺度复核，不得照搬参考项目。"
+    },
+    {
+      "id": "DP-05",
+      "topic": "lawnAndSharedPlaza",
+      "statement": "草坪广场偏向中心草坪或中心共享广场。",
+      "evidenceType": "referencePreference",
+      "status": "designPreference",
+      "confidence": "high",
+      "sourceIds": [
+        "SRC-DESIGNER-01",
+        "SRC-REF-LAWN-01"
+      ],
+      "isFinalDecision": false,
+      "note": "仅记录空间体验偏好；面积、形状、边界和功能关系尚未形成最终设计决策。"
+    },
+    {
+      "id": "DP-06",
+      "type": "designPreference",
+      "topic": "childrenWaterInteraction",
+      "statement": "前期居民调研显示居民对亲水体验有积极偏好，尤其儿童对水互动具有较强兴趣；候选方案可考虑浅层、安全、可视、可控的儿童亲水互动。",
+      "source": "preliminaryResidentResearch",
+      "evidenceType": "preliminaryResidentResearch",
+      "status": "preference",
+      "confidence": "medium",
+      "sourceIds": [
+        "SRC-DESIGNER-01"
+      ],
+      "isFinalDecision": false,
+      "note": "这是居民偏好输入，不是现状水体事实、正式水景工程决定或已确认施工条件；水深、形式、设备、数量、造价、排水与运维均待后续专业确认。"
+    }
+  ],
+  "designerJudgments": [
+    {
+      "id": "DJ-01",
+      "type": "coreChallenge",
+      "originalStatement": "多种实用功能交叉融合",
+      "structuredExplanation": "在有限场地内协调不同功能，避免简单分区拼盘。",
+      "status": "designerJudgment",
+      "sourceIds": [
+        "SRC-DESIGNER-01"
+      ],
+      "note": "保留设计师原始判断，不作为已确认项目事实或 L3 通用知识。"
+    },
+    {
+      "id": "DJ-02",
+      "type": "priority",
+      "priority": 1,
+      "originalStatement": "功能布局",
+      "structuredExplanation": null,
+      "status": "designerJudgment",
+      "sourceIds": [
+        "SRC-DESIGNER-01"
+      ],
+      "note": "设计师本人给出的第一优先项。"
+    },
+    {
+      "id": "DJ-03",
+      "type": "priority",
+      "priority": 2,
+      "originalStatement": "植物设计",
+      "structuredExplanation": null,
+      "status": "designerJudgment",
+      "sourceIds": [
+        "SRC-DESIGNER-01"
+      ],
+      "note": "设计师本人给出的第二优先项。"
+    },
+    {
+      "id": "DJ-04",
+      "type": "priority",
+      "priority": 3,
+      "originalStatement": "造价控制",
+      "structuredExplanation": null,
+      "status": "designerJudgment",
+      "sourceIds": [
+        "SRC-DESIGNER-01"
+      ],
+      "note": "设计师本人给出的第三优先项；当前投资上限仍待复核。"
+    },
+    {
+      "id": "DJ-05",
+      "type": "aiRisk",
+      "originalStatement": "尺度感",
+      "structuredExplanation": "重点警惕 AI 对场地尺度、空间尺度、路径宽度、节点数量及功能面积的失真。",
+      "status": "designerJudgment",
+      "sourceIds": [
+        "SRC-DESIGNER-01"
+      ],
+      "note": "不在输入包中擅自补充具体尺度数值。"
+    },
+    {
+      "id": "DJ-06",
+      "type": "tradeoff",
+      "originalStatement": "儿童活动、老人活动、年轻人活动需求不一致，场地尺度不大，如何协调统一。",
+      "structuredExplanation": "需要在有限场地内复核不同活动需求的兼容关系和空间取舍。",
+      "status": "designerJudgment",
+      "sourceIds": [
+        "SRC-DESIGNER-01"
+      ],
+      "note": "原始表达完整保留；不是最终功能分区或设计决策。"
+    }
+  ],
+  "pendingVerification": [
+    {
+      "id": "PV-01",
+      "topic": "正式红线",
+      "status": "pending",
+      "requiredForStage": "方案尺度与指标确认前",
+      "sourceIds": [
+        "SRC-DESIGNER-01",
+        "SRC-SATELLITE-01",
+        "SRC-PENDING-01"
+      ],
+      "note": "当前边界和 11037.66㎡ 面积均来自卫星工具描点量测，待正式红线复核。"
+    },
+    {
+      "id": "PV-02",
+      "topic": "正式地形测绘",
+      "status": "pending",
+      "requiredForStage": "竖向与排水设计前",
+      "sourceIds": [
+        "SRC-DESIGNER-01",
+        "SRC-GAPS-01",
+        "SRC-PENDING-01"
+      ],
+      "note": "卫星高程精度不足，不能用于真实竖向设计。"
+    },
+    {
+      "id": "PV-03",
+      "topic": "现状乔木调查",
+      "status": "pending",
+      "requiredForStage": "植物与空间布局冻结前",
+      "sourceIds": [
+        "SRC-DESIGNER-01",
+        "SRC-GAPS-01",
+        "SRC-SITE-PHOTO-01"
+      ],
+      "note": "需调查位置、树种、规格、健康状况及保留价值；参考图中的高大乔木不是现状证据。"
+    },
+    {
+      "id": "PV-04",
+      "topic": "地下管线",
+      "status": "pending",
+      "requiredForStage": "构筑物、设施与大乔木落位前",
+      "sourceIds": [
+        "SRC-DESIGNER-01",
+        "SRC-GAPS-01",
+        "SRC-PENDING-01"
+      ],
+      "note": "当前无地下管线图，不虚构管线位置或可建设范围。"
+    },
+    {
+      "id": "PV-05",
+      "topic": "市政排水接口",
+      "status": "pending",
+      "requiredForStage": "排水与海绵策略确认前",
+      "sourceIds": [
+        "SRC-DESIGNER-01",
+        "SRC-GAPS-01",
+        "SRC-PENDING-01"
+      ],
+      "note": "接口位置、标高、接入条件与责任边界均待确认。"
+    },
+    {
+      "id": "PV-06",
+      "topic": "土壤条件",
+      "status": "pending",
+      "requiredForStage": "种植与下渗设计前",
+      "sourceIds": [
+        "SRC-DESIGNER-01",
+        "SRC-GAPS-01",
+        "SRC-PENDING-01"
+      ],
+      "note": "需核实土壤性质、污染、种植适宜性与渗透条件。"
+    },
+    {
+      "id": "PV-07",
+      "topic": "投资上限",
+      "status": "pending",
+      "requiredForStage": "造价控制目标冻结前",
+      "sourceIds": [
+        "SRC-DESIGNER-01",
+        "SRC-TASK-01",
+        "SRC-PENDING-01"
+      ],
+      "note": "现有设计方测算建议值不是甲方投资上限，不写入项目事实。"
+    },
+    {
+      "id": "PV-08",
+      "topic": "运维主体与要求",
+      "status": "pending",
+      "requiredForStage": "设施、材料与养护策略确认前",
+      "sourceIds": [
+        "SRC-DESIGNER-01",
+        "SRC-TASK-01",
+        "SRC-PENDING-01"
+      ],
+      "note": "运维主体、预算、管理方式与维护能力均待确认。"
+    },
+    {
+      "id": "PV-09",
+      "topic": "详细使用人群调研",
+      "status": "pending",
+      "requiredForStage": "功能配置与容量确认前",
+      "sourceIds": [
+        "SRC-DESIGNER-01",
+        "SRC-TASK-01",
+        "SRC-PENDING-01"
+      ],
+      "note": "设计偏好提及儿童、老人及年轻人活动，但具体人群结构、数量、时段和行为需求尚未调研。"
+    },
+    {
+      "id": "PV-10",
+      "topic": "现场踏勘与现场照片",
+      "status": "pending",
+      "requiredForStage": "场地分析确认前",
+      "sourceIds": [
+        "SRC-DESIGNER-01",
+        "SRC-SITE-PHOTO-01"
+      ],
+      "note": "当前输入包未包含真实现场照片；卫星观察不能替代现场踏勘。"
+    },
+    {
+      "id": "PV-11",
+      "topic": "正式出入口条件与权属",
+      "status": "pending",
+      "requiredForStage": "出入口与流线组织确认前",
+      "sourceIds": [
+        "SRC-DESIGNER-01",
+        "SRC-SATELLITE-01",
+        "SRC-PENDING-01"
+      ],
+      "note": "卫星图只能显示道路界面，不能确认正式出入口权属、可开口位置或人流依据。"
+    },
+    {
+      "id": "PV-12",
+      "topic": "甲方正式任务书与书面约束",
+      "status": "pending",
+      "requiredForStage": "概念方案条件最终确认前",
+      "sourceIds": [
+        "SRC-TASK-01",
+        "SRC-PENDING-01"
+      ],
+      "note": "现有任务书是依据零散资料整理的工作版；正式任务书、进度、禁做事项及书面约束待补充。"
+    }
+  ],
+  "demoPolicies": {
+    "doNotInferFromProjectName": true,
+    "projectNameToken": "欢乐谷",
+    "prohibitedNameBasedInferences": [
+      "主题乐园",
+      "游客",
+      "欢乐谷 IP",
+      "摩天轮",
+      "游乐设施",
+      "旅游服务",
+      "网红打卡",
+      "商业娱乐主题"
+    ],
+    "missingDataPolicy": {
+      "rule": "mark pending, not invent",
+      "status": "pending",
+      "allowGeneratedAnswer": false
+    },
+    "evidenceTypes": [
+      "document",
+      "measurement",
+      "observation",
+      "designerInput",
+      "referencePreference"
+    ],
+    "dataClassesMustRemainSeparate": [
+      "projectFact",
+      "measurement",
+      "observation",
+      "designPreference",
+      "designerJudgment",
+      "pendingVerification",
+      "finalDesignDecision"
+    ],
+    "l2Relationship": {
+      "sourceCaseId": "L2-001",
+      "excludedL2CaseIds": [
+        "L2-001"
+      ],
+      "reason": "当前项目自身不得作为相似历史案例重新推荐给自己。",
+      "retrievalImplemented": false
+    },
+    "blueprintPolicy": {
+      "thisPackageIsBlueprint": false,
+      "blueprintGeneratedAfterAgentRun": true
+    },
+    "knowledgeLibrariesIncluded": {
+      "L1": false,
+      "L2": false,
+      "L3": false
+    }
+  },
+  "sourceRefs": [
+    "SRC-DESIGNER-01",
+    "SRC-SATELLITE-01",
+    "SRC-TASK-01",
+    "SRC-GAPS-01",
+    "SRC-SITE-PHOTO-01",
+    "SRC-REF-NOTES-01",
+    "SRC-REF-COLLECT-01",
+    "SRC-BASEINFO-01",
+    "SRC-FACTS-01",
+    "SRC-PENDING-01",
+    "SRC-REF-ELDERLY-01",
+    "SRC-REF-CHILDREN-01",
+    "SRC-REF-GREENWAY-01",
+    "SRC-REF-PLAN-01",
+    "SRC-REF-LAWN-01"
+  ]
+}

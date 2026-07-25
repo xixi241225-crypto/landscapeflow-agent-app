@@ -11,6 +11,7 @@ import {
   selectProjectFactByKey,
 } from '../blueprint/blueprintSelectors.js';
 import { assertAgentWriteScope } from './projectDefinitionAgent.js';
+import conceptReference from '../../data/demo-projects/huanlegu-community-park/concepts/concept_reference_v1.json' with { type: 'json' };
 
 const now = () => new Date().toISOString();
 const milestoneNumber = (value) => Number(String(value || 'v0').replace('v', '')) || 0;
@@ -29,13 +30,26 @@ function responseMapping(sourcePath, sourceItem, response) {
 
 function pickRequired(input) {
   const goal = input.explicitGoals[0] || input.latentGoals[0];
-  const constraint = input.constraints[0];
-  const principle = input.designPrinciples[0];
+  const constraint = input.confirmedConstraints[0] || input.pendingConstraints[0];
+  const constraintSourcePath = input.confirmedConstraints[0]
+    ? 'chapters.projectDefinition.constraints'
+    : 'projectInput.pendingVerification';
+  const principle = input.confirmedDesignPrinciples[0] || input.designPreferences[0];
+  const principleSourcePath = input.confirmedDesignPrinciples[0]
+    ? 'chapters.projectDefinition.designPrinciples'
+    : 'projectInput.designPreferences';
   const site = input.flattenedSiteConditions[0] || input.successCriteria[0];
   if (!goal || !constraint || !principle || !site) {
-    throw new Error('Agent 2 输入不足：至少需要一项目标、核心约束、设计原则，以及场地条件或成功标准。');
+    throw new Error('Agent 2 输入不足：至少需要一项目标、约束或待复核项、已确认原则或设计偏好，以及场地条件或成功标准。');
   }
-  return { goal, constraint, principle, site };
+  return {
+    goal,
+    constraint,
+    constraintSourcePath,
+    principle,
+    principleSourcePath,
+    site,
+  };
 }
 
 function dependencyFromOpenItem(item) {
@@ -68,8 +82,8 @@ function deriveConceptProfile(input) {
     ...confirmedTexts(input.explicitGoals),
     ...confirmedTexts(input.latentGoals),
     ...confirmedTexts(input.flattenedSiteConditions),
-    ...confirmedTexts(input.constraints),
-    ...confirmedTexts(input.designPrinciples),
+    ...confirmedTexts(input.confirmedConstraints),
+    ...confirmedTexts(input.confirmedDesignPrinciples),
     ...confirmedTexts(input.stakeholders),
   ].join(' ');
   const waterfront = /滨水|水岸|滨江|滨河|河道|湖滨|岸线/.test(evidence);
@@ -144,6 +158,53 @@ function sourceCondition(item, confirmedText, unresolvedText) {
     : unresolvedText(itemText(item));
 }
 
+function isHuanleguDemoInput(input) {
+  return input.project?.sourceCaseId === 'L2-001'
+    && input.demoPolicies?.doNotInferFromProjectName === true
+    && input.project?.excludedL2CaseIds?.includes('L2-001');
+}
+
+function huanleguConceptCandidates(input, designerBrief, generatedAt) {
+  const required = pickRequired(input);
+  const dependencies = input.openItems.map(dependencyFromOpenItem);
+  const siteSourcePath = input.flattenedSiteConditions.length
+    ? 'chapters.projectDefinition.siteConditions'
+    : 'chapters.projectDefinition.successCriteria';
+  const normalizedBrief = designerBrief.replace(/[。！？!?]+$/g, '');
+  const briefSuffix = normalizedBrief ? ` 设计师补充要求：“${normalizedBrief}”。` : '';
+  const mappings = [
+    responseMapping(
+      'chapters.projectDefinition.explicitGoals',
+      required.goal,
+      '回应“多种实用功能交叉融合”的项目判断，并保留 Gate 2 人工选择。',
+    ),
+    responseMapping(
+      required.constraintSourcePath,
+      required.constraint,
+      '将该项保留为 pendingVerification 依赖，不作为已确认硬约束执行；空间数量、面积、工程条件与实施方式等待资料复核。',
+    ),
+    responseMapping(
+      required.principleSourcePath,
+      required.principle,
+      '将设计偏好作为可调整的候选推演输入，不升级为 confirmed design principle 或最终设计决策。',
+    ),
+    responseMapping(
+      siteSourcePath,
+      required.site,
+      '仅依据量测与影像观察建立概念级空间假设，不虚构红线、竖向、现状树或市政条件。',
+    ),
+  ];
+  return conceptReference.candidates.map((candidate) => ({
+    ...candidate,
+    narrative: `${candidate.narrative}${briefSuffix}`,
+    targetUsers: confirmedTexts(input.stakeholders),
+    responseMappings: mappings.map((mapping) => ({ ...mapping })),
+    dependencies: dependencies.map((dependency) => ({ ...dependency })),
+    generatedBy: 'agent-2',
+    generatedAt,
+  }));
+}
+
 function conceptCandidates(input, designerBrief, generatedAt) {
   const projectName = compact(input.project.projectName, '当前景观项目');
   const location = compact(input.project.location, '项目所在地');
@@ -171,15 +232,15 @@ function conceptCandidates(input, designerBrief, generatedAt) {
       (value) => `围绕已确认目标“${value}”，以${direction.goalAction}形成可核对的空间回应。`,
       (value) => `“${value}”尚未确认，本方向先以${direction.goalAction}建立可调整的概念框架，不把目标假设当作项目事实。`,
     )),
-    responseMapping('chapters.projectDefinition.constraints', required.constraint, sourceCondition(
+    responseMapping(required.constraintSourcePath, required.constraint, sourceCondition(
       required.constraint,
       (value) => `针对已确认约束“${value}”，通过${direction.constraintAction}控制实施风险。`,
       (value) => `“${value}”仍待补充，暂以${direction.constraintAction}保持方案弹性，待边界明确后复核。`,
     )),
-    responseMapping('chapters.projectDefinition.designPrinciples', required.principle, sourceCondition(
+    responseMapping(required.principleSourcePath, required.principle, sourceCondition(
       required.principle,
       (value) => `落实“${value}”，以${direction.principleAction}组织概念表达。`,
-      (value) => `“${value}”属于待复核原则，本方向以${direction.principleAction}作为概念假设，并保留调整空间。`,
+      (value) => `“${value}”属于设计偏好，不是已确认原则；本方向以${direction.principleAction}作为可调整的概念假设。`,
     )),
     responseMapping(
       siteSourcePath,
@@ -346,8 +407,8 @@ export function validateConceptGenerationChapter(chapter, options = {}) {
     if (!candidate.responseMappings?.length) errors.push(`${candidate.code || candidate.id} 缺少蓝本响应关系`);
     const paths = candidate.responseMappings?.map((item) => item.sourcePath) || [];
     if (!paths.some((path) => path.includes('Goals'))) errors.push(`${candidate.code || candidate.id} 未回应项目目标`);
-    if (!paths.some((path) => path.includes('constraints'))) errors.push(`${candidate.code || candidate.id} 未回应核心约束`);
-    if (!paths.some((path) => path.includes('designPrinciples'))) errors.push(`${candidate.code || candidate.id} 未回应设计原则`);
+    if (!paths.some((path) => path.includes('constraints') || path.includes('pendingVerification'))) errors.push(`${candidate.code || candidate.id} 未回应约束或待复核项`);
+    if (!paths.some((path) => path.includes('designPrinciples') || path.includes('designPreferences'))) errors.push(`${candidate.code || candidate.id} 未回应已确认原则或设计偏好`);
     if (!paths.some((path) => path.includes('siteConditions') || path.includes('successCriteria'))) errors.push(`${candidate.code || candidate.id} 未回应场地条件或成功标准`);
     if (candidate.referenceVisual?.status !== 'demo-reference') errors.push(`${candidate.code || candidate.id} 的参考视觉未标记为演示意向素材`);
   });
@@ -416,7 +477,9 @@ export function runConceptGenerationAgent(currentBlueprint, options = {}) {
   const startedAt = now();
   const generatedAt = now();
   const designerBrief = String(options.designerBrief || '').trim();
-  const candidates = conceptCandidates(input, designerBrief, generatedAt);
+  const candidates = isHuanleguDemoInput(input)
+    ? huanleguConceptCandidates(input, designerBrief, generatedAt)
+    : conceptCandidates(input, designerBrief, generatedAt);
   const dependencies = input.openItems.map(dependencyFromOpenItem);
   const chapter = {
     agentId: 'agent-2',
@@ -432,15 +495,24 @@ export function runConceptGenerationAgent(currentBlueprint, options = {}) {
       facts: Object.values(input.facts).map((item) => item.id),
       goals: [...input.explicitGoals, ...input.latentGoals].map((item) => item.id),
       siteConditions: input.flattenedSiteConditions.map((item) => item.id),
-      constraints: input.constraints.map((item) => item.id),
-      designPrinciples: input.designPrinciples.map((item) => item.id),
+      constraints: input.confirmedConstraints.map((item) => item.id),
+      pendingConstraints: input.pendingConstraints.map((item) => item.id),
+      designPrinciples: input.confirmedDesignPrinciples.map((item) => item.id),
+      designPreferences: input.designPreferences.map((item) => item.id),
       successCriteria: input.successCriteria.map((item) => item.id),
       openItems: input.openItems.map((item) => item.id),
     },
-    sharedRequirements: input.designPrinciples.map((item) => ({
+    sharedRequirements: input.confirmedDesignPrinciples.map((item) => ({
       sourceItemId: item.id,
       value: item.value,
       status: item.status,
+    })),
+    preferenceInputs: input.designPreferences.map((item) => ({
+      sourceItemId: item.id,
+      value: item.value,
+      status: item.status,
+      semanticType: 'designPreference',
+      enforcement: false,
     })),
     conceptCandidates: candidates,
     unresolvedDependencies: dependencies,
