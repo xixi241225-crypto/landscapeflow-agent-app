@@ -1,7 +1,6 @@
 import {
-  BLUEPRINT_STATUS_LABELS,
   selectCoreConstraints,
-  selectDesignPrinciples,
+  selectDesignPreferences,
   selectProjectDefinitionDetails,
   selectProjectGoals,
   selectRoadshowAgentSummaries,
@@ -34,7 +33,6 @@ function BlueprintList({ number, title, items, tone }) {
           <li key={item.id || `${title}-${index}`}>
             <i>✓</i>
             <p>{item.value || item.label || item}</p>
-            {item.status === 'assumption' && <small className="ml-auto shrink-0 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700">合理假设</small>}
           </li>
         ))}
       </ul>
@@ -47,7 +45,9 @@ export function RoadshowBlueprintDraft({ blueprint, onOpenBlueprint }) {
   const details = selectProjectDefinitionDetails(blueprint);
   const goals = selectProjectGoals(blueprint);
   const constraints = selectCoreConstraints(blueprint);
-  const principles = selectDesignPrinciples(blueprint);
+  const preferences = selectDesignPreferences(blueprint);
+  const questions = blueprint.coreDesignQuestions || [];
+  const openItems = details.openItems || [];
   return (
     <div className="roadshow-draft-page">
       <div className="roadshow-draft-heading">
@@ -56,21 +56,22 @@ export function RoadshowBlueprintDraft({ blueprint, onOpenBlueprint }) {
           <h2>项目设计蓝本草案</h2>
           <p>Agent 1 已将项目资料整理为统一的项目定义基线，请确认后启动后续设计。</p>
         </div>
-        <span>Blueprint {blueprint.milestoneVersion || 'v1'} · r{blueprint.revision ?? blueprint.currentVersion}</span>
       </div>
 
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-cyan-200 bg-cyan-50 px-5 py-4">
         <div>
-          <p className="text-sm font-bold text-cyan-900">已写入项目设计蓝本 {blueprint.milestoneVersion || 'v1'}</p>
-          <p className="mt-1 text-xs text-cyan-800">本次新增：项目事实、项目目标、核心约束、设计原则、待补充事项。</p>
+          <p className="text-sm font-bold text-cyan-900">项目资料已整理为设计蓝本草案</p>
+          <p className="mt-1 text-xs text-cyan-800">请确认项目基本信息、目标、偏好、核心问题与当前设计边界。</p>
         </div>
-        <button type="button" onClick={onOpenBlueprint} className="btn-secondary px-4 py-2 text-sm">查看本次更新</button>
+        <button type="button" onClick={onOpenBlueprint} className="btn-secondary px-4 py-2 text-sm">查看完整蓝本</button>
       </div>
 
       <div className="roadshow-draft-grid">
-        <BlueprintList number="01" title="项目目标" tone="violet" items={goals} />
-        <BlueprintList number="02" title="核心约束" tone="gold" items={constraints} />
-        <BlueprintList number="03" title="设计原则" tone="cyan" items={principles} />
+        <BlueprintList number="01" title="设计目标" tone="violet" items={goals} />
+        <BlueprintList number="02" title="设计偏好" tone="cyan" items={preferences} />
+        <BlueprintList number="03" title="核心设计问题" tone="gold" items={questions} />
+        <BlueprintList number="04" title="资料缺口" tone="gold" items={openItems} />
+        <BlueprintList number="05" title="当前设计边界" tone="violet" items={constraints.length ? constraints : [{ value: '正式红线、测绘及工程条件待后续资料确认。' }]} />
       </div>
 
       <details className="roadshow-draft-evidence">
@@ -78,7 +79,7 @@ export function RoadshowBlueprintDraft({ blueprint, onOpenBlueprint }) {
         <div className="grid gap-5 pt-5 md:grid-cols-2 xl:grid-cols-3">
           <div>
             <h4>项目基本事实</h4>
-            {details.facts.map((item) => <p key={item.id}>{item.label}：{item.value} <small>（{BLUEPRINT_STATUS_LABELS[item.status] || item.status}）</small></p>)}
+            {details.facts.map((item) => <p key={item.id}>{item.label}：{item.value}</p>)}
           </div>
           <div>
             <h4>业主与使用者</h4>
@@ -97,11 +98,7 @@ export function RoadshowBlueprintDraft({ blueprint, onOpenBlueprint }) {
             {details.successCriteria.map((item) => <p key={item.id}>{item.value}</p>)}
           </div>
           <div>
-            <h4>合理假设</h4>
-            {details.latentGoals.filter((item) => item.status === 'assumption').map((item) => <p key={item.id}>{item.value}</p>)}
-          </div>
-          <div>
-            <h4>待补充信息</h4>
+            <h4>待后续资料确认</h4>
             {details.openItems.map((item) => <p key={item.id}>{item.label}：{item.value}</p>)}
           </div>
           <div>

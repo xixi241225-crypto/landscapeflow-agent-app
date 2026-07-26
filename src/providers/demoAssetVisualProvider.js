@@ -121,6 +121,7 @@ export class DemoAssetVisualProvider {
     };
     const analysisAssets = clone(binding?.analysisAssets || []);
     const visualCandidates = clone(binding?.visualCandidates || genericCandidates(concept, visualTask));
+    const supportingVisuals = clone(binding?.supportingVisuals || []);
     return {
       visualTasks: [visualTask],
       analysisAssets,
@@ -133,7 +134,8 @@ export class DemoAssetVisualProvider {
         sceneCount: 1,
         selectionRequired: true,
       },
-      visualAssets: visualCandidates.map((candidate) => ({
+      visualAssets: [
+        ...visualCandidates.map((candidate) => ({
         id: candidate.id,
         title: candidate.name,
         assetType: candidate.assetType,
@@ -146,7 +148,9 @@ export class DemoAssetVisualProvider {
         candidateStatus: candidate.candidateStatus,
         isFactSource: false,
         status: candidate.status,
-      })),
+        })),
+        ...supportingVisuals,
+      ],
       qualityReview: [
         {
           check: '视觉—Blueprint 一致性',
@@ -168,7 +172,7 @@ export class DemoAssetVisualProvider {
       }],
       nextTasks: [{
         title: 'Gate 4 视觉方案挑选',
-        value: '由设计师比较候选并记录选择理由；确认前不写入 selectedVisuals。',
+        value: '由设计师比较候选并确认采用方向；可选意见保留在 Trace，确认前不写入 selectedVisuals。',
         status: CONTENT_STATUS.PENDING,
       }],
     };

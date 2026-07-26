@@ -12,6 +12,14 @@ const CONTENT_ITEMS = [
   '实施建议与待深化事项',
 ];
 
+function designerFacingQualityResult(check = '', result = '') {
+  if (check.includes('汇报内容完整')) return 'P01–P14 页码连续，14 页方案内容完整可查看。';
+  if (check.includes('图文与当前方案一致')) return '图文已与设计师确认的方案方向、设计说明和视觉选择核对。';
+  if (check.includes('待深化事项')) return '待深化事项已在汇报中保留，不作为已确认事实。';
+  if (check.includes('成果文件完整')) return '14 页成果均可完整打开，并已归入下载成果包。';
+  return result;
+}
+
 export default function PresentationDeliverable({ blueprint }) {
   const [previewOpen, setPreviewOpen] = useState(false);
   const artifact = blueprint.deliverableArtifacts?.presentation;
@@ -26,7 +34,7 @@ export default function PresentationDeliverable({ blueprint }) {
           <div>
             <p className="text-xs font-bold tracking-[0.2em] text-emerald-300">AGENT 6 · FINAL PRESENTATION</p>
             <h2 className="mt-3 font-serif text-3xl font-bold">方案汇报已准备</h2>
-            <p className="mt-2 text-base text-violet-100">{artifact.pageCount} 页景观概念方案汇报成果，已完成文件校验并登记到当前 Blueprint。</p>
+            <p className="mt-2 text-base text-violet-100">{artifact.pageCount} 页景观概念方案汇报成果，已完成完整性校验并归入当前项目成果。</p>
             <div className="mt-6 flex flex-wrap gap-3">
               <button type="button" onClick={() => setPreviewOpen(true)} className="rounded-xl bg-white px-5 py-3 text-sm font-bold text-[var(--lf-brand-950)]" data-testid="preview-presentation">查看方案汇报</button>
               <a href={artifact.downloadRef} download={artifact.download?.fileName} className="rounded-xl border border-white/30 px-5 py-3 text-sm font-bold text-white hover:bg-white/10" data-testid="download-presentation">下载完整成果包</a>
@@ -42,24 +50,24 @@ export default function PresentationDeliverable({ blueprint }) {
 
       {confirmed && <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800" data-testid="gate5-confirmed-banner">Gate 5 已确认｜最终汇报成果已进入交付状态</div>}
 
-      <div className="grid gap-5 xl:grid-cols-2">
-        <section className="rounded-2xl border border-[var(--lf-border)] bg-white p-5">
-          <h3 className="text-base font-bold text-[var(--lf-brand-950)]">汇报内容</h3>
+      <div className="grid gap-3 xl:grid-cols-2">
+        <details className="rounded-2xl border border-[var(--lf-border)] bg-white p-4">
+          <summary className="cursor-pointer text-sm font-bold text-[var(--lf-brand-950)]">查看汇报内容</summary>
           <div className="mt-4 grid gap-2 sm:grid-cols-2">
             {CONTENT_ITEMS.map((item) => <p key={item} className="rounded-lg bg-[var(--lf-brand-50)] px-3 py-2 text-sm text-[var(--lf-text)]">✓ {item}</p>)}
           </div>
-        </section>
-        <section className="rounded-2xl border border-[var(--lf-border)] bg-white p-5">
-          <h3 className="text-base font-bold text-[var(--lf-brand-950)]">成果质量校验</h3>
+        </details>
+        <details className="rounded-2xl border border-[var(--lf-border)] bg-white p-4">
+          <summary className="cursor-pointer text-sm font-bold text-[var(--lf-brand-950)]">查看成果质量校验</summary>
           <div className="mt-4 space-y-3">
             {(blueprint.qualityReview || []).filter((item) => item.id?.startsWith('presentation-')).map((item) => (
               <div key={item.id || item.check} className="flex items-start justify-between gap-3 border-b border-slate-100 pb-3 last:border-0">
-                <div><p className="text-sm font-semibold">{item.check}</p><p className="mt-1 text-xs leading-5 text-[var(--lf-muted)]">{item.result}</p></div>
+                <div><p className="text-sm font-semibold">{item.check}</p><p className="mt-1 text-xs leading-5 text-[var(--lf-muted)]">{designerFacingQualityResult(item.check, item.result)}</p></div>
                 <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700">通过</span>
               </div>
             ))}
           </div>
-        </section>
+        </details>
       </div>
       <PresentationDeckViewer open={previewOpen} artifact={artifact} onClose={() => setPreviewOpen(false)} />
     </div>

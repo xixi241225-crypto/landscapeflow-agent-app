@@ -213,7 +213,7 @@ const activeUi = [
 ].map((path) => readFileSync(new URL(path, import.meta.url), 'utf8')).join('\n');
 assert.match(activeUi, /查看方案汇报/);
 assert.match(activeUi, /下载完整成果包/);
-assert.match(activeUi, /确认汇报成果/);
+assert.match(activeUi, /确认最终成果/);
 assert.doesNotMatch(activeUi, /下载可编辑 PPT|生成可编辑 PPT|PPTX 待后续接入/);
 assert.equal(statSync(zipUrl).isFile(), true);
 

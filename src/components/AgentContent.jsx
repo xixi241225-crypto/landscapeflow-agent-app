@@ -6,7 +6,8 @@ import ImageModal from './ImageModal';
 import VisualAssetFrame from './VisualAssetFrame';
 import ProjectDefinitionWizard from './ProjectDefinitionWizard';
 import PresentationDeliverable from './PresentationDeliverable';
-import { RoadshowAgentTrack, RoadshowBlueprintDraft, RoadshowStageRail } from './RoadshowFlow';
+import RoadshowAgentWorkspace from './RoadshowAgentWorkspace';
+import { RoadshowBlueprintDraft, RoadshowStageRail } from './RoadshowFlow';
 import { AGENTS, CONTENT_STATUS } from '../blueprint/blueprintModel';
 import {
   selectConceptCandidate,
@@ -137,6 +138,8 @@ export default function AgentContent({
   presentationMode = false,
   presentationStage = 0,
   presentationAgentStates = [],
+  roadshowUi = { agent4View: 'spatial', visualPromptReady: false },
+  presentationBusy = false,
   onFormUpdate,
   onFillDemoBasic,
   onFillDemoFiles,
@@ -161,6 +164,12 @@ export default function AgentContent({
   designStatementBusySections,
   onNotice,
   onOpenBlueprint,
+  onGenerateDesignStatement,
+  onContinueFromStatement,
+  onGenerateVisualPrompts,
+  onStartVisualGeneration,
+  onEnterOutput,
+  onConfirmPresentationContent,
 }) {
   const [modalImage, setModalImage] = useState(null);
   const agent = AGENTS[viewedStep];
@@ -228,75 +237,37 @@ export default function AgentContent({
                 />
               )}
               {presentationStage === 1 && <RoadshowBlueprintDraft blueprint={blueprint} onOpenBlueprint={onOpenBlueprint} />}
-              {presentationStage === 2 && (
-                activeCheckpoint?.id === 'checkpoint-2' ? (
-                  <div className="space-y-4">
-                    <Comparison blueprint={blueprint} />
-                    <CheckpointPanel
-                      blueprint={blueprint}
-                      checkpoint={activeCheckpoint}
-                      onConfirm={onConfirmCheckpoint}
-                      onAssumptionDecision={onAssumptionDecision}
-                      onSaveFacts={onSaveFacts}
-                      onRegenerate={onRegenerateConcepts}
-                      onReviewDesignStatementSection={onReviewDesignStatementSection}
-                      onRegenerateDesignStatementSection={onRegenerateDesignStatementSection}
-                      onApproveRemainingDesignStatementSections={onApproveRemainingDesignStatementSections}
-                      designStatementBusySections={designStatementBusySections}
-                    />
-                  </div>
-                ) : activeCheckpoint?.id === 'checkpoint-3' ? (
-                  <CheckpointPanel
-                    blueprint={blueprint}
-                    checkpoint={activeCheckpoint}
-                    onConfirm={onConfirmCheckpoint}
-                    onAssumptionDecision={onAssumptionDecision}
-                    onSaveFacts={onSaveFacts}
-                    onRegenerate={onRegenerateConcepts}
-                    onReviewDesignStatementSection={onReviewDesignStatementSection}
-                    onRegenerateDesignStatementSection={onRegenerateDesignStatementSection}
-                    onApproveRemainingDesignStatementSections={onApproveRemainingDesignStatementSections}
-                    designStatementBusySections={designStatementBusySections}
-                  />
-                ) : activeCheckpoint?.id === 'checkpoint-4' ? (
-                  <div className="space-y-4">
-                    <VisualResults blueprint={blueprint} onOpenImage={setModalImage} />
-                    <CheckpointPanel
-                      blueprint={blueprint}
-                      checkpoint={activeCheckpoint}
-                      onConfirm={onConfirmCheckpoint}
-                      onAssumptionDecision={onAssumptionDecision}
-                      onSaveFacts={onSaveFacts}
-                      onRegenerate={onRegenerateConcepts}
-                      onReviewDesignStatementSection={onReviewDesignStatementSection}
-                      onRegenerateDesignStatementSection={onRegenerateDesignStatementSection}
-                      onApproveRemainingDesignStatementSections={onApproveRemainingDesignStatementSections}
-                      designStatementBusySections={designStatementBusySections}
-                    />
-                  </div>
-                ) : activeCheckpoint?.id === 'checkpoint-5' ? (
-                  <div className="space-y-4">
-                    <PresentationDeliverable blueprint={blueprint} />
-                    <CheckpointPanel
-                      blueprint={blueprint}
-                      checkpoint={activeCheckpoint}
-                      onConfirm={onConfirmCheckpoint}
-                      onAssumptionDecision={onAssumptionDecision}
-                      onSaveFacts={onSaveFacts}
-                      onRegenerate={onRegenerateConcepts}
-                      onReviewDesignStatementSection={onReviewDesignStatementSection}
-                      onRegenerateDesignStatementSection={onRegenerateDesignStatementSection}
-                      onApproveRemainingDesignStatementSections={onApproveRemainingDesignStatementSections}
-                      designStatementBusySections={designStatementBusySections}
-                    />
-                  </div>
-                ) : blueprint.checkpoints?.find((checkpoint) => checkpoint.id === 'checkpoint-5')?.status === '已确认' ? (
-                  <PresentationDeliverable blueprint={blueprint} />
-                ) : blueprint.checkpoints?.find((checkpoint) => checkpoint.id === 'checkpoint-4')?.status === '已确认'
-                  && blueprint.agentRuns?.[6]?.status === 'pending' ? (
-                    <VisualResults blueprint={blueprint} onOpenImage={setModalImage} />
-                ) : <RoadshowAgentTrack states={presentationAgentStates} blueprint={blueprint} />
-              )}
+              {presentationStage === 2 && <RoadshowAgentWorkspace
+                blueprint={blueprint}
+                viewedStep={viewedStep}
+                activeCheckpoint={activeCheckpoint}
+                conceptRequirement={conceptRequirement}
+                roadshowUi={roadshowUi}
+                outputWorkflowStep={outputWorkflowStep}
+                presentationBusy={presentationBusy}
+                checkpointProps={{
+                  onConfirm: onConfirmCheckpoint,
+                  onAssumptionDecision,
+                  onSaveFacts,
+                  onRegenerate: onRegenerateConcepts,
+                  onReviewDesignStatementSection,
+                  onRegenerateDesignStatementSection,
+                  onApproveRemainingDesignStatementSections,
+                  designStatementBusySections,
+                }}
+                onNavigate={onNavigate}
+                onOpenBlueprint={onOpenBlueprint}
+                onRequirement={onConceptRequirement}
+                onRegenerateConcepts={onRegenerateConcepts}
+                onEnterComparison={() => { onNavigate(2); if (!blueprint.comparison || blueprint.agentRuns?.[3]?.status === 'stale') onRunAgent(3); }}
+                onGenerateDesignStatement={onGenerateDesignStatement}
+                onContinueFromStatement={onContinueFromStatement}
+                onGenerateVisualPrompts={onGenerateVisualPrompts}
+                onStartVisualGeneration={onStartVisualGeneration}
+                onEnterOutput={onEnterOutput}
+                onConfirmPresentationContent={onConfirmPresentationContent}
+                onOpenImage={setModalImage}
+              />}
             </>
           ) : viewedStep === 0 && (showProjectWizard ? (
             <ProjectDefinitionWizard

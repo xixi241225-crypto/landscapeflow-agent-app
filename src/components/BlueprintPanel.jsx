@@ -6,6 +6,7 @@ import {
   selectConceptCandidates,
   selectConceptGenerationSummary,
   selectCoreConstraints,
+  selectDesignPreferences,
   selectDesignPrinciples,
   selectProjectFacts,
   selectProjectGoals,
@@ -69,7 +70,7 @@ export default function BlueprintPanel({ blueprint, versions, viewedStep, onOpen
   const chapterProgress = selectBlueprintProgress(blueprint);
   const goals = selectProjectGoals(blueprint);
   const constraints = selectCoreConstraints(blueprint);
-  const principles = selectDesignPrinciples(blueprint);
+  const principles = presentationMode ? selectDesignPreferences(blueprint) : selectDesignPrinciples(blueprint);
   const facts = selectProjectFacts(blueprint);
   const candidates = selectConceptCandidates(blueprint);
   const conceptSummary = selectConceptGenerationSummary(blueprint);
@@ -82,7 +83,10 @@ export default function BlueprintPanel({ blueprint, versions, viewedStep, onOpen
   const latest = blueprint.changeLog?.[0];
 
   if (presentationMode) {
-    const presentationCompleted = presentationStage === 0
+    const finalConfirmed = blueprint.checkpoints?.find((item) => item.id === 'checkpoint-5')?.status === '已确认';
+    const presentationCompleted = finalConfirmed
+      ? 100
+      : presentationStage === 0
       ? 15
       : presentationStage === 1
         ? 35
@@ -97,10 +101,10 @@ export default function BlueprintPanel({ blueprint, versions, viewedStep, onOpen
               <p className="text-base font-bold text-[var(--lf-brand-950)]">项目设计蓝本</p>
               <p className="mt-0.5 text-xs text-[var(--lf-muted)]">六 Agent 的共同设计依据</p>
             </div>
-            <Pill tone="cyan">{blueprint.milestoneVersion || 'v0'} · r{blueprint.revision ?? blueprint.currentVersion}</Pill>
+            <Pill tone="cyan">持续更新</Pill>
           </div>
           <div className="mt-4 flex items-center justify-between text-xs font-semibold">
-            <span className="text-[var(--lf-muted)]">当前阶段：{blueprint.stage === 'project-definition' ? '项目定义' : blueprint.stage === 'concept-generation' ? '概念生成' : blueprint.stage === 'agent-collaboration' ? 'Agent 协作' : blueprint.stage === 'deliverables' ? '成果输出' : '项目资料'}</span>
+            <span className="text-[var(--lf-muted)]">当前阶段：{finalConfirmed ? '项目完成' : blueprint.stage === 'project-definition' ? '项目定义' : blueprint.stage === 'concept-generation' ? '概念生成' : blueprint.stage === 'agent-collaboration' ? 'Agent 协作' : blueprint.stage === 'deliverables' ? '成果输出' : '项目资料'}</span>
             <span className="text-[var(--lf-brand-700)]">{presentationCompleted}%</span>
           </div>
           <div className="mt-2 h-2 overflow-hidden rounded-full bg-violet-100">
@@ -112,7 +116,7 @@ export default function BlueprintPanel({ blueprint, versions, viewedStep, onOpen
           {[
             ['项目目标', goals],
             ['核心约束', constraints],
-            ['设计原则', principles],
+            ['设计偏好', principles],
           ].map(([title, items], index) => (
             <section key={title} className="mb-3 rounded-xl border border-violet-100 bg-white p-3">
               <div className="flex items-center gap-2">
@@ -126,14 +130,14 @@ export default function BlueprintPanel({ blueprint, versions, viewedStep, onOpen
           ))}
           <details className="rounded-xl border border-violet-100 bg-violet-50/50 p-3">
             <summary className="cursor-pointer text-xs font-semibold text-[var(--lf-brand-700)]">六章完成度</summary>
-            <p className="mt-3 text-xs leading-5 text-[var(--lf-muted)]">{chapterProgress.completed}/6 章已写入 · {versions.length} 个正式版本 · {blueprint.invalidatedOutputs.length} 项需更新</p>
+            <p className="mt-3 text-xs leading-5 text-[var(--lf-muted)]">{chapterProgress.completed}/6 章已写入 · {blueprint.invalidatedOutputs.length} 项待更新</p>
           </details>
-          {candidates.length > 0 && <section className="mt-3 rounded-xl border border-cyan-100 bg-cyan-50 p-3"><p className="text-xs font-bold text-cyan-800">概念候选 · {conceptSummary.candidateCount} 个</p>{conceptSummary.names.map((name) => <p key={name} className="mt-1 text-xs text-cyan-800">· {name}</p>)}</section>}
+          {candidates.length > 0 && <section className="mt-3 rounded-xl border border-cyan-100 bg-cyan-50 p-3"><p className="text-xs font-bold text-cyan-800">概念候选 · {conceptSummary.candidateCount} 个</p>{conceptSummary.names.map((name, index) => <p key={name} className="mt-1 text-xs text-cyan-800">· 方案 {index + 1}｜{name.replace(/^[ABC]｜/, '')}</p>)}</section>}
         </div>
 
         <div className="grid grid-cols-2 gap-2 border-t border-violet-100 bg-white p-3">
           <button onClick={onOpenFullBlueprint} className="btn-primary col-span-2 px-3 py-2 text-xs">查看完整蓝本</button>
-          <button onClick={onOpenVersions} className="btn-secondary px-3 py-2 text-xs">版本记录（{versions.length}）</button>
+          <button onClick={onOpenVersions} className="btn-secondary px-3 py-2 text-xs">历史版本</button>
           <button onClick={onInitiateModification} className="btn-gold px-3 py-2 text-xs">补充资料</button>
         </div>
       </aside>

@@ -44,9 +44,9 @@ export const AGENTS = [
 
 export const CHECKPOINTS = [
   { id: 'checkpoint-1', order: 1, afterAgent: 1, name: '项目理解确认', description: '确认项目事实、目标、约束、缺口、假设和核心问题。' },
-  { id: 'checkpoint-2', order: 2, afterAgent: 3, name: '方案方向决策', description: '由设计师选择方案方向，并记录融合要求和修改意见。' },
+  { id: 'checkpoint-2', order: 2, afterAgent: 3, name: '方案方向决策', description: '由设计师在三个概念方向中确认当前方案；如均不满意，可返回 Agent 2 重新生成。' },
   { id: 'checkpoint-3', order: 3, afterAgent: 4, name: '设计说明书分项确认', description: '设计师逐项复核 Design Statement（含六项专业策略），通过或提出专业修改意见。' },
-  { id: 'checkpoint-4', order: 4, afterAgent: 5, name: '视觉方案挑选', description: '设计师比较视觉候选，选择采用方向并记录专业判断理由。' },
+  { id: 'checkpoint-4', order: 4, afterAgent: 5, name: '视觉方案挑选', description: '设计师比较儿童活动场景视觉候选，并确认采用方向。' },
   { id: 'checkpoint-5', order: 5, afterAgent: 6, name: '汇报成果确认', description: '设计师复核汇报内容完整性、方案一致性、待深化事项保留情况与 14 页成果文件完整性。' },
 ];
 

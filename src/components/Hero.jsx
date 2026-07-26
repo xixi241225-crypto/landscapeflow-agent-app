@@ -56,24 +56,26 @@ export default function Hero() {
           </motion.div>
         </section>
 
-        <section className="border-y border-[var(--lf-border)] bg-white/80 py-16">
+        <section className="border-y border-[var(--lf-border)] bg-white/80 py-16" data-testid="product-mechanism">
           <div className="mx-auto max-w-[1240px] px-6 lg:px-10">
             <div className="mx-auto max-w-3xl text-center">
-              <p className="text-xs font-bold tracking-[0.2em] text-[var(--lf-brand-600)]">1 + 6 + 1 COLLABORATION</p>
-              <h2 className="mt-3 font-serif text-3xl font-bold text-[var(--lf-brand-950)]">围绕同一份 Blueprint 持续协作</h2>
-              <p className="mt-3 text-base leading-7 text-[var(--lf-muted)]">设计总监组织任务，专业 Agent 分阶段读写，设计师在关键节点形成最终判断。</p>
+              <p className="text-xs font-bold tracking-[0.2em] text-[var(--lf-brand-600)]">1 + 6 + 1 + N COLLABORATION</p>
+              <h2 className="mt-3 font-serif text-3xl font-bold text-[var(--lf-brand-950)]">LandscapeFlow AI 是怎么工作的？</h2>
+              <p className="mt-3 text-base leading-7 text-[var(--lf-muted)]">一个设计总监，带六个专业 Agent，围绕同一份项目蓝本完成方案</p>
+              <p className="mt-2 text-sm font-semibold text-[var(--lf-brand-700)]">AI 负责生产，设计师在 2 次决策 + 3 次复核中掌握关键方向</p>
             </div>
 
-            <div className="mx-auto mt-10 max-w-5xl">
-              <div className="architecture-connector mx-auto max-w-xl rounded-2xl bg-[var(--lf-brand-950)] px-6 py-5 text-center text-white shadow-lg">
-                <p className="text-xs font-semibold tracking-[0.18em] text-violet-200">1 名景观方案设计总监智能体</p>
-                <p className="mt-2 text-sm text-violet-100">统筹任务 · 判断方向 · 组织协作</p>
+            <div
+              className="mx-auto mt-10 max-w-5xl"
+              data-product-mechanism-asset="./product-mechanism/landscapeflow-product-mechanism-latest.png"
+            >
+              <div className="architecture-connector mx-auto max-w-2xl rounded-2xl bg-[var(--lf-brand-950)] px-6 py-5 text-center text-white shadow-lg">
+                <p className="text-xs font-semibold tracking-[0.18em] text-violet-200">1｜景观设计总监智能体</p>
+                <p className="mt-2 text-sm text-violet-100">匠心内核：设计智库 · 判断引擎 · 调度引擎</p>
               </div>
-              <div className="architecture-connector mx-auto mt-10 max-w-2xl rounded-2xl border border-cyan-200 bg-cyan-50 px-6 py-5 text-center">
-                <p className="text-xs font-semibold tracking-[0.18em] text-cyan-700">1 份项目设计蓝本 Blueprint</p>
-                <p className="mt-2 text-sm text-[var(--lf-muted)]">唯一设计依据 · 持续回写 · 版本演进 · 影响可追溯</p>
-              </div>
-              <div className="mt-10 grid grid-cols-2 gap-3 lg:grid-cols-6">
+              <div className="mt-8">
+                <p className="mb-3 text-center text-xs font-bold tracking-[0.16em] text-[var(--lf-brand-600)]">6｜六个专业 Agent</p>
+                <div className="grid grid-cols-2 gap-3 lg:grid-cols-6">
                 {AGENTS.map((agent) => (
                   <div key={agent.id} className="agent-card min-h-[150px] p-4">
                     <span className="text-xs font-bold text-[var(--lf-brand-500)]">{agent.id}</span>
@@ -81,14 +83,29 @@ export default function Hero() {
                     <p className="mt-2 text-sm leading-6 text-[var(--lf-muted)]">{agent.detail}</p>
                   </div>
                 ))}
+                </div>
+              </div>
+              <div className="architecture-connector mx-auto mt-8 max-w-2xl rounded-2xl border border-cyan-200 bg-cyan-50 px-6 py-5 text-center">
+                <p className="text-xs font-semibold tracking-[0.18em] text-cyan-700">1｜项目设计蓝本 Blueprint</p>
+                <p className="mt-2 text-sm text-[var(--lf-muted)]">唯一设计依据 · 持续回写 · 版本演进 · 影响可追溯</p>
+              </div>
+              <div className="mt-8 grid gap-3 md:grid-cols-3">
+                <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 text-center">
+                  <p className="text-xs font-bold tracking-[0.15em] text-emerald-700">正式成果</p>
+                  <p className="mt-2 text-sm text-emerald-900">设计说明 · 专业分析 · 视觉成果 · 方案汇报</p>
+                </div>
+                <div className="rounded-2xl border border-violet-200 bg-violet-50 p-5 text-center">
+                  <p className="text-xs font-bold tracking-[0.15em] text-violet-700">设计执行轨迹 DESIGN TRACE</p>
+                  <p className="mt-2 text-sm text-violet-900">关键选择、修改意见与成果版本可追溯</p>
+                </div>
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 text-center">
+                  <p className="text-xs font-bold tracking-[0.15em] text-slate-600">N｜能力底座</p>
+                  <p className="mt-2 text-sm text-slate-700">Skills · 模型 · 专业工具</p>
+                </div>
               </div>
               <div className="mt-8 rounded-2xl border border-amber-200 bg-[var(--lf-gold-soft)] p-5">
                 <div className="grid gap-2 md:grid-cols-3">
-                  {CHECKPOINTS.map((item, index) => (
-                    <div key={item} className="rounded-xl border border-amber-100 bg-white px-4 py-3 text-sm font-semibold text-[var(--lf-text)]">
-                      <span className="mr-2 text-[var(--lf-gold)]">0{index + 1}</span>{item}
-                    </div>
-                  ))}
+                  {CHECKPOINTS.map((item, index) => <div key={item} className="rounded-xl border border-amber-100 bg-white px-4 py-3 text-sm font-semibold text-[var(--lf-text)]"><span className="mr-2 text-[var(--lf-gold)]">0{index + 1}</span>{item}</div>)}
                 </div>
               </div>
             </div>

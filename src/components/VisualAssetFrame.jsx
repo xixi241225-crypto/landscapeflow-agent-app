@@ -36,6 +36,7 @@ export default function VisualAssetFrame({
   visualClassName = '',
   compact = false,
   showMeta = true,
+  showBadges = true,
   allowZoom = true,
 }) {
   const [loadFailed, setLoadFailed] = useState(false);
@@ -76,10 +77,12 @@ export default function VisualAssetFrame({
           <p className="mt-1 text-xs text-[var(--lf-muted)]">视觉槽位已预留，可按 Blueprint 定向替换</p>
         </div>
       )}
-      <div className="absolute left-2 top-2 flex flex-wrap gap-1.5">
-        <span className={`rounded-full border px-2 py-1 text-[11px] font-semibold ${STATUS_STYLE[resolvedStatus] || STATUS_STYLE['待生成']}`}>{resolvedStatus}</span>
-        {asset.id && <span className="rounded-full border border-white/70 bg-white/90 px-2 py-1 text-[11px] font-bold text-[var(--lf-brand-700)]">{asset.id}</span>}
-      </div>
+      {showBadges && (
+        <div className="absolute left-2 top-2 flex flex-wrap gap-1.5">
+          <span className={`rounded-full border px-2 py-1 text-[11px] font-semibold ${STATUS_STYLE[resolvedStatus] || STATUS_STYLE['待生成']}`}>{resolvedStatus}</span>
+          {asset.id && <span className="rounded-full border border-white/70 bg-white/90 px-2 py-1 text-[11px] font-bold text-[var(--lf-brand-700)]">{asset.id}</span>}
+        </div>
+      )}
       {invalid && <div className="absolute inset-0 flex items-center justify-center bg-rose-950/16"><span className="rounded-lg bg-white/94 px-3 py-2 text-sm font-bold text-rose-700 shadow">已失效，不属于当前方案</span></div>}
       {hasImage && allowZoom && <span className="absolute bottom-2 right-2 rounded-full bg-slate-950/65 px-2 py-1 text-[10px] text-white">点击查看</span>}
     </div>

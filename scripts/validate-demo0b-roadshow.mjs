@@ -174,7 +174,8 @@ assert.match(projectDefinitionWizardSource, /formData\.targetUsers/);
 assert.match(projectDefinitionWizardSource, /待补充 \/ 待解析/);
 assert.match(agentContentSource, /selectedConcept\?\.proposition/);
 assert.match(agentContentSource, /selectedConcept\.keyScenes/);
-assert.match(checkpointPanelSource, /采用方案 B 的公共核心策略，同时融合方案 C 的慢行体验逻辑/);
+assert.match(checkpointPanelSource, /三个方案都不满意，重新生成/);
+assert.doesNotMatch(checkpointPanelSource, /雨水花园|儿童区|老人区|松林/);
 
 console.log('✓ Demo-0B 完整 Blueprint v7 主链与成果可展示条件校验通过');
 console.log('✓ Results ViewModel 项目、概念、空间、视觉、Summary 与 14 页方案汇报成果均来自 Blueprint');

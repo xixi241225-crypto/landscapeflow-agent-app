@@ -127,10 +127,10 @@ const localDraft = {
 };
 assert.equal(JSON.stringify(blueprint), beforeDraft);
 assert.equal(selectSelectedVisuals(blueprint).length, 0);
-assert.throws(
-  () => confirmCheckpoint(blueprint, 'checkpoint-4', { visualSelection: { scene: 'children', candidateId: 'V02B', reasons: [] } }),
-  /至少选择一项/,
-);
+const noReasonPreview = confirmCheckpoint(blueprint, 'checkpoint-4', {
+  visualSelection: { scene: 'children', candidateId: 'V02B', reasons: [] },
+});
+assert.deepEqual(selectSelectedVisuals(noReasonPreview, 'children')[0].reasons, []);
 
 // G–H: Gate 4 confirmation writes selection, reasons and one trace event; Agent 6 is next but not executed.
 blueprint = confirmCheckpoint(blueprint, 'checkpoint-4', {
@@ -224,7 +224,7 @@ const presentationRunnerSource = workbenchSource.slice(
   workbenchSource.indexOf('const handleOpenPresentationResults'),
 );
 assert.match(checkpointSource, /useState\(\{\s*candidateId: ''/s);
-assert.match(checkpointSource, /只有点击下方“确认视觉方案并继续”后/);
+assert.match(checkpointSource, /只有点击下方“确认视觉方案”后/);
 assert.doesNotMatch(presentationRunnerSource, /confirmCheckpoint/);
 assert.match(presentationRunnerSource, /\['checkpoint-2', 'checkpoint-3', 'checkpoint-4', 'checkpoint-5'\]\.includes/);
 assert.match(presentationRunnerSource, /'checkpoint-5': 'Agent 6 已登记 14 页方案汇报成果/);

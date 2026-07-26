@@ -43,7 +43,7 @@ export default function BottomControlBar({
             <>
               <button onClick={onModifyPresentation} className="btn-secondary px-5 py-3 text-sm">修改或补充资料</button>
               <button onClick={onConfirmPresentation} disabled={presentationBusy} className="btn-primary px-7 py-3 text-base disabled:cursor-wait disabled:opacity-70">
-                {presentationBusy ? '正在启动 Agent 协作…' : '确认设计方向并开始设计'}
+                {presentationBusy ? '正在进入概念生成…' : '确认项目理解并继续'}
               </button>
             </>
           )}

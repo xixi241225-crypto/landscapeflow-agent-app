@@ -451,9 +451,6 @@ export function confirmCheckpoint(blueprint, checkpointId, decision = {}, confir
     ));
     if (!candidate) throw new Error('所选视觉候选不属于当前 Blueprint');
     if (candidate.isFactSource !== false) throw new Error('视觉候选必须明确标记为非事实源');
-    if (!Array.isArray(visualSelection.reasons) || !visualSelection.reasons.length) {
-      throw new Error('请至少选择一项视觉判断理由');
-    }
   }
   if (checkpointId === 'checkpoint-5') {
     if (blueprint.agentRuns?.[6]?.status !== 'done') {
@@ -501,7 +498,7 @@ export function confirmCheckpoint(blueprint, checkpointId, decision = {}, confir
       candidateId: candidate.id,
       visualAssetId: candidate.assetRef || candidate.id,
       candidateName: candidate.name,
-      reasons: [...visualSelection.reasons],
+      reasons: [...(visualSelection.reasons || [])],
       comment: String(visualSelection.comment || '').trim(),
       sourceBlueprintFields: [...new Set([
         ...(candidate.sourceBlueprintFields || []),

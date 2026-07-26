@@ -88,7 +88,7 @@ function BasicInfoStep({ formData, onFormUpdate, onFillDemo, onNext, onNotice })
 
   return (
     <div className="project-wizard-page">
-      <PageTitle title="项目基本信息" subtitle="先建立项目边界，演示案例仅填充本页且不会自动提交。" onFillDemo={onFillDemo} />
+      <PageTitle title="项目基本信息" subtitle="欢乐谷演示项目的已知输入已准备好，设计师只需核对关键边界。" onFillDemo={onFillDemo} />
       <div className="mt-7 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <label className="form-label">项目名称
           <input data-testid="field-projectName" value={formData.projectName || ''} onChange={(event) => onFormUpdate('projectName', event.target.value)} className="form-input mt-1.5" placeholder="例如：社区公园更新设计" />
@@ -117,21 +117,52 @@ function BasicInfoStep({ formData, onFormUpdate, onFillDemo, onNext, onNotice })
             {DESIGN_STAGES.map((item) => <option key={item} value={item}>{item}</option>)}
           </select>
         </label>
-        <label className="form-label">预算条件
-          <select data-testid="field-budgetCondition" value={formData.budgetCondition || ''} onChange={(event) => onFormUpdate('budgetCondition', event.target.value)} className="form-select mt-1.5">
-            <option value="">请选择预算条件</option>
-            {BUDGET_OPTIONS.map((item) => <option key={item} value={item}>{item}</option>)}
-          </select>
-        </label>
+        {formData.demoProjectInput ? (
+          <div className="form-label">预算条件
+            <div data-testid="field-budgetCondition-pending" className="mt-1.5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800">
+              待后续资料确认，当前不作为设计硬约束
+            </div>
+          </div>
+        ) : (
+          <label className="form-label">预算条件
+            <select data-testid="field-budgetCondition" value={formData.budgetCondition || ''} onChange={(event) => onFormUpdate('budgetCondition', event.target.value)} className="form-select mt-1.5">
+              <option value="">请选择预算条件</option>
+              {BUDGET_OPTIONS.map((item) => <option key={item} value={item}>{item}</option>)}
+            </select>
+          </label>
+        )}
       </div>
+
+      <details className="mt-5 rounded-2xl border border-violet-100 bg-white p-4" open>
+        <summary className="cursor-pointer text-sm font-bold text-[var(--lf-brand-900)]">已预置的设计要求与偏好</summary>
+        <div className="mt-4 grid gap-4 md:grid-cols-3">
+          <label className="form-label">设计偏好
+            <textarea data-testid="field-stylePreference" value={formData.stylePreference || ''} onChange={(event) => onFormUpdate('stylePreference', event.target.value)} className="form-input mt-1.5 min-h-[92px] resize-none" placeholder="待补充" />
+          </label>
+          <label className="form-label">重点关注
+            <textarea data-testid="field-clientFocus" value={formData.clientFocus || ''} onChange={(event) => onFormUpdate('clientFocus', event.target.value)} className="form-input mt-1.5 min-h-[92px] resize-none" placeholder="待补充" />
+          </label>
+          <label className="form-label">汇报对象
+            <textarea data-testid="field-presentationAudience" value={formData.presentationAudience || ''} onChange={(event) => onFormUpdate('presentationAudience', event.target.value)} className="form-input mt-1.5 min-h-[92px] resize-none" placeholder="待补充" />
+          </label>
+        </div>
+      </details>
 
       <div className="mt-5 grid gap-4 md:grid-cols-2">
         <label className="form-label">设计目标
           <textarea data-testid="field-designGoals" value={formData.designGoals || ''} onChange={(event) => onFormUpdate('designGoals', event.target.value)} className="form-input mt-1.5 min-h-[108px] resize-none" placeholder="描述项目需要解决的核心目标" />
         </label>
-        <label className="form-label">核心约束
-          <textarea data-testid="field-constraints" value={formData.constraints || ''} onChange={(event) => onFormUpdate('constraints', event.target.value)} className="form-input mt-1.5 min-h-[108px] resize-none" placeholder="描述造价、维护、场地与规范条件" />
-        </label>
+        {formData.demoProjectInput ? (
+          <div className="form-label">核心约束
+            <div data-testid="field-constraints-pending" className="mt-1.5 min-h-[108px] rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-800">
+              正式红线、测绘、现状乔木、地下管线、市政排水接口、投资上限与运维主体均待后续资料确认。
+            </div>
+          </div>
+        ) : (
+          <label className="form-label">核心约束
+            <textarea data-testid="field-constraints" value={formData.constraints || ''} onChange={(event) => onFormUpdate('constraints', event.target.value)} className="form-input mt-1.5 min-h-[108px] resize-none" placeholder="描述造价、维护、场地与规范条件" />
+          </label>
+        )}
       </div>
 
       <div className="project-wizard-actions">
@@ -191,11 +222,11 @@ function UploadStep({
         <div className="max-h-[214px] overflow-y-auto">
           {formData.siteFiles?.length ? formData.siteFiles.map((file) => (
             <div key={file.name} className="project-file-row">
-              <span className="truncate font-semibold text-[var(--lf-text)]">{file.name}</span>
-              <span>{file.type || file.name.split('.').pop()?.toUpperCase()}</span>
+              <span className="truncate font-semibold text-[var(--lf-text)]">{file.displayName || file.name}</span>
+              <span>{file.displayType || file.type || file.name.split('.').pop()?.toUpperCase()}</span>
               <span>{file.size}</span>
               <span className="truncate text-[var(--lf-brand-600)]">{file.category || '项目资料'}</span>
-              <button type="button" onClick={() => removeFile(file.name)} className="text-rose-500" aria-label={`删除 ${file.name}`}>删除</button>
+              <button type="button" onClick={() => removeFile(file.name)} className="text-rose-500" aria-label={`删除 ${file.displayName || file.name}`}>删除</button>
             </div>
           )) : <p className="py-9 text-center text-sm text-slate-400">尚未上传项目资料</p>}
         </div>

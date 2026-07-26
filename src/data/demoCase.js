@@ -17,6 +17,14 @@ const projectFact = (field) => [
 ].find((record) => record.field === field);
 
 const areaMeasurement = projectFact('siteArea');
+const DEMO_FILE_DISPLAY_NAMES = {
+  'SRC-SATELLITE-01': '项目区位与场地量测影像',
+  'SRC-REF-ELDERLY-01': '康体活动设施参考',
+  'SRC-REF-CHILDREN-01': '儿童活动设施参考',
+  'SRC-REF-GREENWAY-01': '林荫慢行体验参考',
+  'SRC-REF-PLAN-01': '社区公园空间组织参考',
+  'SRC-REF-LAWN-01': '中心共享空间参考',
+};
 
 export const DEMO_CASE = {
   projectName: projectFact('projectName').value,
@@ -24,15 +32,15 @@ export const DEMO_CASE = {
   area: String(areaMeasurement.value),
   projectType: projectFact('projectType').value,
   targetUsers: '',
-  designGoals: '',
+  designGoals: '在有限场地内协调多种实用功能，优先处理功能布局、植物设计与造价控制。',
   constraints: '',
-  stylePreference: '',
+  stylePreference: '偏好功能布点与环形步道组织，关注中心共享空间、林荫慢行、无动力儿童活动与克制的自然体验。',
   maintenance: '',
-  clientFocus: '',
+  clientFocus: '功能布局、植物设计、造价控制',
   designStage: projectFact('designStage').value,
   deliveryDate: '',
   budgetCondition: '',
-  presentationAudience: '',
+  presentationAudience: '项目决策方',
   areaEvidenceType: areaMeasurement.evidenceType,
   areaStatus: areaMeasurement.status,
   areaConfidence: areaMeasurement.confidence,
@@ -69,8 +77,10 @@ export const DEMO_FILES = [
   {
     id: 'demo-input-v1',
     name: 'project_input_v1.json',
+    displayName: '设计任务书',
     size: '结构化输入',
     type: 'JSON',
+    displayType: '已上传',
     category: '项目任务书',
     status: '已编译，来源可追溯',
     demo: true,
@@ -82,6 +92,8 @@ export const DEMO_FILES = [
     .map((source) => ({
       id: source.id,
       name: source.copiedPath.split('/').pop(),
+      displayName: DEMO_FILE_DISPLAY_NAMES[source.id] || source.copiedPath.split('/').pop(),
+      displayType: source.type === 'siteImage' ? '区位资料' : '设计参考',
       size: '来源资产',
       type: source.copiedPath.split('.').pop().toUpperCase(),
       category: source.type === 'siteImage' ? '区位资料' : '参考案例',

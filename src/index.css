@@ -1390,12 +1390,12 @@
 .roadshow-draft-grid {
   display: grid;
   margin-top: 22px;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 16px;
 }
 
 .roadshow-draft-card {
-  min-height: 275px;
+  min-height: 220px;
   border: 1px solid var(--lf-border);
   border-radius: 18px;
   padding: 19px;
@@ -1481,6 +1481,117 @@
 .roadshow-track-caption { margin-top: 16px; color: var(--lf-brand-700); font-size: 14px; font-weight: 800; text-align: center; }
 .roadshow-track-caption.complete { color: #17875d; }
 
+.roadshow-agent-stepper {
+  position: sticky;
+  top: -16px;
+  z-index: 24;
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 16px;
+  border: 1px solid var(--lf-border);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.96);
+  padding: 9px;
+  box-shadow: 0 8px 22px rgba(31, 28, 88, 0.05);
+  backdrop-filter: blur(12px);
+}
+
+.roadshow-agent-step {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+  border-radius: 11px;
+  padding: 9px 10px;
+  color: #a0a3b2;
+  text-align: left;
+  transition: 180ms ease;
+}
+
+.roadshow-agent-step > span {
+  display: flex;
+  width: 24px;
+  height: 24px;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: #f0f1f5;
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.roadshow-agent-step p {
+  overflow: hidden;
+  font-size: 12px;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.roadshow-agent-step.done { color: #17875d; }
+.roadshow-agent-step.done > span { background: #dff8ed; color: #17875d; }
+.roadshow-agent-step.active { background: linear-gradient(110deg, #eeebff, #edf9f7); color: var(--lf-brand-900); }
+.roadshow-agent-step.active > span { background: var(--lf-brand-700); color: white; }
+
+.roadshow-ux-page {
+  display: grid;
+  gap: 16px;
+  padding-bottom: 12px;
+}
+
+.roadshow-ux-hero {
+  border: 1px solid #d9d5f5;
+  border-radius: 18px;
+  background: linear-gradient(115deg, #f6f4ff, #f2fbfa);
+  padding: 18px 20px;
+}
+
+.roadshow-ux-hero > p {
+  color: var(--lf-brand-600);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+}
+
+.roadshow-ux-hero h2 {
+  margin-top: 5px;
+  color: var(--lf-brand-950);
+  font-family: Georgia, 'Times New Roman', 'Noto Serif SC', serif;
+  font-size: 25px;
+  font-weight: 800;
+}
+
+.roadshow-ux-hero > span {
+  display: block;
+  margin-top: 5px;
+  color: var(--lf-muted);
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+.roadshow-sticky-action {
+  position: sticky;
+  bottom: 0;
+  z-index: 22;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  border: 1px solid #dddaf2;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.97);
+  padding: 11px 13px 11px 17px;
+  box-shadow: 0 -8px 22px rgba(31, 28, 88, 0.07);
+  backdrop-filter: blur(12px);
+}
+
+.roadshow-sticky-action p {
+  color: var(--lf-muted);
+  font-size: 12px;
+}
+
 .roadshow-results-bottom {
   position: fixed;
   right: 0;
@@ -1509,7 +1620,10 @@
   .roadshow-agent-card h2 { margin-top: 18px; }
   .roadshow-slide-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .roadshow-draft-card { min-height: 295px; padding: 16px; }
+  .roadshow-draft-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .roadshow-draft-card li { font-size: 13px; }
+  .roadshow-agent-step { padding-inline: 7px; }
+  .roadshow-agent-step p { font-size: 11px; }
 }
 
 @media (max-width: 900px) {
@@ -1527,4 +1641,5 @@
   .roadshow-results-summary > div:nth-child(6) { border-top: 1px solid var(--lf-border); }
   .roadshow-ppt-file { align-items: flex-start; flex-wrap: wrap; }
   .roadshow-slide-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .roadshow-agent-stepper { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }

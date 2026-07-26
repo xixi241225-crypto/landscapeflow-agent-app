@@ -30,7 +30,7 @@ export const DEMO_ASSET_BINDINGS = {
           candidateOrigin: 'projectReferenceDirection',
         },
         isFactSource: false,
-        demoUsage: 'Agent 5 分析成果',
+        demoUsage: 'Agent 4 空间推演成果',
         riskNotes: ['不得反向提取为项目事实'],
       },
       {
@@ -57,7 +57,7 @@ export const DEMO_ASSET_BINDINGS = {
           childrenWaterStatus: 'preference',
         },
         isFactSource: false,
-        demoUsage: 'Agent 5 分析成果',
+        demoUsage: 'Agent 4 空间推演成果',
         riskNotes: ['儿童亲水只作为设计偏好，不是现状事实或工程决定'],
       },
       {
@@ -86,7 +86,7 @@ export const DEMO_ASSET_BINDINGS = {
           reviewScope: 'spatialScaleAndFunction',
         },
         isFactSource: false,
-        demoUsage: 'Agent 5 设计总监复核',
+        demoUsage: 'Agent 4 设计总监复核',
         riskNotes: [
           '不是施工校核、法规审查或正式专业签审',
           '图内数值须回到真实资料验证',
@@ -164,6 +164,36 @@ export const DEMO_ASSET_BINDINGS = {
         riskNotes: ['成熟乔木仅表达目标林荫体验，不代表现状已存在高大乔木'],
       },
     ],
+    supportingVisuals: [
+      ['V01', 'overall', '总体鸟瞰', './demo-images/aerial.jpg'],
+      ['V03', 'lawn', '中央共享草坪', './demo-images/awn.jpg'],
+      ['V04', 'elderly', '老人康体空间', './demo-images/elderly.jpg'],
+      ['V05', 'entrance', '公园入口', './demo-images/entrance.jpg'],
+      ['V06', 'planting', '植物空间', './demo-images/planting.jpg'],
+      ['V07', 'night', '夜间氛围', './demo-images/night.jpg'],
+    ].map(([id, scene, title, url]) => ({
+      id,
+      scene,
+      title,
+      url,
+      assetType: 'VisualResult',
+      role: 'supportingVisual',
+      status: 'approvedDemoAsset',
+      provenance: {
+        generationMode: 'externalAgentGenerated',
+        generationProvider: 'WorkBuddy Agent',
+        candidateOrigin: 'projectBoundDemoVisual',
+      },
+      sourceBlueprintFields: [
+        'designerDecision.selectedConceptId',
+        'deliverableArtifacts.designStatement',
+        'spatialStructure',
+        'featureNodes',
+        'professionalStrategies',
+      ],
+      isFactSource: false,
+      riskNotes: ['视觉成果不得反向提取为项目事实'],
+    })),
   },
 };
 

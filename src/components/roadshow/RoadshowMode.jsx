@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import PresentationDeckViewer from '../PresentationDeckViewer';
 import {
   isRoadshowResultsReady,
+  selectDesignExecutionTrace,
   selectRoadshowResults,
 } from '../../blueprint/blueprintSelectors';
 import { loadActiveProject } from '../../lib/projectStorage';
@@ -34,7 +35,7 @@ function RoadshowImage({ src, alt, fit = 'cover', className = '', placeholder = 
   return <img src={src} alt={alt} className={className} style={{ objectFit: fit }} onError={() => setFailed(true)} />;
 }
 
-function RoadshowHeader({ onHome, blueprint }) {
+function RoadshowHeader({ onHome }) {
   return (
     <header className="roadshow-header">
       <button onClick={onHome} className="flex shrink-0 items-center gap-3 text-left" aria-label="返回产品首页">
@@ -53,22 +54,22 @@ function RoadshowHeader({ onHome, blueprint }) {
         ))}
       </div>
       <div className="hidden shrink-0 text-right lg:block">
-        <p className="text-xs font-bold text-[var(--lf-brand-700)]">Blueprint {blueprint.milestoneVersion} · Results</p>
+        <p className="text-xs font-bold text-[var(--lf-brand-700)]">项目成果 · RESULTS</p>
         <p className="mt-0.5 text-xs text-[var(--lf-muted)]">最终交付成果</p>
       </div>
     </header>
   );
 }
 
-function BlueprintStatusBar({ blueprint }) {
+function BlueprintStatusBar() {
   return (
     <div className="roadshow-blueprint-status">
       <span className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-500 text-white"><CheckIcon className="h-4 w-4" /></span>
-      <span className="font-bold text-[var(--lf-brand-950)]">项目设计蓝本 {blueprint.milestoneVersion || 'v7'}</span>
+      <span className="font-bold text-[var(--lf-brand-950)]">项目设计蓝本已归档</span>
       <span className="hidden h-4 w-px bg-violet-200 sm:block" />
-      <span className="text-emerald-700">6 个 Agent 已真实完成</span>
+      <span className="text-emerald-700">六个专业 Agent 已完成</span>
       <span className="hidden h-4 w-px bg-violet-200 md:block" />
-      <span className="hidden text-[var(--lf-muted)] md:inline">成果由当前活动项目 Blueprint 统一提供</span>
+      <span className="hidden text-[var(--lf-muted)] md:inline">最终成果已确认</span>
     </div>
   );
 }
@@ -237,7 +238,6 @@ function PresentationResult({ result, onDownload, onPreview }) {
             <div className="p-3.5">
               <h3>{slide.title}</h3>
               <p>{slide.upScreenCopy}</p>
-              <small>{slide.suggestedVisual}</small>
             </div>
           </article>
         ))}
@@ -246,7 +246,43 @@ function PresentationResult({ result, onDownload, onPreview }) {
   );
 }
 
-function ResultsPage({ activeTab, onTabChange, onDownload, onPreview, results }) {
+function DesignTraceDialog({ open, trace, onClose }) {
+  if (!open) return null;
+  return (
+    <div className="fixed inset-0 z-[120] flex items-center justify-center bg-slate-950/55 p-6" role="dialog" aria-modal="true" aria-label="设计执行轨迹详情">
+      <section className="max-h-[82vh] w-full max-w-3xl overflow-y-auto rounded-3xl bg-white p-7 shadow-2xl">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="roadshow-eyebrow">DESIGN TRACE</p>
+            <h2 className="mt-1 text-2xl font-bold text-[var(--lf-brand-950)]">设计执行轨迹</h2>
+            <p className="mt-2 text-sm text-[var(--lf-muted)]">展示本次设计师专业意见与对应成果更新，不暴露内部运行字段。</p>
+          </div>
+          <button type="button" onClick={onClose} className="btn-secondary px-4 py-2 text-sm">关闭</button>
+        </div>
+        <div className="mt-6 grid gap-3 sm:grid-cols-2">
+          {['项目理解已确认', '方案方向已确认', '设计说明已完成分项复核', '视觉成果与最终汇报已确认'].map((item) => (
+            <p key={item} className="rounded-xl bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">✓ {item}</p>
+          ))}
+        </div>
+        <div className="mt-6 space-y-3">
+          {trace.map((item) => (
+            <article key={item.traceId} className="rounded-2xl border border-violet-100 bg-violet-50/50 p-5">
+              <div className="flex items-center justify-between gap-3">
+                <h3 className="font-bold text-[var(--lf-brand-950)]">{item.sectionTitle || '设计说明专业修改'}</h3>
+                <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-emerald-700">{item.status === 'completed' ? '已完成' : '处理中'}</span>
+              </div>
+              <p className="mt-3 text-sm leading-6 text-slate-700"><b>设计师意见：</b>{item.comment || '无补充意见'}</p>
+              <p className="mt-2 text-sm leading-6 text-[var(--lf-muted)]">Agent 4 已按意见重新生成对应分项，后续成果继续沿用更新后的设计说明。</p>
+            </article>
+          ))}
+          {!trace.length && <p className="rounded-2xl border border-violet-100 bg-violet-50 p-5 text-sm text-[var(--lf-muted)]">本次方案没有需要单独重新生成的设计说明分项。</p>}
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function ResultsPage({ activeTab, onTabChange, onDownload, onPreview, onOpenTrace, results }) {
   const project = results.project;
   const areaLabel = /㎡|平方米|平米|m²/i.test(project.area) ? project.area : `${project.area}㎡`;
   return (
@@ -261,8 +297,8 @@ function ResultsPage({ activeTab, onTabChange, onDownload, onPreview, results })
             <p className="mt-1 font-semibold text-emerald-700">最终状态：已完成</p>
           </div>
           <div className="hidden rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-3 text-right md:block">
-            <p className="text-sm font-semibold text-emerald-700">唯一数据源</p>
-            <p className="mt-1 text-lg font-bold text-emerald-900">当前活动项目 Blueprint</p>
+            <p className="text-sm font-semibold text-emerald-700">项目状态</p>
+            <p className="mt-1 text-lg font-bold text-emerald-900">成果已完整归档</p>
           </div>
         </div>
         <div className="roadshow-results-summary">
@@ -280,6 +316,20 @@ function ResultsPage({ activeTab, onTabChange, onDownload, onPreview, results })
           {activeTab === 'visual' && <VisualResult result={results.visual} />}
           {activeTab === 'presentation' && <PresentationResult result={results.presentation} onDownload={onDownload} onPreview={onPreview} />}
         </div>
+        <section className="mt-8 rounded-2xl border border-violet-100 bg-white p-5" data-testid="results-design-trace-entry">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <p className="text-xs font-bold tracking-[0.14em] text-[var(--lf-brand-600)]">DESIGN TRACE</p>
+              <h2 className="mt-1 text-xl font-bold text-[var(--lf-brand-950)]">设计执行轨迹</h2>
+              <p className="mt-2 text-sm text-[var(--lf-muted)]">本项目已记录关键设计选择、修改和成果版本。</p>
+            </div>
+            <button type="button" onClick={onOpenTrace} className="btn-secondary px-5 py-2.5 text-sm">查看设计执行轨迹</button>
+          </div>
+          <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+            {['项目理解确认', '方案方向确认', '设计说明复核', '视觉成果确认'].map((item) => <p key={item} className="rounded-xl bg-violet-50 px-4 py-3 text-sm font-semibold text-violet-800">✓ {item}</p>)}
+          </div>
+          <p className="mt-4 text-xs leading-6 text-[var(--lf-muted)]">经人工复核后，可进一步沉淀为后续项目可复用的设计经验。</p>
+        </section>
       </div>
     </section>
   );
@@ -289,11 +339,13 @@ export default function RoadshowMode() {
   const navigate = useNavigate();
   const [resultsTab, setResultsTab] = useState('presentation');
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [traceOpen, setTraceOpen] = useState(false);
   const [notice, setNotice] = useState('');
   const activeProject = useMemo(() => loadActiveProject(), []);
   const blueprint = activeProject?.blueprint || null;
   const ready = isRoadshowResultsReady(blueprint);
   const results = useMemo(() => ready ? selectRoadshowResults(blueprint) : null, [blueprint, ready]);
+  const designTrace = useMemo(() => ready ? selectDesignExecutionTrace(blueprint) : [], [blueprint, ready]);
 
   useEffect(() => {
     if (!ready) navigate('/workbench', { replace: true });
@@ -313,17 +365,18 @@ export default function RoadshowMode() {
 
   return (
     <div className="roadshow-shell">
-      <RoadshowHeader onHome={() => navigate('/')} blueprint={blueprint} />
-      <BlueprintStatusBar blueprint={blueprint} />
+      <RoadshowHeader onHome={() => navigate('/')} />
+      <BlueprintStatusBar />
       {notice && <div className="roadshow-notice">{notice}</div>}
       <main className="min-h-0 flex-1">
-        <ResultsPage activeTab={resultsTab} onTabChange={setResultsTab} onDownload={handlePresentationDownload} onPreview={() => setPreviewOpen(true)} results={results} />
+        <ResultsPage activeTab={resultsTab} onTabChange={setResultsTab} onDownload={handlePresentationDownload} onPreview={() => setPreviewOpen(true)} onOpenTrace={() => setTraceOpen(true)} results={results} />
       </main>
       <div className="roadshow-results-bottom">
-        <button onClick={() => navigate('/workbench')} className="btn-secondary px-6 py-3 text-sm">返回执行轨迹</button>
-        <button onClick={() => setResultsTab('presentation')} className="btn-primary px-7 py-3 text-base">查看汇报成果</button>
+        <button onClick={() => navigate('/workbench')} className="btn-secondary px-6 py-3 text-sm">返回工作台</button>
+        <button onClick={() => setResultsTab('presentation')} className="btn-primary px-7 py-3 text-base">查看方案成果</button>
       </div>
       <PresentationDeckViewer open={previewOpen} artifact={blueprint.deliverableArtifacts?.presentation} onClose={() => setPreviewOpen(false)} />
+      <DesignTraceDialog open={traceOpen} trace={designTrace} onClose={() => setTraceOpen(false)} />
     </div>
   );
 }

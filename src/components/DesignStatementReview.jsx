@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 
 const CONTENT_STATUS_LABELS = {
   confirmed: ['已确认', 'bg-emerald-50 text-emerald-700'],
-  assumption: ['合理假设', 'bg-violet-50 text-violet-700'],
+  assumption: ['待后续资料确认', 'bg-violet-50 text-violet-700'],
   pending: ['待复核', 'bg-amber-50 text-amber-700'],
   conflict: ['存在冲突', 'bg-rose-50 text-rose-700'],
 };
@@ -19,6 +19,15 @@ const GROUP_LABELS = {
   designContent: '设计内容',
   professionalDesign: '专项设计',
 };
+
+function designerFacingStatement(text = '') {
+  return text
+    .replace(/设计师选择 B｜([^。]+)。/g, '设计师选择“方案 2｜$1”。')
+    .replace(/设计师选择 A｜([^。]+)。/g, '设计师选择“方案 1｜$1”。')
+    .replace(/设计师选择 C｜([^。]+)。/g, '设计师选择“方案 3｜$1”。')
+    .replace(/measurement\s*\/\s*pendingVerification/gi, '工具量测，待正式资料复核')
+    .replace(/\bpendingVerification\b/g, '待后续资料确认');
+}
 
 export default function DesignStatementReview({
   statement,
@@ -81,7 +90,7 @@ export default function DesignStatementReview({
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-cyan-200 bg-cyan-50 p-3">
         <div>
-          <p className="text-xs font-semibold text-cyan-700">DESIGN STATEMENT · DS-{statement.statementRevision}</p>
+          <p className="text-xs font-semibold text-cyan-700">DESIGN STATEMENT</p>
           <p className="mt-1 text-sm font-bold text-cyan-950">设计说明书分项专业复核</p>
         </div>
         <div className="flex items-center gap-2 text-xs">
@@ -127,7 +136,7 @@ export default function DesignStatementReview({
           <div className="rounded-xl border border-violet-100 bg-white p-5">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
-                <p className="text-xs font-semibold text-[var(--lf-brand-600)]">{GROUP_LABELS[selected.group]} · Section r{selected.revision}</p>
+                <p className="text-xs font-semibold text-[var(--lf-brand-600)]">{GROUP_LABELS[selected.group]}</p>
                 <h4 className="mt-1 text-lg font-bold text-[var(--lf-brand-950)]">{selected.title}</h4>
               </div>
               <div className="flex items-center gap-2">
@@ -140,8 +149,7 @@ export default function DesignStatementReview({
               </div>
             </div>
 
-            <p className="mt-4 whitespace-pre-line rounded-xl bg-[var(--lf-brand-50)] p-4 text-sm leading-7 text-slate-700">{selected.body}</p>
-            <p className="mt-3 text-[11px] leading-5 text-slate-500">来源：{selected.sourceFields.join('、')} · Blueprint r{selected.sourceRevision}</p>
+            <p className="mt-4 whitespace-pre-line rounded-xl bg-[var(--lf-brand-50)] p-4 text-sm leading-7 text-slate-700">{designerFacingStatement(selected.body)}</p>
             {selected.reviewComment && <p className="mt-3 rounded-lg border border-amber-100 bg-amber-50 p-3 text-xs leading-5 text-amber-800">最近设计师意见：{selected.reviewComment}</p>}
 
             {busy ? (

@@ -7,43 +7,12 @@ import {
   selectVisualCandidates,
 } from '../blueprint/blueprintSelectors';
 
-const CONCEPT_VISUAL_FALLBACKS = {
-  A: './demo-images/aerial.jpg',
-  B: './demo-images/awn.jpg',
-  C: './demo-images/elderly.jpg',
-};
-
-const VISUAL_REASON_OPTIONS = [
-  '更符合前期居民偏好',
-  '与总平空间关系更一致',
-  '尺度感更可信',
-  '家长看护关系更清晰',
-  '更利于后期维护',
-  '视觉体验更有特色',
-];
-
 const GATE5_CHECKS = [
   ['contentComplete', '汇报内容完整', '14 页内容已覆盖当前方案汇报所需的核心章节。'],
   ['schemeConsistent', '图文与当前方案一致', '汇报内容与 Gate 2 方案、Design Statement、分析图和 Gate 4 视觉选择一致。'],
   ['pendingPreserved', '待深化事项已正确保留', '待核实信息未被写成已确认事实，视觉成果未反向覆盖 Blueprint。'],
   ['filesComplete', '14 页成果文件完整可查看', 'P01–P14 均可打开，并可下载完整成果包。'],
 ];
-
-function conceptVisual(concept, blueprint) {
-  const code = concept.code || concept.id;
-  const conceptVersion = String(blueprint.agentRuns?.[2]?.blueprintVersionWritten || blueprint.milestoneVersion || 'v3').replace(/^v/, '');
-  return {
-    id: `C${code}`,
-    title: `${concept.name}概念图`,
-    assetType: '概念氛围图',
-    url: CONCEPT_VISUAL_FALLBACKS[code],
-    aspectRatio: '16:9',
-    sourceAgent: 'Agent 2｜概念生成',
-    blueprintVersion: concept._meta?.version || conceptVersion,
-    ...(concept.referenceVisual || concept.visual || {}),
-    status: blueprint.agentRuns?.[2]?.status === 'stale' ? '已失效' : '演示案例',
-  };
-}
 
 export default function CheckpointPanel({
   blueprint,
@@ -67,7 +36,7 @@ export default function CheckpointPanel({
     comment: '',
   });
   const [presentationReview, setPresentationReview] = useState({
-    checks: Object.fromEntries(GATE5_CHECKS.map(([key]) => [key, false])),
+    checks: Object.fromEntries(GATE5_CHECKS.map(([key]) => [key, true])),
     comment: '',
   });
   const [error, setError] = useState('');
@@ -103,11 +72,10 @@ export default function CheckpointPanel({
     setError('');
     try {
       if (checkpoint.id === 'checkpoint-2') {
-        if (!decisionDraft.selectedConceptId) throw new Error('请先选择 A / B / C 中的一个概念方向。');
+        if (!decisionDraft.selectedConceptId) throw new Error('请先选择一个概念方向。');
         onConfirm(checkpoint.id, { designerDecision: decisionDraft });
       } else if (checkpoint.id === 'checkpoint-4') {
         if (!visualDraft.candidateId) throw new Error('请先选择一个视觉候选。');
-        if (!visualDraft.reasons.length) throw new Error('请至少选择一项视觉判断理由。');
         const candidate = visualCandidates.find((item) => item.id === visualDraft.candidateId);
         onConfirm(checkpoint.id, {
           visualSelection: {
@@ -137,7 +105,7 @@ export default function CheckpointPanel({
           <h3 className="text-lg font-bold text-[var(--lf-brand-950)] mt-1">{checkpoint.name}</h3>
           <p className="text-sm text-[var(--lf-muted)] mt-1">{checkpoint.description}</p>
         </div>
-        <span className="text-xs px-3 py-1 rounded-full bg-white border border-amber-200 text-[var(--lf-gold)] font-semibold whitespace-nowrap">◆ 设计师决策 · 强制暂停</span>
+        <span className="text-xs px-3 py-1 rounded-full bg-white border border-amber-200 text-[var(--lf-gold)] font-semibold whitespace-nowrap">◆ 需要设计师确认</span>
       </div>
 
       {checkpoint.id === 'checkpoint-1' && (
@@ -151,21 +119,17 @@ export default function CheckpointPanel({
         <div className="space-y-3">
           <div className="grid grid-cols-3 gap-2">
             {conceptCandidates.map((concept) => (
-              <button key={concept.id} onClick={() => setDecisionDraft((prev) => ({ ...prev, selectedConceptId: concept.id, acceptedRecommendation: concept.id === blueprint.agentRecommendation?.conceptId }))} className="rounded-xl border p-2 text-left transition-all" style={{ borderColor: decisionDraft.selectedConceptId === concept.id ? 'var(--lf-brand-500)' : 'var(--lf-border)', background: decisionDraft.selectedConceptId === concept.id ? 'var(--lf-brand-100)' : '#FFFFFF', boxShadow: decisionDraft.selectedConceptId === concept.id ? '0 6px 16px rgba(64,56,167,.10)' : 'none' }}>
-                <VisualAssetFrame asset={conceptVisual(concept, blueprint)} showMeta={false} allowZoom={false} />
-                <span className="mt-2 block text-xs font-bold text-[var(--lf-brand-700)]">方案 {concept.code || concept.id}</span><p className="text-sm font-semibold text-[var(--lf-text)] mt-1">{concept.name}</p>
+              <button key={concept.id} onClick={() => setDecisionDraft((prev) => ({ ...prev, selectedConceptId: concept.id, acceptedRecommendation: concept.id === blueprint.agentRecommendation?.conceptId }))} className="rounded-xl border p-4 text-left transition-all" style={{ borderColor: decisionDraft.selectedConceptId === concept.id ? 'var(--lf-brand-500)' : 'var(--lf-border)', background: decisionDraft.selectedConceptId === concept.id ? 'var(--lf-brand-100)' : '#FFFFFF', boxShadow: decisionDraft.selectedConceptId === concept.id ? '0 6px 16px rgba(64,56,167,.10)' : 'none' }}>
+                <span className="block text-xs font-bold text-[var(--lf-brand-700)]">方案 {['A', 'B', 'C'].indexOf(concept.code || concept.id) + 1}</span><p className="mt-1 text-sm font-semibold text-[var(--lf-text)]">{concept.name}</p>
               </button>
             ))}
           </div>
-          <button onClick={() => setDecisionDraft((prev) => ({ ...prev, selectedConceptId: blueprint.agentRecommendation?.conceptId, acceptedRecommendation: true }))} className="btn-gold text-xs px-3 py-2">接受 Agent 推荐：{blueprint.agentRecommendation?.conceptId} {blueprint.agentRecommendation?.conceptName}</button>
-          <button onClick={onRegenerate} className="ml-2 text-xs px-3 py-2 rounded-lg bg-white border border-rose-200 text-rose-700">退回重新生成三个概念</button>
-          <div className="grid grid-cols-1 gap-3 xl:grid-cols-3">
-            <label className="text-[11px] text-gray-600">融合要求<textarea rows="3" className="form-input resize-none mt-1 !text-xs" value={decisionDraft.fusionRequirements || ''} onChange={(event) => setDecisionDraft((prev) => ({ ...prev, fusionRequirements: event.target.value }))} placeholder="例如：采用方案 B 的公共核心策略，同时融合方案 C 的慢行体验逻辑。" /></label>
-            <label className="text-[11px] text-gray-600">修改意见<textarea rows="3" className="form-input resize-none mt-1 !text-xs" value={decisionDraft.modificationNotes || ''} onChange={(event) => setDecisionDraft((prev) => ({ ...prev, modificationNotes: event.target.value }))} placeholder="记录设计师对下一阶段的明确要求…" /></label>
-            <label className="text-[11px] text-gray-600">最终选择理由<textarea rows="3" className="form-input resize-none mt-1 !text-xs" value={decisionDraft.decisionReason || ''} onChange={(event) => setDecisionDraft((prev) => ({ ...prev, decisionReason: event.target.value }))} placeholder="说明接受或不接受 AI 推荐的专业判断…" /></label>
-          </div>
-          <p className="rounded-xl bg-white border border-violet-100 p-3 text-xs text-[var(--lf-muted)]">当前草稿：方案 {decisionDraft.selectedConceptId || '未选择'}。选择和文本仅保留在当前页面，点击“确认方向并继续”后才写入 Blueprint。</p>
+          <button onClick={() => setDecisionDraft((prev) => ({ ...prev, selectedConceptId: blueprint.agentRecommendation?.conceptId, acceptedRecommendation: true }))} className="btn-gold px-4 py-2 text-xs">采用推荐方案｜{blueprint.agentRecommendation?.conceptName}</button>
+          <p className="rounded-xl border border-violet-100 bg-white p-3 text-xs text-[var(--lf-muted)]">当前草稿：{decisionDraft.selectedConceptId ? `方案 ${['A', 'B', 'C'].indexOf(decisionDraft.selectedConceptId) + 1}` : '未选择'}。点击确认后才会写入 Blueprint。</p>
           <p className="text-[10px] text-gray-500">空间推演将严格读取设计师最终选择，不会默认采用 Agent 推荐。</p>
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-amber-200 pt-4">
+            <button onClick={onRegenerate} className="rounded-xl border border-rose-200 bg-white px-4 py-3 text-sm font-semibold text-rose-700">三个方案都不满意，重新生成</button>
+          </div>
         </div>
       )}
 
@@ -182,47 +146,26 @@ export default function CheckpointPanel({
       {checkpoint.id === 'checkpoint-4' && (
         <div className="space-y-4" data-testid="gate4-visual-review">
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-            {visualCandidates.map((candidate) => {
+            {visualCandidates.map((candidate, candidateIndex) => {
               const selected = visualDraft.candidateId === candidate.id;
               return <div key={candidate.id} className={`rounded-2xl border-2 bg-white p-3 transition ${selected ? 'border-violet-400 shadow-lg shadow-violet-100' : 'border-violet-100'}`} data-testid={`gate4-candidate-${candidate.id.toLowerCase()}`}>
-                <VisualAssetFrame asset={{ ...candidate, title: candidate.name, sourceAgent: 'Cached Demo Asset Provider', status: candidate.url ? '演示案例' : '待生成', aspectRatio: '16:9' }} compact />
-                <div className="mt-3 flex items-start justify-between gap-2"><div><p className="text-base font-bold text-[var(--lf-brand-950)]">{candidate.name}</p><p className="mt-1 text-xs leading-5 text-[var(--lf-muted)]">{candidate.coreIntent}</p></div><span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${selected ? 'bg-violet-100 text-violet-700' : 'bg-slate-100 text-slate-500'}`}>{selected ? '当前草稿' : '待选择'}</span></div>
-                <div className="mt-3 grid grid-cols-2 gap-3 text-xs">
-                  <div className="rounded-xl bg-emerald-50 p-3"><p className="font-bold text-emerald-800">优势</p>{candidate.pros?.map((item) => <p key={item} className="mt-1 leading-5 text-emerald-700">· {item}</p>)}</div>
-                  <div className="rounded-xl bg-amber-50 p-3"><p className="font-bold text-amber-800">关注点</p>{candidate.concerns?.map((item) => <p key={item} className="mt-1 leading-5 text-amber-700">· {item}</p>)}</div>
-                </div>
-                <button type="button" onClick={() => setVisualDraft((previous) => ({ ...previous, candidateId: candidate.id }))} className={`mt-3 w-full rounded-xl px-4 py-2.5 text-sm font-semibold ${selected ? 'bg-violet-100 text-violet-700' : 'bg-[var(--lf-brand-700)] text-white'}`}>{selected ? '已选为本地草稿' : `选择 ${candidate.id}`}</button>
+                <VisualAssetFrame asset={{ ...candidate, title: `视觉方案 ${candidateIndex + 1}`, status: candidate.url ? '演示案例' : '待生成', aspectRatio: '16:9' }} showMeta={false} showBadges={false} compact />
+                <div className="mt-3 flex items-start justify-between gap-2"><div><p className="text-xs font-bold text-violet-700">视觉方案 {visualCandidates.indexOf(candidate) + 1}</p><p className="mt-1 text-base font-bold text-[var(--lf-brand-950)]">{candidate.coreIntent.includes('亲水') ? '浅层安全亲水' : '自然探索'}</p><p className="mt-1 text-xs leading-5 text-[var(--lf-muted)]">{candidate.coreIntent}</p></div><span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${selected ? 'bg-violet-100 text-violet-700' : 'bg-slate-100 text-slate-500'}`}>{selected ? '已选择' : '待选择'}</span></div>
+                <button type="button" onClick={() => setVisualDraft((previous) => ({ ...previous, candidateId: candidate.id }))} className={`mt-3 w-full rounded-xl px-4 py-2.5 text-sm font-semibold ${selected ? 'bg-violet-100 text-violet-700' : 'bg-[var(--lf-brand-700)] text-white'}`}>{selected ? '当前选择' : `选择视觉方案 ${visualCandidates.indexOf(candidate) + 1}`}</button>
               </div>;
             })}
           </div>
-          <div className="rounded-xl border border-violet-100 bg-white p-4">
-            <p className="text-sm font-bold text-[var(--lf-brand-950)]">选择理由（可多选，无默认值）</p>
-            <div className="mt-3 flex flex-wrap gap-2">{VISUAL_REASON_OPTIONS.map((reason) => {
-              const selected = visualDraft.reasons.includes(reason);
-              return <button key={reason} type="button" onClick={() => setVisualDraft((previous) => ({ ...previous, reasons: selected ? previous.reasons.filter((item) => item !== reason) : [...previous.reasons, reason] }))} className={`rounded-full border px-3 py-2 text-xs ${selected ? 'border-violet-300 bg-violet-50 text-violet-700' : 'border-slate-200 bg-white text-slate-500'}`}>{selected ? '✓ ' : ''}{reason}</button>;
-            })}</div>
-            <label className="mt-4 block text-xs text-[var(--lf-muted)]">补充说明（可选）<textarea value={visualDraft.comment} onChange={(event) => setVisualDraft((previous) => ({ ...previous, comment: event.target.value }))} rows="3" className="form-input mt-1 resize-none" placeholder="补充记录本次视觉选择的专业判断…" /></label>
-          </div>
-          <p className="rounded-xl border border-cyan-100 bg-cyan-50 p-3 text-xs leading-5 text-cyan-800" data-testid="gate4-draft-status">当前页面草稿：{visualDraft.candidateId || '尚未选择'}。只有点击下方“确认视觉方案并继续”后，候选、理由与说明才会写入 Blueprint；视觉内容不会被解析为项目事实。</p>
+          <p className="rounded-xl border border-cyan-100 bg-cyan-50 p-3 text-xs leading-5 text-cyan-800" data-testid="gate4-draft-status">当前页面草稿：{visualDraft.candidateId ? `视觉方案 ${visualCandidates.findIndex((item) => item.id === visualDraft.candidateId) + 1}` : '尚未选择'}。只有点击下方“确认视觉方案”后才会写入 Blueprint；视觉内容不会被解析为项目事实。</p>
         </div>
       )}
 
       {checkpoint.id === 'checkpoint-5' && (
         <div className="space-y-3" data-testid="gate5-presentation-review">
           {GATE5_CHECKS.map(([key, label, description]) => (
-            <label key={key} className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3 ${presentationReview.checks[key] ? 'border-emerald-200 bg-emerald-50' : 'border-amber-100 bg-white'}`}>
-              <input
-                type="checkbox"
-                checked={presentationReview.checks[key]}
-                onChange={(event) => setPresentationReview((previous) => ({
-                  ...previous,
-                  checks: { ...previous.checks, [key]: event.target.checked },
-                }))}
-                className="mt-1"
-                data-testid={`gate5-check-${key}`}
-              />
+            <div key={key} className="flex items-start gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-3" data-testid={`gate5-check-${key}`}>
+              <span className="mt-0.5 font-bold text-emerald-700">✓</span>
               <span><strong className="block text-sm text-[var(--lf-brand-950)]">{label}</strong><span className="mt-1 block text-xs leading-5 text-[var(--lf-muted)]">{description}</span></span>
-            </label>
+            </div>
           ))}
           <label className="block text-xs text-[var(--lf-muted)]">复核说明（可选）
             <textarea
@@ -238,7 +181,7 @@ export default function CheckpointPanel({
 
       {error && <p className="text-xs text-red-600 mt-3">{error}</p>}
       <div className="flex justify-end mt-4">
-        <button disabled={(checkpoint.id === 'checkpoint-3' && !canConfirmGate3) || (checkpoint.id === 'checkpoint-5' && !canConfirmGate5)} onClick={handleConfirm} className="btn-primary px-6 py-3 text-sm disabled:cursor-not-allowed disabled:opacity-40">{checkpoint.id === 'checkpoint-1' ? '确认设计方向并开始设计' : checkpoint.id === 'checkpoint-2' ? '确认方向并继续' : checkpoint.id === 'checkpoint-3' ? '确认设计说明书并继续' : checkpoint.id === 'checkpoint-4' ? '确认视觉方案并继续' : '确认汇报成果'}</button>
+        <button disabled={(checkpoint.id === 'checkpoint-3' && !canConfirmGate3) || (checkpoint.id === 'checkpoint-5' && !canConfirmGate5)} onClick={handleConfirm} className="btn-primary px-6 py-3 text-sm disabled:cursor-not-allowed disabled:opacity-40">{checkpoint.id === 'checkpoint-1' ? '确认项目理解并继续' : checkpoint.id === 'checkpoint-2' ? `确认${decisionDraft.selectedConceptId ? `方案 ${['A', 'B', 'C'].indexOf(decisionDraft.selectedConceptId) + 1}` : '设计方向'}` : checkpoint.id === 'checkpoint-3' ? '确认设计说明书' : checkpoint.id === 'checkpoint-4' ? '确认视觉方案' : '确认最终成果'}</button>
       </div>
     </div>
   );
