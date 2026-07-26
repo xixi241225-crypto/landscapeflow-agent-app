@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import PresentationDeckViewer from '../PresentationDeckViewer';
 import {
   isRoadshowResultsReady,
   selectRoadshowResults,
@@ -53,7 +54,7 @@ function RoadshowHeader({ onHome, blueprint }) {
       </div>
       <div className="hidden shrink-0 text-right lg:block">
         <p className="text-xs font-bold text-[var(--lf-brand-700)]">Blueprint {blueprint.milestoneVersion} · Results</p>
-        <p className="mt-0.5 text-xs text-[var(--lf-muted)]">真实项目成果只读展示</p>
+        <p className="mt-0.5 text-xs text-[var(--lf-muted)]">最终交付成果</p>
       </div>
     </header>
   );
@@ -77,7 +78,7 @@ function ResultsTabs({ active, onChange }) {
     ['definition', '项目定义与概念'],
     ['spatial', '总平面与分析'],
     ['visual', '视觉表达'],
-    ['ppt', '汇报 PPT 结构'],
+    ['presentation', '方案汇报成果'],
   ];
   return (
     <div className="roadshow-results-tabs">
@@ -200,30 +201,30 @@ function VisualResult({ result }) {
   );
 }
 
-function PptResult({ result, onDownload }) {
+function PresentationResult({ result, onDownload, onPreview }) {
   return (
     <div>
       <article className="roadshow-ppt-file">
-        <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-[var(--lf-brand-950)] text-lg font-black text-white">PPT</div>
+        <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-[var(--lf-brand-950)] text-lg font-black text-white">14P</div>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <h2 className="truncate text-2xl font-bold text-[var(--lf-brand-950)]">{result.fileName}</h2>
-            <span className="roadshow-status-pill success">{result.pageCount} 页内容结构已生成</span>
-            {!result.fileUrl && <span className="roadshow-status-pill pending">PPTX 待后续接入</span>}
+            <h2 className="truncate text-2xl font-bold text-[var(--lf-brand-950)]">{result.title}</h2>
+            <span className="roadshow-status-pill success">{result.pageCount} 页成果已确认</span>
           </div>
           <p className="mt-2 text-base text-[var(--lf-muted)]">{result.status}</p>
         </div>
-        <button onClick={onDownload} className="btn-secondary shrink-0 px-6 py-3 text-base">
-          {result.fileUrl ? '下载可编辑 PPT' : '查看交付状态'}
-        </button>
+        <div className="flex shrink-0 gap-2">
+          <button onClick={onPreview} className="btn-secondary px-5 py-3 text-base">全屏预览</button>
+          <a href={result.fileUrl} download={result.fileName} onClick={onDownload} className="btn-primary px-5 py-3 text-base">下载完整成果包</a>
+        </div>
       </article>
 
       <div className="mt-6 flex items-end justify-between gap-4">
         <div>
-          <p className="roadshow-eyebrow">{result.pageCount}-PAGE BLUEPRINT DECK</p>
-          <h2 className="mt-1 text-2xl font-bold text-[var(--lf-brand-950)]">完整汇报 PPT 结构总览</h2>
+          <p className="roadshow-eyebrow">{result.pageCount}-PAGE PRESENTATION IMAGE DECK</p>
+          <h2 className="mt-1 text-2xl font-bold text-[var(--lf-brand-950)]">完整方案汇报成果</h2>
         </div>
-        <p className="hidden text-sm text-[var(--lf-muted)] md:block">页面文字来自 Blueprint · 图片仅映射已有成果资产</p>
+        <p className="hidden text-sm text-[var(--lf-muted)] md:block">P01–P14 已通过 Gate 5 复核</p>
       </div>
       <div className="roadshow-slide-grid">
         {result.slides.map((slide) => (
@@ -236,7 +237,7 @@ function PptResult({ result, onDownload }) {
             <div className="p-3.5">
               <h3>{slide.title}</h3>
               <p>{slide.upScreenCopy}</p>
-              <small>建议视觉：{slide.suggestedVisual}</small>
+              <small>{slide.suggestedVisual}</small>
             </div>
           </article>
         ))}
@@ -245,7 +246,7 @@ function PptResult({ result, onDownload }) {
   );
 }
 
-function ResultsPage({ activeTab, onTabChange, onDownload, results }) {
+function ResultsPage({ activeTab, onTabChange, onDownload, onPreview, results }) {
   const project = results.project;
   const areaLabel = /㎡|平方米|平米|m²/i.test(project.area) ? project.area : `${project.area}㎡`;
   return (
@@ -256,7 +257,8 @@ function ResultsPage({ activeTab, onTabChange, onDownload, results }) {
             <p className="roadshow-eyebrow">COMPLETE LANDSCAPE SCHEME</p>
             <h1>{project.projectName}</h1>
             <p className="mt-2 text-sm font-semibold text-[var(--lf-muted)]">{project.location} · {areaLabel} · {project.projectType}</p>
-            <p className="mt-1 font-semibold text-emerald-700">完整景观方案成果已生成</p>
+            <p className="mt-1 text-sm font-semibold text-[var(--lf-brand-700)]">当前方案：{results.definition.selectedConcept?.name || '待确认'}</p>
+            <p className="mt-1 font-semibold text-emerald-700">最终状态：已完成</p>
           </div>
           <div className="hidden rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-3 text-right md:block">
             <p className="text-sm font-semibold text-emerald-700">唯一数据源</p>
@@ -266,12 +268,17 @@ function ResultsPage({ activeTab, onTabChange, onDownload, results }) {
         <div className="roadshow-results-summary">
           {results.summary.map((item) => <div key={item.key}><strong>{item.value}</strong><span>{item.label}</span></div>)}
         </div>
+        <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4" data-testid="final-deliverable-checklist">
+          {['设计说明', '专业分析图', '重点视觉成果', '14 页景观概念方案汇报'].map((item) => (
+            <div key={item} className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">✓ {item}</div>
+          ))}
+        </div>
         <ResultsTabs active={activeTab} onChange={onTabChange} />
         <div className="mt-6">
           {activeTab === 'definition' && <DefinitionResult result={results.definition} />}
           {activeTab === 'spatial' && <SpatialResult result={results.spatial} />}
           {activeTab === 'visual' && <VisualResult result={results.visual} />}
-          {activeTab === 'ppt' && <PptResult result={results.ppt} onDownload={onDownload} />}
+          {activeTab === 'presentation' && <PresentationResult result={results.presentation} onDownload={onDownload} onPreview={onPreview} />}
         </div>
       </div>
     </section>
@@ -280,7 +287,8 @@ function ResultsPage({ activeTab, onTabChange, onDownload, results }) {
 
 export default function RoadshowMode() {
   const navigate = useNavigate();
-  const [resultsTab, setResultsTab] = useState('ppt');
+  const [resultsTab, setResultsTab] = useState('presentation');
+  const [previewOpen, setPreviewOpen] = useState(false);
   const [notice, setNotice] = useState('');
   const activeProject = useMemo(() => loadActiveProject(), []);
   const blueprint = activeProject?.blueprint || null;
@@ -297,15 +305,8 @@ export default function RoadshowMode() {
     return () => clearTimeout(timer);
   }, [notice]);
 
-  const handlePptDownload = useCallback(() => {
-    if (!results?.ppt.fileUrl) {
-      setNotice(`${results?.ppt.pageCount || 0} 页内容结构已生成；可编辑 PPTX 待后续接入。`);
-      return;
-    }
-    const link = document.createElement('a');
-    link.href = results.ppt.fileUrl;
-    link.download = results.ppt.fileName;
-    link.click();
+  const handlePresentationDownload = useCallback(() => {
+    setNotice('完整成果包下载已开始。');
   }, [results]);
 
   if (!ready || !results) return null;
@@ -316,12 +317,13 @@ export default function RoadshowMode() {
       <BlueprintStatusBar blueprint={blueprint} />
       {notice && <div className="roadshow-notice">{notice}</div>}
       <main className="min-h-0 flex-1">
-        <ResultsPage activeTab={resultsTab} onTabChange={setResultsTab} onDownload={handlePptDownload} results={results} />
+        <ResultsPage activeTab={resultsTab} onTabChange={setResultsTab} onDownload={handlePresentationDownload} onPreview={() => setPreviewOpen(true)} results={results} />
       </main>
       <div className="roadshow-results-bottom">
         <button onClick={() => navigate('/workbench')} className="btn-secondary px-6 py-3 text-sm">返回执行轨迹</button>
-        <button onClick={() => setResultsTab('ppt')} className="btn-primary px-7 py-3 text-base">查看 PPT 结构</button>
+        <button onClick={() => setResultsTab('presentation')} className="btn-primary px-7 py-3 text-base">查看汇报成果</button>
       </div>
+      <PresentationDeckViewer open={previewOpen} artifact={blueprint.deliverableArtifacts?.presentation} onClose={() => setPreviewOpen(false)} />
     </div>
   );
 }

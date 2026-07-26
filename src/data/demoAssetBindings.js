@@ -24,6 +24,8 @@ export const DEMO_ASSET_BINDINGS = {
         ],
         status: 'approvedDemoAsset',
         provenance: {
+          generationMode: 'externalAgentGenerated',
+          generationProvider: 'WorkBuddy Agent',
           candidateId: 'B',
           candidateOrigin: 'projectReferenceDirection',
         },
@@ -49,6 +51,8 @@ export const DEMO_ASSET_BINDINGS = {
         ],
         status: 'approvedDemoAsset',
         provenance: {
+          generationMode: 'externalAgentGenerated',
+          generationProvider: 'WorkBuddy Agent',
           childrenWaterSource: 'preliminaryResidentResearch',
           childrenWaterStatus: 'preference',
         },
@@ -76,6 +80,8 @@ export const DEMO_ASSET_BINDINGS = {
         ],
         status: 'approvedDemoAsset',
         provenance: {
+          generationMode: 'externalAgentGenerated',
+          generationProvider: 'WorkBuddy Agent',
           reviewLevel: 'designDirector',
           reviewScope: 'spatialScaleAndFunction',
         },
@@ -113,6 +119,8 @@ export const DEMO_ASSET_BINDINGS = {
         candidateStatus: 'candidate',
         selectedVisual: false,
         provenance: {
+          generationMode: 'externalAgentGenerated',
+          generationProvider: 'WorkBuddy Agent',
           candidateOrigin: 'demoVisualCandidate',
           preferenceSource: 'preliminaryResidentResearch',
           preferenceStatus: 'preference',
@@ -146,6 +154,8 @@ export const DEMO_ASSET_BINDINGS = {
         candidateStatus: 'candidate',
         selectedVisual: false,
         provenance: {
+          generationMode: 'externalAgentGenerated',
+          generationProvider: 'WorkBuddy Agent',
           candidateOrigin: 'demoVisualCandidate',
           shadeSource: 'designPreference',
           shadeStatus: 'targetExperience',

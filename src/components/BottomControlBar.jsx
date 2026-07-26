@@ -26,9 +26,10 @@ export default function BottomControlBar({
   if (presentationMode) {
     const completeCount = presentationAgentStates.filter((status) => status === '已完成').length;
     const activeCheckpoint = blueprint.checkpoints?.find((checkpoint) => checkpoint.id === blueprint.currentCheckpoint);
-    const waitingForDesigner = ['checkpoint-2', 'checkpoint-3', 'checkpoint-4'].includes(activeCheckpoint?.id);
+    const waitingForDesigner = ['checkpoint-2', 'checkpoint-3', 'checkpoint-4', 'checkpoint-5'].includes(activeCheckpoint?.id);
     const agent6Ready = blueprint.checkpoints?.find((checkpoint) => checkpoint.id === 'checkpoint-4')?.status === '已确认'
       && blueprint.agentRuns?.[6]?.status === 'pending';
+    const gate5Confirmed = blueprint.checkpoints?.find((checkpoint) => checkpoint.id === 'checkpoint-5')?.status === '已确认';
     return (
       <div className="absolute bottom-0 left-0 right-0 z-30 border-t border-[var(--lf-border)] bg-white/95 px-5 py-3 backdrop-blur-md">
         <div className="mx-auto flex max-w-[980px] items-center justify-between gap-4">
@@ -51,7 +52,7 @@ export default function BottomControlBar({
               <div className="min-w-0 flex-1">
                 <div className="flex items-center justify-between text-sm">
                   <span className={completeCount === 6 ? 'font-semibold text-emerald-700' : 'font-semibold text-[var(--lf-brand-700)]'}>
-                    {completeCount === 6 ? '六个专业 Agent 已全部完成' : waitingForDesigner ? `等待设计师：${activeCheckpoint.name}` : agent6Ready ? 'Gate 4 已确认｜Agent 6 成果输出为下一可运行步骤' : '正在生成完整方案……'}
+                    {gate5Confirmed ? '最终汇报成果已确认' : waitingForDesigner ? `等待设计师：${activeCheckpoint.name}` : completeCount === 6 ? '六个专业 Agent 已完成｜等待 Gate 5 确认' : agent6Ready ? 'Gate 4 已确认｜正在准备 Agent 6 成果输出' : '正在生成完整方案……'}
                   </span>
                   <span className="text-[var(--lf-muted)]">{completeCount} / 6</span>
                 </div>
@@ -59,7 +60,7 @@ export default function BottomControlBar({
                   <span className="block h-full rounded-full bg-gradient-to-r from-[var(--lf-brand-700)] to-cyan-500 transition-all" style={{ width: `${completeCount / 6 * 100}%` }} />
                 </div>
               </div>
-              {completeCount === 6 && <button onClick={onOpenResults} className="btn-primary shrink-0 px-7 py-3 text-base">查看完整成果</button>}
+              {gate5Confirmed && <button onClick={onOpenResults} className="btn-primary shrink-0 px-7 py-3 text-base">查看完整成果</button>}
             </>
           )}
         </div>
@@ -76,8 +77,8 @@ export default function BottomControlBar({
       ? '当前阶段尚未执行'
       : viewedRun?.status === 'stale'
         ? '当前成果需要重新生成'
-        : viewedStep === 5 && outputWorkflowStep < 4
-            ? '请先完成方案文案与 PPT 预览'
+        : viewedStep === 5 && blueprint.checkpoints?.find((item) => item.id === 'checkpoint-5')?.status !== '已确认'
+            ? '请先完成汇报成果确认'
             : checkpointForViewed && checkpointForViewed.status !== '已确认'
               ? `等待${checkpointForViewed.name}`
               : '';

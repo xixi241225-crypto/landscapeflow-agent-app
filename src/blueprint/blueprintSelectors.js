@@ -1,4 +1,5 @@
 import { BLUEPRINT_ITEM_STATUS } from './blueprintModel.js';
+import { validatePresentationArtifact } from './presentationArtifactService.js';
 
 export const BLUEPRINT_STATUS_LABELS = {
   [BLUEPRINT_ITEM_STATUS.CONFIRMED]: '已确认',
@@ -339,6 +340,34 @@ export function selectVisualReview(blueprint) {
   return selectVisualExpression(blueprint).visualReview;
 }
 
+export function selectPresentationArtifact(blueprint) {
+  return blueprint?.deliverableArtifacts?.presentation || null;
+}
+
+export function selectPresentationDeliverableInput(blueprint) {
+  const projectInput = selectProjectInputForAgents(blueprint);
+  const selectedConcept = selectConceptCandidate(blueprint, blueprint?.designerDecision?.selectedConceptId);
+  return {
+    projectId: blueprint?.project?.projectId || blueprint?.projectId || '',
+    demoArtifactBinding: blueprint?.project?.demoArtifactBinding || '',
+    project: {
+      projectName: projectInput.projectName,
+      location: projectInput.city,
+      area: projectInput.area,
+      projectType: projectInput.projectType,
+    },
+    selectedConcept,
+    designerDecision: blueprint?.designerDecision || null,
+    designStatement: blueprint?.deliverableArtifacts?.designStatement || null,
+    analysisAssets: selectAnalysisAssets(blueprint),
+    selectedVisuals: selectSelectedVisuals(blueprint),
+    visualReview: selectVisualReview(blueprint),
+    pendingVerification: asArray(blueprint?.pendingVerification),
+    trace: selectProjectExecutionTrace(blueprint),
+    sourceBlueprintRevision: blueprint?.revision ?? blueprint?.currentVersion ?? 0,
+  };
+}
+
 export function selectAgentExecution(blueprint, agentId) {
   return [...(blueprint?.agentExecutions || [])].reverse().find((item) => item.agentId === `agent-${agentId}` || item.agentId === Number(agentId)) || null;
 }
@@ -425,10 +454,50 @@ export function selectVisualDecisionTrace(blueprint) {
   ].sort((a, b) => new Date(a.completedAt || a.startedAt || 0) - new Date(b.completedAt || b.startedAt || 0));
 }
 
+export function selectPresentationTrace(blueprint) {
+  const executions = (blueprint?.agentExecutions || []).filter((execution) => (
+    execution.agentId === 'agent-6'
+    && ['presentation-artifact-registration', 'presentation-quality-review'].includes(execution.executionType)
+  ));
+  const reviewEvents = (blueprint?.changeLog || []).filter((event) => (
+    ['presentation-artifact-registration', 'presentation-deliverable-review'].includes(event.type)
+  ));
+  return [
+    ...executions.map((execution) => ({
+      traceId: execution.traceId,
+      type: execution.executionType,
+      actor: execution.agentName || '成果输出',
+      action: execution.executionType === 'presentation-artifact-registration' ? 'registered' : 'validated',
+      artifactId: execution.artifactId,
+      artifactType: execution.artifactType,
+      pageCount: execution.pageCount,
+      deckHash: execution.deckHash,
+      sourceBlueprintRevision: execution.sourceBlueprintRevision,
+      sourceDesignStatementRevision: execution.sourceDesignStatementRevision,
+      sourceVisualReviewRevision: execution.sourceVisualReviewRevision,
+      completedAt: execution.completedAt,
+      status: execution.status,
+    })),
+    ...reviewEvents.map((event) => ({
+      traceId: event.traceId,
+      type: event.type,
+      actor: event.sourceAgent,
+      action: event.action,
+      artifactId: event.artifactId,
+      pageCount: event.pageCount,
+      checks: event.checks || null,
+      comment: event.comment || '',
+      completedAt: event.modifiedAt,
+      status: event.confirmationStatus,
+    })),
+  ].sort((a, b) => new Date(a.completedAt || 0) - new Date(b.completedAt || 0));
+}
+
 export function selectProjectExecutionTrace(blueprint) {
   return [
     ...selectDesignExecutionTrace(blueprint),
     ...selectVisualDecisionTrace(blueprint),
+    ...selectPresentationTrace(blueprint),
   ].sort((a, b) => new Date(a.completedAt || a.requestedAt || a.startedAt || 0) - new Date(b.completedAt || b.requestedAt || b.startedAt || 0));
 }
 
@@ -453,6 +522,7 @@ export function selectRoadshowAgentSummaries(blueprint) {
   const visualAssets = asArray(blueprint?.visualAssets);
   const pptOutline = asArray(blueprint?.pptOutline || blueprint?.pptStructure);
   const artifacts = asArray(blueprint?.outputArtifacts);
+  const presentation = selectPresentationArtifact(blueprint);
   const definitions = [
     { id: 1, name: '前期分析', result: selectAgent1ExecutionSummary(blueprint) },
     { id: 2, name: '概念生成', result: selectAgent2ExecutionSummary(blueprint) },
@@ -480,8 +550,10 @@ export function selectRoadshowAgentSummaries(blueprint) {
     {
       id: 6,
       name: '成果输出',
-      result: pptOutline.length
-        ? `已生成 ${pptOutline.length} 页汇报结构与 ${artifacts.length} 类成果清单`
+      result: presentation?.status === 'current'
+        ? `已登记并校验 ${presentation.pageCount} 页方案汇报成果与 ${artifacts.length} 类成果清单`
+        : pptOutline.length
+          ? `已组织 ${pptOutline.length} 页汇报内容，等待登记最终成果`
         : '等待生成汇报结构与成果清单',
     },
   ];
@@ -494,12 +566,19 @@ export function selectRoadshowAgentSummaries(blueprint) {
 export function isRoadshowResultsReady(blueprint) {
   if (!blueprint) return false;
   const allAgentsDone = [1, 2, 3, 4, 5, 6].every((agentId) => blueprint.agentRuns?.[agentId]?.status === 'done');
-  const pptOutline = asArray(blueprint.pptOutline || blueprint.pptStructure);
   const gate3Confirmed = blueprint.checkpoints?.find((checkpoint) => checkpoint.id === 'checkpoint-3')?.status === '已确认';
   const gate4Confirmed = blueprint.checkpoints?.find((checkpoint) => checkpoint.id === 'checkpoint-4')?.status === '已确认';
+  const gate5Confirmed = blueprint.checkpoints?.find((checkpoint) => checkpoint.id === 'checkpoint-5')?.status === '已确认';
   const designStatement = blueprint.deliverableArtifacts?.designStatement;
   const designStatementReady = !designStatement || designStatement.status === 'approved';
-  return allAgentsDone && pptOutline.length > 0 && gate3Confirmed && gate4Confirmed && designStatementReady;
+  const artifactValidation = validatePresentationArtifact(blueprint, selectPresentationArtifact(blueprint));
+  return allAgentsDone
+    && gate3Confirmed
+    && gate4Confirmed
+    && gate5Confirmed
+    && designStatementReady
+    && blueprint.status === 'completed'
+    && artifactValidation.valid;
 }
 
 function selectPptImage(page, index, assets) {
@@ -552,27 +631,17 @@ export function selectRoadshowResults(blueprint) {
   const planVisuals = visualAssets.filter((asset) => /总平|正投影/.test(`${asset.assetType || ''} ${asset.angle || ''}`));
   const analysisVisuals = visualAssets.filter((asset) => /分析/.test(`${asset.assetType || ''} ${asset.angle || ''}`));
   const renderings = visualAssets.filter((asset) => !planVisuals.includes(asset) && !analysisVisuals.includes(asset));
-  const pptOutline = asArray(blueprint?.pptOutline || blueprint?.pptStructure);
-  const pptArtifact = asArray(blueprint?.outputArtifacts).find((item) => item.action === 'ppt' || /PPT/i.test(item.type || ''));
-  const imageSources = {
-    concept: selectedConcept?.referenceVisual || null,
-    plan: planAsset || planVisuals[0] || null,
-    analysis: analysisVisuals,
-    renderings,
-  };
-  const slides = pptOutline.map((page, index) => {
-    const imageAsset = selectPptImage(page, index, imageSources);
-    return {
-      number: page.page || index + 1,
-      title: page.title || `第 ${index + 1} 页`,
-      content: page.content || page.upScreenCopy || '',
-      upScreenCopy: page.upScreenCopy || page.content || '',
-      suggestedVisual: page.suggestedVisual || '视觉内容待深化',
-      sourceFields: asArray(page.sourceFields),
-      image: imageAsset?.url || '',
-      imageAsset,
-    };
-  });
+  const presentationArtifact = selectPresentationArtifact(blueprint);
+  const slides = asArray(presentationArtifact?.pages).map((page) => ({
+    number: page.pageNumber,
+    title: page.title,
+    content: '',
+    upScreenCopy: page.title,
+    suggestedVisual: page.fileName,
+    sourceFields: ['deliverableArtifacts.presentation.pages'],
+    image: page.runtimeRef,
+    imageAsset: page,
+  }));
   const project = {
     projectName: projectInput.projectName,
     location: projectInput.city,
@@ -586,7 +655,7 @@ export function selectRoadshowResults(blueprint) {
     { key: 'masterplan', value: planAsset ? 1 : 0, label: '张总平面' },
     { key: 'analysis', value: analysisAssets.length, label: '项分析内容' },
     { key: 'visual', value: visualAssets.length, label: '项视觉成果' },
-    { key: 'ppt', value: pptOutline.length, label: '页 PPT 结构' },
+    { key: 'presentation', value: presentationArtifact?.pageCount || 0, label: '页最终汇报成果' },
   ];
   return {
     project,
@@ -618,13 +687,22 @@ export function selectRoadshowResults(blueprint) {
       planAssets: planVisuals,
       professionalStrategies,
     },
-    ppt: {
-      pageCount: pptOutline.length,
-      fileName: `${project.projectName || '景观方案'}｜方案汇报.pptx`,
-      fileUrl: pptArtifact?.fileUrl || '',
-      status: pptArtifact?.fileUrl ? '可下载' : `${pptOutline.length} 页内容结构已生成；可编辑 PPTX 待后续接入`,
+    designStatement: blueprint?.deliverableArtifacts?.designStatement || null,
+    pendingVerification: asArray(blueprint?.pendingVerification),
+    trace: selectProjectExecutionTrace(blueprint),
+    presentation: {
+      artifactId: presentationArtifact?.artifactId || '',
+      artifactType: presentationArtifact?.artifactType || '',
+      pageCount: presentationArtifact?.pageCount || 0,
+      fileName: presentationArtifact?.download?.fileName || '',
+      fileUrl: presentationArtifact?.downloadRef || presentationArtifact?.download?.runtimeRef || '',
+      status: presentationArtifact?.review?.status === 'confirmed' ? 'Gate 5 已确认，可下载完整成果包' : '等待 Gate 5 汇报成果确认',
+      editable: false,
+      title: presentationArtifact?.title || '',
+      deckHash: presentationArtifact?.deckHash || '',
       slides,
-      outline: pptOutline,
+      pages: presentationArtifact?.pages || [],
+      review: presentationArtifact?.review || null,
     },
   };
 }
@@ -639,7 +717,8 @@ export function deriveRoadshowStateFromBlueprint(blueprint) {
   });
   return {
     presentationStage: 2,
-    presentationComplete: states.every((status) => status === '已完成'),
+    presentationComplete: states.every((status) => status === '已完成')
+      && blueprint?.checkpoints?.find((checkpoint) => checkpoint.id === 'checkpoint-5')?.status === '已确认',
     presentationAgentStates: states,
   };
 }

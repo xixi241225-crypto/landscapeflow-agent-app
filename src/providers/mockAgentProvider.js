@@ -7,6 +7,7 @@ import {
   selectProjectInputForAgents,
 } from '../blueprint/blueprintSelectors.js';
 import { demoAssetVisualProvider } from './demoAssetVisualProvider.js';
+import { demoPresentationArtifactProvider } from './demoPresentationArtifactProvider.js';
 
 function parseArea(area) {
   const parsed = Number(String(area || '').replace(/[^0-9.]/g, ''));
@@ -92,7 +93,7 @@ function projectDefinitionPatch(blueprint) {
       ...constraintList.map((value) => ({ title: '限制条件', value, status: CONTENT_STATUS.PENDING })),
     ],
     deliverableRequirements: [
-      { title: '方案汇报', value: `面向${compact(project.presentationAudience, '项目决策方')}形成结构清晰的概念方案文案与 12 页汇报 PPT。`, status: CONTENT_STATUS.PENDING },
+      { title: '方案汇报', value: `面向${compact(project.presentationAudience, '项目决策方')}形成结构清晰的概念方案文案与方案汇报成果。`, status: CONTENT_STATUS.PENDING },
       { title: '视觉成果', value: '形成总平面、分析图和重点空间效果图任务书；演示阶段使用案例素材。', status: CONTENT_STATUS.PENDING },
       { title: '交付节点', value: compact(project.deliveryDate, '交付时间待确认'), status: CONTENT_STATUS.PENDING },
     ],
@@ -391,74 +392,7 @@ function visualPatch(blueprint) {
 }
 
 function outputPatch(blueprint) {
-  const project = getProject(blueprint);
-  const definition = selectProjectDefinitionDetails(blueprint);
-  const concept = selectedConcept(blueprint);
-  const assumptionsPending = [...definition.latentGoals, ...definition.openItems].filter((item) => ['assumption', 'pending', CONTENT_STATUS.ASSUMPTION, CONTENT_STATUS.PENDING].includes(item.status)).length;
-  const strategy = blueprint.professionalStrategies || {};
-  const zones = blueprint.functionalZones.map((item) => item.name).join('、');
-  const nodes = blueprint.featureNodes.map((item) => item.name).join('、');
-  const sources = definition.sourceDocuments.map((item) => item.fileName).join('、');
-  const pages = [
-    ['01', '封面', `${compact(project.projectName, '景观概念方案')}｜${concept?.name || '概念方向待确认'}`, '项目主视觉全幅', ['projectBasicInfo.projectName', 'designerDecision.selectedConceptId']],
-    ['02', '项目背景与设计任务', `${compact(project.city, '项目地点待确认')}｜${compact(project.area, '面积待确认')}｜${compact(project.projectType, '项目类型待确认')}；设计目标：${compact(project.designGoals, '待确认')}`, '区位图 + 任务关键词', ['projectBasicInfo', 'informationSources']],
-    ['03', '场地理解与核心问题', definition.coreQuestions.map((item) => item.value).join('；'), '现状照片 + 问题分析图', ['chapters.projectDefinition.siteConditions', 'chapters.projectDefinition.coreQuestions', 'chapters.projectDefinition.openItems']],
-    ['04', '项目目标与设计约束', `${compact(project.designGoals, '目标待确认')}；核心约束：${definition.constraints.map((item) => item.value).join('、')}`, '目标与约束双栏信息图', ['chapters.projectDefinition.explicitGoals', 'chapters.projectDefinition.constraints']],
-    ['05', '核心设计概念', `${concept?.name || '待选择'}：${concept?.proposition || concept?.narrative || '待生成'}；核心叙事：${blueprint.coreNarrative?.value || '待生成'}`, '概念主视觉 + 叙事关键词', ['chapters.conceptGeneration.conceptCandidates', 'coreNarrative']],
-    ['06', '方案比选与设计师决策', `A/B/C 多维度比选；Agent 推荐 ${blueprint.agentRecommendation?.conceptId || '—'}；设计师选择 ${concept?.id || '—'}；融合要求：${blueprint.designerDecision.fusionRequirements || '无'}`, '比选表 + 设计师决策高亮', ['comparison', 'agentRecommendation', 'designerDecision']],
-    ['07', '总体空间结构', blueprint.spatialStructure?.value || '待生成', '总平面 + 结构示意', ['spatialStructure', 'coreNarrative']],
-    ['08', '功能分区与游线组织', `功能分区：${zones || '待生成'}；动线：${blueprint.circulationStrategy?.value || '待生成'}`, '分区色块图 + 游线箭头', ['functionalZones', 'circulationStrategy']],
-    ['09', '植物、材料与生态策略', `植物：${strategy.plant || '待生成'}；材料：${strategy.material || '待生成'}；生态：${strategy.ecology || '待生成'}；竖向与排水：${strategy.grading || '待生成'} ${strategy.drainage || ''}`, '植物群落 + 材料样板 + 生态剖面', ['professionalStrategies']],
-    ['10', '特色节点与场景设计', nodes || '特色节点待生成', '节点索引图 + 2–3 张重点场景', ['featureNodes', 'visualTasks']],
-    ['11', '视觉成果展示', `${blueprint.visualTasks.length} 项视觉任务已组织，展示鸟瞰、到达界面、概念关键场景、策略分析与夜景等演示案例视觉成果。`, '多图网格 + 大图强调', ['visualTasks', 'visualAssets']],
-    ['12', '项目价值与下一步工作', `以一份可演进蓝本统一概念、空间、视觉与汇报；信息来源：${sources || '设计师输入'}；下一步：${blueprint.nextTasks.map((item) => item.value).join('、')}`, '价值总结 + 下一步时间线', ['qualityReview', 'risks', 'nextTasks']],
-  ];
-  const pptOutline = pages.map(([page, title, content, suggestedVisual, sourceFields]) => ({
-    page,
-    title,
-    content,
-    upScreenCopy: content,
-    suggestedVisual,
-    sourceFields,
-    speechNotes: `本页围绕“${title}”展开，先说明核心结论，再用${suggestedVisual}对应 Blueprint 依据。`,
-    status: CONTENT_STATUS.AI_SUGGESTED,
-  }));
-  return {
-    schemeNarrative: {
-      title: `${compact(project.projectName, '景观概念方案')}｜完整方案文案`,
-      sections: [
-        { title: '项目理解', value: `${compact(project.city, '项目地点待确认')}的${compact(project.projectType, '景观项目')}，面向${compact(project.targetUsers, '主要使用者')}。` },
-        { title: '设计定位', value: compact(project.designGoals, '形成生态、体验与实施平衡的景观方案。') },
-        { title: '核心概念', value: `${concept?.name || '待确认'}：${blueprint.coreNarrative?.value || concept?.concept || '待生成'}` },
-        { title: '方案比选结论', value: `AI 推荐方案 ${blueprint.agentRecommendation?.conceptId || '—'}；设计师最终选择方案 ${concept?.id || '—'}。${blueprint.designerDecision.decisionReason ? `选择理由：${blueprint.designerDecision.decisionReason}` : ''}` },
-        { title: '空间结构', value: blueprint.spatialStructure?.value || '待生成' },
-        { title: '功能分区', value: zones || '待生成' },
-        { title: '动线系统', value: blueprint.circulationStrategy?.value || '待生成' },
-        { title: '专业策略', value: `植物：${strategy.plant || '待生成'}；材料：${strategy.material || '待生成'}；生态：${strategy.ecology || '待生成'}；运营：${strategy.operations || '待生成'}` },
-        { title: '特色节点', value: nodes || '待生成' },
-        { title: '视觉表达', value: `围绕 ${blueprint.visualTasks.length} 项画面任务形成演示案例视觉成果。` },
-        { title: '项目价值', value: '以持续演进的项目设计蓝本统一概念、空间、视觉与汇报表达。' },
-      ],
-      status: CONTENT_STATUS.AI_SUGGESTED,
-    },
-    pptOutline,
-    pptStructure: pptOutline,
-    qualityReview: [
-      { check: '图文一致性', result: '页面标题、核心内容与建议视觉均对应当前蓝本字段。', level: 'pass' },
-      { check: '数据一致性', result: 'PPT 与报告均从当前 Blueprint 读取', level: 'pass' },
-      { check: '未确认假设', result: `${assumptionsPending} 项仍为待确认/系统假设`, level: assumptionsPending ? 'warning' : 'pass' },
-      { check: '视觉偏离', result: '演示案例视觉已按任务类型组织，正式深化时再进行项目级定向生产。', level: 'warning' },
-      { check: '成果完整性', result: '项目设计蓝本、方案报告、视觉成果集与 12 页 PPT 结构已齐备。', level: 'pass' },
-    ],
-    outputArtifacts: [
-      { type: '项目设计蓝本', state: 'JSON 可导出', action: 'json' },
-      { type: '方案设计报告', state: 'Markdown 可导出', action: 'markdown' },
-      { type: '视觉成果集', state: '演示案例已展示', action: 'visual' },
-      { type: '汇报 PPT', state: '12 页内容已准备', action: 'ppt' },
-    ],
-    risks: [{ title: '成果深化边界', value: '可编辑 PPT 文件将在最终成果阶段生成，本轮展示内容与页面结构。', status: CONTENT_STATUS.PENDING }],
-    nextTasks: [{ title: '最终确认', value: '完成图文、数据、假设、视觉与完整性复核，确认演示方案。', status: CONTENT_STATUS.PENDING }],
-  };
+  return demoPresentationArtifactProvider.createPatch(blueprint);
 }
 
 export class MockAgentProvider extends AgentProvider {

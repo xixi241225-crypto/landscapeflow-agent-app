@@ -43,7 +43,7 @@ http://localhost:5173/landscapeflow-agent-app/#/roadshow
 3. Agent 1 后确认项目事实，并接受或否定系统假设。
 4. Agent 2–3 后选择 A / B / C，填写融合要求并保存决策。
 5. Agent 4 后确认核心叙事、空间结构、分区、动线、专业策略和节点。
-6. Agent 5–6 展示视觉成果集、报告和 12 页 PPT 预览，完成最终复核。
+6. Agent 5–6 展示视觉成果，并登记、预览和交付 14 页方案汇报成果，完成 Gate 5 最终确认。
 
 路演模式会自动衔接 Agent，但始终在五个设计师确认节点停下。当前 Demo-2 已实现到 Gate 4（视觉方案挑选），不会自动执行 Agent 6。点击“重新开始演示”可恢复到预置案例的初始状态。
 
@@ -63,8 +63,8 @@ Blueprint 数据结构与服务位于 `src/blueprint/`；Agent 协作引擎位�
 
 ## 当前演示边界
 
-已完成 Blueprint 回写与版本历史、Gate 1–4、上游修改与下游失效、项目级 localStorage、JSON / Markdown 导出、演示案例视觉成果以及动态 12 页 PPT 内容预览。Gate 5 属于后续 Demo-3。
+已完成 Blueprint 回写与版本历史、Gate 1–5、上游修改与下游失效、项目级 localStorage、JSON / Markdown 导出、演示视觉成果、14 页方案汇报预览与 ZIP 成果包下载。
 
-本轮不包含真实模型调用、PDF / Word / CAD 内容解析、定向图像生成、可编辑 PPTX 文件、云数据库、登录注册与云存储。
+本轮不包含在线模型调用、PDF / Word / CAD 内容解析、运行时图像生成、PPTX 文件、云数据库、登录注册与云存储；正式汇报成果为外部专业 Agent 已生产的 14 页 PNG presentation image deck。
 
 PPT 后续制作文案见 `docs/LandscapeFlow_AI_参赛路演PPT_占位文案.md`。

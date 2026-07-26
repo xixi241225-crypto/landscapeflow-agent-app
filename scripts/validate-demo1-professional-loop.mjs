@@ -265,6 +265,17 @@ blueprint = confirmCheckpoint(blueprint, 'checkpoint-4', {
 }, 'Demo-1 验证设计师');
 const agent6Patch = await mockAgentProvider.runAgent(6, blueprint, { delayMs: 0 });
 blueprint = applyAgentPatch(blueprint, 6, agent6Patch, 'Demo-1 Agent 6 验证');
+assert.equal(isRoadshowResultsReady(blueprint), false);
+blueprint = confirmCheckpoint(blueprint, 'checkpoint-5', {
+  presentationReview: {
+    checks: {
+      contentComplete: true,
+      schemeConsistent: true,
+      pendingPreserved: true,
+      filesComplete: true,
+    },
+  },
+}, 'Demo-1 验证设计师');
 assert.equal(isRoadshowResultsReady(blueprint), true);
 
 // 28: a later Agent 4 source edit invalidates dependent Agent 5/6 outputs.
@@ -299,7 +310,7 @@ assert.doesNotMatch(runnerSource, /updateDesignerDecision/);
 assert.doesNotMatch(runnerSource, /confirmCheckpoint\([^)]*['"]checkpoint-2['"]/s);
 assert.doesNotMatch(runnerSource, /confirmCheckpoint\([^)]*['"]checkpoint-3['"]/s);
 assert.doesNotMatch(runnerSource, /confirmCheckpoint\([^)]*['"]checkpoint-4['"]/s);
-assert.match(runnerSource, /\['checkpoint-2', 'checkpoint-3', 'checkpoint-4'\]\.includes/);
+assert.match(runnerSource, /\['checkpoint-2', 'checkpoint-3', 'checkpoint-4', 'checkpoint-5'\]\.includes/);
 assert.match(runnerSource, /getNextRunnableAgent\(blueprintRef\.current\)/);
 assert.match(runnerSource, /checkpoint-4/);
 assert.deepEqual(
@@ -307,6 +318,7 @@ assert.deepEqual(
   ['项目理解确认', '方案方向决策', '设计说明书分项确认', '视觉方案挑选'],
 );
 assert.match(blueprint.checkpoints[2].description, /逐项复核 Design Statement.*专业修改意见/);
+assert.equal(blueprint.checkpoints[4].name, '汇报成果确认');
 assert.match(checkpointPanelSource, /DESIGNER CHECKPOINT · GATE/);
 assert.doesNotMatch(checkpointPanelSource, /checkpoint\.order} \/ 4/);
 assert.doesNotMatch(heroSource, /四个关键判断|项目事实确认|概念方向确认|空间方案确认/);

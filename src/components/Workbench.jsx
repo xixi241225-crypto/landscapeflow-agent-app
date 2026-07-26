@@ -44,7 +44,7 @@ const AGENT_ANALYSIS_STEPS = {
   3: ['建立比选维度', '计算项目适配度', '形成 Agent 推荐'],
   4: ['读取设计师最终选择', '推演空间与动线', '组织六项专业策略'],
   5: ['拆解视觉任务', '匹配重点空间场景', '组织演示案例视觉成果'],
-  6: ['汇总蓝本字段', '组织报告与 12 页 PPT', '执行最终质量复核'],
+  6: ['读取已确认方案成果', '登记 14 页汇报成果', '执行成果完整性校验'],
 };
 
 function newProjectState(presentationMode = false) {
@@ -356,13 +356,8 @@ export default function Workbench() {
 
   const runPresentationUntilCheckpoint = useCallback(async () => {
     const waitingCheckpoint = blueprintRef.current.currentCheckpoint;
-    if (['checkpoint-2', 'checkpoint-3', 'checkpoint-4'].includes(waitingCheckpoint)) {
+    if (['checkpoint-2', 'checkpoint-3', 'checkpoint-4', 'checkpoint-5'].includes(waitingCheckpoint)) {
       setRunState('checkpoint');
-      return;
-    }
-    const gate4Confirmed = blueprintRef.current.checkpoints?.find((item) => item.id === 'checkpoint-4')?.status === '已确认';
-    if (gate4Confirmed && blueprintRef.current.agentRuns?.[6]?.status === 'pending') {
-      setRunState('ready');
       return;
     }
     if (presentationRunRef.current || presentationComplete) return;
@@ -391,7 +386,7 @@ export default function Workbench() {
       while (presentationTokenRef.current === token) {
         if (presentationTokenRef.current !== token) return;
         const activeCheckpoint = blueprintRef.current.currentCheckpoint;
-        if (['checkpoint-2', 'checkpoint-3', 'checkpoint-4'].includes(activeCheckpoint)) {
+        if (['checkpoint-2', 'checkpoint-3', 'checkpoint-4', 'checkpoint-5'].includes(activeCheckpoint)) {
           setRunState('checkpoint');
           return;
         }
@@ -410,12 +405,13 @@ export default function Workbench() {
         const completed = blueprintRef.current.agentRuns?.[nextAgent]?.status === 'done';
         setPresentationAgentStates((states) => states.map((status, itemIndex) => itemIndex === nextAgent - 1 ? (completed ? '已完成' : '等待') : status));
         const reachedCheckpoint = blueprintRef.current.currentCheckpoint;
-        if (['checkpoint-2', 'checkpoint-3', 'checkpoint-4'].includes(reachedCheckpoint)) {
+        if (['checkpoint-2', 'checkpoint-3', 'checkpoint-4', 'checkpoint-5'].includes(reachedCheckpoint)) {
           setRunState('checkpoint');
           setNotice({
             'checkpoint-2': 'Agent 3 已完成方案比选，等待设计师主动选择方向。',
             'checkpoint-3': 'Agent 4 已生成设计说明书，等待设计师逐项专业复核。',
             'checkpoint-4': 'Agent 5 已生成视觉候选，等待设计师完成视觉方案挑选。',
+            'checkpoint-5': 'Agent 6 已登记 14 页方案汇报成果，等待设计师完成汇报成果确认。',
           }[reachedCheckpoint]);
           return;
         }
@@ -431,6 +427,10 @@ export default function Workbench() {
   }, [commitBlueprint, executeAgent, presentationComplete]);
 
   const handleOpenPresentationResults = useCallback(() => {
+    if (blueprintRef.current.checkpoints?.find((item) => item.id === 'checkpoint-5')?.status !== '已确认') {
+      setNotice('请先完成 Gate 5 汇报成果确认。');
+      return;
+    }
     saveProjectState({
       projectId, formData, blueprint: blueprintRef.current, versions, viewedStep, currentStep, runState: 'done', runMode: 'roadshow',
       outputWorkflowStep: 4, conceptRequirement, projectInputStep, presentationMode: true,
@@ -590,11 +590,20 @@ export default function Workbench() {
     const next = confirmCheckpoint(source, checkpointId, {
       source: '工作台人工确认',
       ...(checkpointId === 'checkpoint-4' ? { visualSelection: payload.visualSelection } : {}),
+      ...(checkpointId === 'checkpoint-5' ? { presentationReview: payload.presentationReview } : {}),
     });
     commitBlueprint(next, `设计师完成${next.checkpoints.find((item) => item.id === checkpointId)?.name}`);
-    if (checkpointId === 'checkpoint-5') setRunState('done');
+    if (checkpointId === 'checkpoint-5') {
+      setRunState('done');
+      setPresentationAgentStates(Array(6).fill('已完成'));
+      setPresentationComplete(true);
+    }
     else if (presentationMode && ['checkpoint-2', 'checkpoint-3'].includes(checkpointId)) {
       setRunState('ready');
+      setTimeout(runPresentationUntilCheckpoint, 360);
+    } else if (checkpointId === 'checkpoint-4' && presentationMode) {
+      setRunState('ready');
+      setViewedStep(5);
       setTimeout(runPresentationUntilCheckpoint, 360);
     } else if (checkpointId === 'checkpoint-4') {
       setRunState('ready');
@@ -604,9 +613,11 @@ export default function Workbench() {
       setTimeout(runRoadshowFlow, 360);
     } else setRunState('ready');
     setNotice(checkpointId === 'checkpoint-4'
-      ? '视觉方案选择已写入 Blueprint；Agent 6 已成为下一可运行步骤，本轮不会自动执行。'
+      ? presentationMode
+        ? '视觉方案选择已写入 Blueprint；正在进入 Agent 6 成果输出。'
+        : '视觉方案选择已写入 Blueprint；Agent 6 已成为下一可运行步骤。'
       : checkpointId === 'checkpoint-5'
-        ? '演示方案已完成｜正式成果可继续深化'
+        ? 'Gate 5 已确认｜最终汇报成果已进入交付状态'
         : '设计师确认已写入项目设计蓝本。');
   }, [commitBlueprint, presentationMode, runMode, runPresentationUntilCheckpoint, runRoadshowFlow]);
 

@@ -7,7 +7,7 @@ const descriptions = [
   '动态比选与设计师最终选择',
   '基于人工选择落实空间方案',
   '视觉任务与演示案例成果',
-  '报告、12页 PPT 与质量复核',
+  '14 页方案汇报成果与质量复核',
 ];
 
 export default function AgentSidebar({ blueprint, viewedStep, currentStep, onStepClick }) {

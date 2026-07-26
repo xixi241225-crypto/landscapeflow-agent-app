@@ -22,6 +22,13 @@ const VISUAL_REASON_OPTIONS = [
   '视觉体验更有特色',
 ];
 
+const GATE5_CHECKS = [
+  ['contentComplete', '汇报内容完整', '14 页内容已覆盖当前方案汇报所需的核心章节。'],
+  ['schemeConsistent', '图文与当前方案一致', '汇报内容与 Gate 2 方案、Design Statement、分析图和 Gate 4 视觉选择一致。'],
+  ['pendingPreserved', '待深化事项已正确保留', '待核实信息未被写成已确认事实，视觉成果未反向覆盖 Blueprint。'],
+  ['filesComplete', '14 页成果文件完整可查看', 'P01–P14 均可打开，并可下载完整成果包。'],
+];
+
 function conceptVisual(concept, blueprint) {
   const code = concept.code || concept.id;
   const conceptVersion = String(blueprint.agentRuns?.[2]?.blueprintVersionWritten || blueprint.milestoneVersion || 'v3').replace(/^v/, '');
@@ -59,6 +66,10 @@ export default function CheckpointPanel({
     reasons: [],
     comment: '',
   });
+  const [presentationReview, setPresentationReview] = useState({
+    checks: Object.fromEntries(GATE5_CHECKS.map(([key]) => [key, false])),
+    comment: '',
+  });
   const [error, setError] = useState('');
   useEffect(() => {
     const next = {
@@ -86,6 +97,7 @@ export default function CheckpointPanel({
     && !designStatementBusySections.length
     && !['regenerating', 'needsRevision', 'stale'].includes(designStatement.status)
   );
+  const canConfirmGate5 = GATE5_CHECKS.every(([key]) => presentationReview.checks[key]);
 
   const handleConfirm = () => {
     setError('');
@@ -107,6 +119,9 @@ export default function CheckpointPanel({
             sourceBlueprintFields: candidate?.sourceBlueprintFields || [],
           },
         });
+      } else if (checkpoint.id === 'checkpoint-5') {
+        if (!canConfirmGate5) throw new Error('请逐项完成汇报成果复核。');
+        onConfirm(checkpoint.id, { presentationReview });
       } else {
         if (checkpoint.id === 'checkpoint-3' && !canConfirmGate3) throw new Error('请先完成设计说明书全部分项复核。');
         onConfirm(checkpoint.id);
@@ -193,16 +208,37 @@ export default function CheckpointPanel({
       )}
 
       {checkpoint.id === 'checkpoint-5' && (
-        <div className="space-y-2">
-          {blueprint.qualityReview.map((item, index) => (
-            <div key={`${item.check}-${index}`} className="flex items-start justify-between gap-3 rounded-lg bg-white border border-amber-100 p-2.5"><div><p className="text-xs font-medium text-gray-800">{item.check}</p><p className="text-[10px] text-gray-500 mt-0.5">{item.result}</p></div><span className={`text-[9px] px-2 py-0.5 rounded-full ${item.level === 'pass' ? 'bg-green-50 text-green-700' : 'bg-amber-100 text-amber-800'}`}>{item.level === 'pass' ? '通过' : '需注意'}</span></div>
+        <div className="space-y-3" data-testid="gate5-presentation-review">
+          {GATE5_CHECKS.map(([key, label, description]) => (
+            <label key={key} className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3 ${presentationReview.checks[key] ? 'border-emerald-200 bg-emerald-50' : 'border-amber-100 bg-white'}`}>
+              <input
+                type="checkbox"
+                checked={presentationReview.checks[key]}
+                onChange={(event) => setPresentationReview((previous) => ({
+                  ...previous,
+                  checks: { ...previous.checks, [key]: event.target.checked },
+                }))}
+                className="mt-1"
+                data-testid={`gate5-check-${key}`}
+              />
+              <span><strong className="block text-sm text-[var(--lf-brand-950)]">{label}</strong><span className="mt-1 block text-xs leading-5 text-[var(--lf-muted)]">{description}</span></span>
+            </label>
           ))}
+          <label className="block text-xs text-[var(--lf-muted)]">复核说明（可选）
+            <textarea
+              rows="3"
+              value={presentationReview.comment}
+              onChange={(event) => setPresentationReview((previous) => ({ ...previous, comment: event.target.value }))}
+              className="form-input mt-1 resize-none"
+              placeholder="记录本次汇报成果确认的补充意见…"
+            />
+          </label>
         </div>
       )}
 
       {error && <p className="text-xs text-red-600 mt-3">{error}</p>}
       <div className="flex justify-end mt-4">
-        <button disabled={checkpoint.id === 'checkpoint-3' && !canConfirmGate3} onClick={handleConfirm} className="btn-primary px-6 py-3 text-sm disabled:cursor-not-allowed disabled:opacity-40">{checkpoint.id === 'checkpoint-1' ? '确认设计方向并开始设计' : checkpoint.id === 'checkpoint-2' ? '确认方向并继续' : checkpoint.id === 'checkpoint-3' ? '确认设计说明书并继续' : checkpoint.id === 'checkpoint-4' ? '确认视觉方案并继续' : '确认最终成果并完成项目'}</button>
+        <button disabled={(checkpoint.id === 'checkpoint-3' && !canConfirmGate3) || (checkpoint.id === 'checkpoint-5' && !canConfirmGate5)} onClick={handleConfirm} className="btn-primary px-6 py-3 text-sm disabled:cursor-not-allowed disabled:opacity-40">{checkpoint.id === 'checkpoint-1' ? '确认设计方向并开始设计' : checkpoint.id === 'checkpoint-2' ? '确认方向并继续' : checkpoint.id === 'checkpoint-3' ? '确认设计说明书并继续' : checkpoint.id === 'checkpoint-4' ? '确认视觉方案并继续' : '确认汇报成果'}</button>
       </div>
     </div>
   );

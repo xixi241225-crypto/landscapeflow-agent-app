@@ -226,11 +226,11 @@ const presentationRunnerSource = workbenchSource.slice(
 assert.match(checkpointSource, /useState\(\{\s*candidateId: ''/s);
 assert.match(checkpointSource, /只有点击下方“确认视觉方案并继续”后/);
 assert.doesNotMatch(presentationRunnerSource, /confirmCheckpoint/);
-assert.match(presentationRunnerSource, /\['checkpoint-2', 'checkpoint-3', 'checkpoint-4'\]\.includes/);
-assert.match(presentationRunnerSource, /gate4Confirmed.*agentRuns\?\.\[6\]\?\.status === 'pending'/s);
+assert.match(presentationRunnerSource, /\['checkpoint-2', 'checkpoint-3', 'checkpoint-4', 'checkpoint-5'\]\.includes/);
+assert.match(presentationRunnerSource, /'checkpoint-5': 'Agent 6 已登记 14 页方案汇报成果/);
 
 console.log('✓ A–E Gate 3 → Agent 5 → Gate 4 真暂停、Blueprint 驱动与指定分析/候选资产校验通过');
 console.log('✓ F–H 本地草稿、Gate 4 确认写入、理由与统一 Trace 校验通过');
 console.log('✓ I–J 视觉非事实源与第二项目无欢乐谷资产/文案泄漏校验通过');
 console.log('✓ K–L 上游失效、历史保留与 reload persistence 校验通过');
-console.log('✓ M 活跃 UI 无自动选择、路演不自动确认 Gate 4 且不执行 Agent 6');
+console.log('✓ M 活跃 UI 无自动选择、路演不自动确认 Gate 4，并在 Agent 6 后真实暂停于 Gate 5');

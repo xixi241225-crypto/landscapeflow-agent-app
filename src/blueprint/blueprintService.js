@@ -11,6 +11,10 @@ import {
   createBlueprintVersion as createVersionSnapshot,
   restoreBlueprintVersion as restoreVersionSnapshot,
 } from './blueprintVersionService.js';
+import {
+  validateGate5Review,
+  validatePresentationArtifact,
+} from './presentationArtifactService.js';
 
 const AGENT_FIELD_OWNERS = {
   1: ['projectBasicInfo', 'confirmedFacts', 'explicitRequirements', 'latentGoals', 'siteConditions', 'deliverableRequirements', 'informationSources', 'unconfirmedInfo', 'systemAssumptions', 'designConstraints', 'coreDesignQuestions', 'risks', 'nextTasks'],
@@ -18,7 +22,7 @@ const AGENT_FIELD_OWNERS = {
   3: ['comparison', 'agentRecommendation', 'risks', 'nextTasks'],
   4: ['coreNarrative', 'spatialStructure', 'functionalZones', 'circulationStrategy', 'professionalStrategies', 'featureNodes', 'risks', 'nextTasks'],
   5: ['visualTasks', 'analysisAssets', 'visualCandidates', 'visualReview', 'visualAssets', 'qualityReview', 'risks', 'nextTasks'],
-  6: ['schemeNarrative', 'pptOutline', 'pptStructure', 'qualityReview', 'outputArtifacts', 'risks', 'nextTasks'],
+  6: ['presentationSummary', 'deliverableArtifacts', 'schemeNarrative', 'pptOutline', 'pptStructure', 'qualityReview', 'outputArtifacts', 'risks', 'nextTasks'],
 };
 
 const APPEND_BY_AGENT_FIELDS = new Set(['risks', 'nextTasks', 'qualityReview']);
@@ -120,6 +124,24 @@ export function applyAgentPatch(blueprint, agentId, patch, reason = 'Agent 结�
   const milestoneVersion = AGENT_MILESTONE[agent.id];
   const source = `Agent ${agent.id}｜${agent.name}`;
   fields.forEach((field) => {
+    if (agent.id === 6 && field === 'deliverableArtifacts') {
+      const nestedFields = Object.keys(patch.deliverableArtifacts || {});
+      const unauthorizedNested = nestedFields.filter((nestedField) => nestedField !== 'presentation');
+      if (unauthorizedNested.length) {
+        throw new Error(`${agent.name} Agent 无权写入成果字段：${unauthorizedNested.join('、')}`);
+      }
+      next.deliverableArtifacts = {
+        ...(next.deliverableArtifacts || {}),
+        presentation: stampValue(
+          patch.deliverableArtifacts.presentation,
+          source,
+          reason,
+          version,
+          CONTENT_STATUS.AI_SUGGESTED,
+        ),
+      };
+      return;
+    }
     const stamped = stampValue(patch[field], source, reason, version, CONTENT_STATUS.AI_SUGGESTED);
     if (APPEND_BY_AGENT_FIELDS.has(field) && Array.isArray(stamped)) {
       const retained = (next[field] || []).filter((item) => item?._meta?.sourceAgent !== source);
@@ -176,11 +198,55 @@ export function applyAgentPatch(blueprint, agentId, patch, reason = 'Agent 结�
       candidateIds: (next.visualCandidates || []).map((item) => item.id),
       sourceBlueprintFields: [...new Set((next.visualTasks || []).flatMap((item) => item.sourceBlueprintFields || []))],
     } : {}),
+    ...(agent.id === 6 ? {
+      executionType: 'presentation-artifact-registration',
+      traceId: `presentation-agent6-r${version}`,
+      artifactId: next.deliverableArtifacts?.presentation?.artifactId,
+      artifactType: next.deliverableArtifacts?.presentation?.artifactType,
+      pageCount: next.deliverableArtifacts?.presentation?.pageCount,
+      deckHash: next.deliverableArtifacts?.presentation?.deckHash,
+      generationMode: next.deliverableArtifacts?.presentation?.generationMode,
+      generationProvider: next.deliverableArtifacts?.presentation?.generationProvider,
+      sourceBlueprintRevision: next.deliverableArtifacts?.presentation?.sourceBlueprintRevision,
+      sourceDesignStatementRevision: next.deliverableArtifacts?.presentation?.sourceDesignStatementRevision,
+      sourceVisualReviewRevision: next.deliverableArtifacts?.presentation?.sourceVisualReviewRevision,
+    } : {}),
   };
-  next.agentExecutions = [...(next.agentExecutions || []), execution];
+  next.agentExecutions = [
+    ...(next.agentExecutions || []),
+    execution,
+    ...(agent.id === 6 ? [{
+      id: newEntityId('execution'),
+      agentId: 'agent-6',
+      agentName: agent.name,
+      executionType: 'presentation-quality-review',
+      traceId: `${execution.traceId}-quality`,
+      artifactId: execution.artifactId,
+      pageCount: execution.pageCount,
+      checks: (next.qualityReview || []).filter((item) => item.id?.startsWith('presentation-')).map((item) => ({
+        id: item.id,
+        check: item.check,
+        level: item.level,
+      })),
+      startedAt: execution.startedAt,
+      completedAt: execution.completedAt,
+      inputVersion: execution.inputVersion,
+      outputVersion: execution.outputVersion,
+      status: (next.qualityReview || []).filter((item) => item.id?.startsWith('presentation-')).every((item) => item.level === 'pass') ? 'completed' : 'warning',
+    }] : []),
+  ];
   next.invalidatedOutputs = next.invalidatedOutputs.filter((item) => item.targetAgent !== agent.id);
   next.changeLog.unshift({
     id: newEntityId('change'),
+    ...(agent.id === 6 ? {
+      traceId: execution.traceId,
+      type: 'presentation-artifact-registration',
+      action: 'registered',
+      artifactId: execution.artifactId,
+      artifactType: execution.artifactType,
+      pageCount: execution.pageCount,
+      deckHash: execution.deckHash,
+    } : {}),
     sourceAgent: source,
     modifiedAt: now(),
     reason,
@@ -196,7 +262,7 @@ export function applyAgentPatch(blueprint, agentId, patch, reason = 'Agent 结�
       ? { ...item, status: '待确认', confirmedAt: null, confirmedBy: null, decision: null }
       : item);
   }
-  if (agent.id === 6) next.officialPackageStatus = '待最终确认';
+  if (agent.id === 6) next.officialPackageStatus = '待汇报成果确认';
   return next;
 }
 
@@ -242,6 +308,29 @@ export function invalidateDownstream(blueprint, changedFields, reason = '上游�
         selectedVisuals: next.selectedVisuals,
       } : next.chapters?.visualExpression,
     };
+  }
+  if (impactedAgents.includes(6) && next.deliverableArtifacts?.presentation) {
+    next.deliverableArtifacts.presentation = {
+      ...next.deliverableArtifacts.presentation,
+      status: 'stale',
+      staleAt: now(),
+      staleReason: reason,
+      changedFields,
+    };
+    next.presentationSummary = next.presentationSummary ? {
+      ...next.presentationSummary,
+      status: 'stale',
+    } : next.presentationSummary;
+    next.chapters = {
+      ...(next.chapters || {}),
+      deliverables: next.chapters?.deliverables ? {
+        ...next.chapters.deliverables,
+        deliverableArtifacts: next.deliverableArtifacts,
+        presentationSummary: next.presentationSummary,
+      } : next.chapters?.deliverables,
+    };
+    next.status = 'review';
+    next.stage = 'deliverables';
   }
   if (impactedAgents.length) {
     next.checkpoints = next.checkpoints.map((checkpoint) => impactedAgents.some((agentId) => agentId <= checkpoint.afterAgent)
@@ -366,8 +455,33 @@ export function confirmCheckpoint(blueprint, checkpointId, decision = {}, confir
       throw new Error('请至少选择一项视觉判断理由');
     }
   }
-  if (checkpointId === 'checkpoint-5' && blueprint.invalidatedOutputs.length) {
-    throw new Error('仍有需重新生成的下游成果，无法完成最终确认');
+  if (checkpointId === 'checkpoint-5') {
+    if (blueprint.agentRuns?.[6]?.status !== 'done') {
+      throw new Error('Agent 6 尚未完成，无法确认汇报成果');
+    }
+    if (blueprint.checkpoints?.find((item) => item.id === 'checkpoint-4')?.status !== '已确认') {
+      throw new Error('Gate 4 尚未确认，无法确认汇报成果');
+    }
+    const designStatement = blueprint.deliverableArtifacts?.designStatement;
+    if (!designStatement || designStatement.status !== 'approved') {
+      throw new Error('设计说明书不是当前已通过版本，无法确认汇报成果');
+    }
+    if (blueprint.visualReview?.status !== 'confirmed'
+      || !(blueprint.selectedVisuals || []).length
+      || (blueprint.selectedVisuals || []).some((item) => item.selectionStatus !== 'confirmed')) {
+      throw new Error('视觉成果尚未确认或已失效，无法确认汇报成果');
+    }
+    if (blueprint.invalidatedOutputs?.some((item) => [5, 6].includes(item.targetAgent))) {
+      throw new Error('汇报成果依赖的下游内容已失效，请重新生成');
+    }
+    const artifactValidation = validatePresentationArtifact(blueprint, blueprint.deliverableArtifacts?.presentation);
+    if (!artifactValidation.valid) {
+      throw new Error(`汇报成果校验未通过：${artifactValidation.errors.join('；')}`);
+    }
+    const reviewValidation = validateGate5Review(decision.presentationReview);
+    if (!reviewValidation.valid) {
+      throw new Error(`请完成 Gate 5 全部复核项：${reviewValidation.missing.join('、')}`);
+    }
   }
   const next = cloneBlueprint(blueprint);
   const version = (next.revision ?? next.currentVersion ?? 0) + 1;
@@ -409,6 +523,7 @@ export function confirmCheckpoint(blueprint, checkpointId, decision = {}, confir
       confirmedAt: selection.selectedAt,
       confirmedBy,
       sourceBlueprintRevision: blueprint.revision ?? blueprint.currentVersion,
+      revision: version,
       selectedScenes: next.selectedVisuals.map((item) => item.scene),
     };
     next.chapters = {
@@ -444,6 +559,51 @@ export function confirmCheckpoint(blueprint, checkpointId, decision = {}, confir
       relatedBlueprintFields: selection.sourceBlueprintFields,
     });
   }
+  if (checkpointId === 'checkpoint-5') {
+    const reviewedAt = now();
+    const presentationReview = {
+      status: 'confirmed',
+      checkpointId: 'checkpoint-5',
+      checks: { ...decision.presentationReview.checks },
+      comment: String(decision.presentationReview.comment || '').trim(),
+      confirmedAt: reviewedAt,
+      confirmedBy,
+      sourceBlueprintRevision: blueprint.revision ?? blueprint.currentVersion,
+    };
+    next.deliverableArtifacts.presentation = {
+      ...next.deliverableArtifacts.presentation,
+      review: presentationReview,
+    };
+    next.presentationSummary = {
+      ...(next.presentationSummary || {}),
+      gate5Status: 'confirmed',
+      confirmedAt: reviewedAt,
+    };
+    next.chapters = {
+      ...(next.chapters || {}),
+      deliverables: {
+        ...(next.chapters?.deliverables || {}),
+        deliverableArtifacts: next.deliverableArtifacts,
+        presentationSummary: next.presentationSummary,
+      },
+    };
+    next.changeLog.unshift({
+      id: newEntityId('change'),
+      traceId: newEntityId('presentation-review'),
+      type: 'presentation-deliverable-review',
+      action: 'confirmed',
+      sourceAgent: confirmedBy,
+      modifiedAt: reviewedAt,
+      reason: '设计师完成 Gate 5 汇报成果确认',
+      confirmationStatus: CONTENT_STATUS.CONFIRMED,
+      version,
+      fields: ['deliverableArtifacts.presentation.review', 'checkpoints'],
+      artifactId: next.deliverableArtifacts.presentation.artifactId,
+      pageCount: next.deliverableArtifacts.presentation.pageCount,
+      checks: presentationReview.checks,
+      comment: presentationReview.comment,
+    });
+  }
   next.checkpoints = next.checkpoints.map((item) => item.id === checkpointId ? {
     ...item,
     status: '已确认',
@@ -461,7 +621,11 @@ export function confirmCheckpoint(blueprint, checkpointId, decision = {}, confir
       next[field] = (next[field] || []).map((item) => ({ ...item, status: CONTENT_STATUS.CONFIRMED, _meta: makeMeta(confirmedBy, '确认项目定义', version, CONTENT_STATUS.CONFIRMED) }));
     });
   }
-  if (checkpointId === 'checkpoint-5') next.officialPackageStatus = '演示方案已完成｜正式成果可继续深化';
+  if (checkpointId === 'checkpoint-5') {
+    next.officialPackageStatus = '已完成';
+    next.status = 'completed';
+    next.stage = 'completed';
+  }
   next.changeLog.unshift({
     id: newEntityId('change'),
     sourceAgent: confirmedBy,
@@ -494,6 +658,13 @@ export function canRunAgent(blueprint, agentId) {
   if (agentId >= 3 && !blueprint.chapters?.conceptGeneration?.conceptCandidates?.length) return false;
   if (agentId >= 4 && blueprint.checkpoints.find((item) => item.id === 'checkpoint-2')?.status !== '已确认') return false;
   if (agentId >= 5 && blueprint.checkpoints.find((item) => item.id === 'checkpoint-3')?.status !== '已确认') return false;
-  if (agentId >= 6 && blueprint.checkpoints.find((item) => item.id === 'checkpoint-4')?.status !== '已确认') return false;
+  if (agentId >= 6) {
+    if (blueprint.checkpoints.find((item) => item.id === 'checkpoint-4')?.status !== '已确认') return false;
+    if (![1, 2, 3, 4, 5].every((id) => blueprint.agentRuns?.[id]?.status === 'done')) return false;
+    if (blueprint.deliverableArtifacts?.designStatement?.status !== 'approved') return false;
+    if (blueprint.visualReview?.status !== 'confirmed') return false;
+    if (!(blueprint.selectedVisuals || []).length || blueprint.selectedVisuals.some((item) => item.selectionStatus !== 'confirmed')) return false;
+    if (blueprint.invalidatedOutputs?.some((item) => [5, 6].includes(item.targetAgent))) return false;
+  }
   return true;
 }

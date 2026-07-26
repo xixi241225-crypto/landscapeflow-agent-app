@@ -64,6 +64,17 @@ blueprint = confirmCheckpoint(blueprint, 'checkpoint-4', {
 }, 'Demo-0B 验证设计师');
 const agent6Patch = await mockAgentProvider.runAgent(6, blueprint, { delayMs: 0 });
 blueprint = applyAgentPatch(blueprint, 6, agent6Patch, 'Demo-0B Agent 6 验证');
+assert.equal(isRoadshowResultsReady(blueprint), false);
+blueprint = confirmCheckpoint(blueprint, 'checkpoint-5', {
+  presentationReview: {
+    checks: {
+      contentComplete: true,
+      schemeConsistent: true,
+      pendingPreserved: true,
+      filesComplete: true,
+    },
+  },
+}, 'Demo-0B 验证设计师');
 
 assert.equal(blueprint.milestoneVersion, 'v7');
 assert.ok([1, 2, 3, 4, 5, 6].every((agentId) => blueprint.agentRuns[agentId].status === 'done'));
@@ -75,11 +86,11 @@ assert.equal(results.project.projectName, '北京市欢乐谷社区公园景观�
 assert.equal(results.project.location, '北京市朝阳区');
 assert.equal(results.project.area, '11037.66');
 assert.equal(results.project.projectType, '社区公园景观设计');
-assert.equal(results.ppt.pageCount, blueprint.pptOutline.length);
-assert.equal(results.ppt.pageCount, 12);
-assert.equal(results.ppt.slides.length, 12);
-assert.equal(results.ppt.fileUrl, '');
-assert.match(results.ppt.status, /12 页内容结构已生成/);
+assert.equal(results.presentation.pageCount, blueprint.pptOutline.length);
+assert.equal(results.presentation.pageCount, 14);
+assert.equal(results.presentation.slides.length, 14);
+assert.match(results.presentation.fileUrl, /\.zip$/);
+assert.match(results.presentation.status, /Gate 5 已确认/);
 
 assert.deepEqual(results.spatial.spatialStructure, blueprint.spatialStructure);
 assert.deepEqual(results.spatial.functionalZones, blueprint.functionalZones);
@@ -88,7 +99,7 @@ assert.deepEqual(results.spatial.professionalStrategies, blueprint.professionalS
 assert.deepEqual(results.visual.visualTasks, blueprint.visualTasks);
 assert.deepEqual(results.visual.visualAssets, blueprint.visualAssets);
 assert.deepEqual(results.visual.selectedVisuals, blueprint.selectedVisuals);
-assert.deepEqual(results.ppt.outline, blueprint.pptOutline);
+assert.deepEqual(results.presentation.pages, blueprint.deliverableArtifacts.presentation.pages);
 
 assert.equal(results.definition.selectedConceptId, blueprint.designerDecision.selectedConceptId);
 assert.equal(results.definition.selectedConcept.id, blueprint.designerDecision.selectedConceptId);
@@ -96,7 +107,7 @@ assert.equal(results.summary.find((item) => item.key === 'concepts').value, blue
 assert.equal(results.summary.find((item) => item.key === 'masterplan').value, blueprint.spatialStructure.planAsset ? 1 : 0);
 assert.equal(results.summary.find((item) => item.key === 'analysis').value, blueprint.spatialStructure.analysisAssets.length);
 assert.equal(results.summary.find((item) => item.key === 'visual').value, blueprint.visualAssets.length);
-assert.equal(results.summary.find((item) => item.key === 'ppt').value, blueprint.pptOutline.length);
+assert.equal(results.summary.find((item) => item.key === 'presentation').value, blueprint.pptOutline.length);
 
 const unsupportedProjectClaims = /松林|上海市浦东新区|28000|2\.8\s*公顷|林下会客|林下康养|雨水花园|摩天轮|游乐园|游客外溢/;
 assert.doesNotMatch(JSON.stringify(results), unsupportedProjectClaims);
@@ -166,7 +177,7 @@ assert.match(agentContentSource, /selectedConcept\.keyScenes/);
 assert.match(checkpointPanelSource, /采用方案 B 的公共核心策略，同时融合方案 C 的慢行体验逻辑/);
 
 console.log('✓ Demo-0B 完整 Blueprint v7 主链与成果可展示条件校验通过');
-console.log('✓ Results ViewModel 项目、概念、空间、视觉、Summary 与 12 页 PPT 均来自 Blueprint');
+console.log('✓ Results ViewModel 项目、概念、空间、视觉、Summary 与 14 页方案汇报成果均来自 Blueprint');
 console.log('✓ Agent 4 / 5 未确认事实清理与专业策略待复核表达校验通过');
 console.log('✓ RoadshowMode 第二执行链、独立状态和 roadshowProject 静态数据源已移除');
 console.log('✓ Demo-0B.1 活跃 UI 旧静态识别、方案默认话术与 Gate 2 示例防回归校验通过');

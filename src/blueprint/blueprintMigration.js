@@ -312,7 +312,9 @@ export function migrateBlueprintToV2(existingBlueprint) {
       deliverableArtifacts: {
         ...(existingBlueprint.deliverableArtifacts || {}),
         designStatement: existingBlueprint.deliverableArtifacts?.designStatement || null,
+        presentation: existingBlueprint.deliverableArtifacts?.presentation || null,
       },
+      presentationSummary: existingBlueprint.presentationSummary || null,
       chapters: {
         projectDefinition: existingBlueprint.chapters.projectDefinition
           ? { ...existingBlueprint.chapters.projectDefinition, facts: keyedFacts }
@@ -364,7 +366,9 @@ export function migrateBlueprintToV2(existingBlueprint) {
     next.deliverableArtifacts = {
       ...(next.deliverableArtifacts || {}),
       designStatement: next.deliverableArtifacts?.designStatement || null,
+      presentation: next.deliverableArtifacts?.presentation || null,
     };
+    next.presentationSummary = next.presentationSummary || null;
     next.checkpoints = normalizeCheckpoints(next.checkpoints);
     next.migratedFrom = {
       schemaVersion: existingBlueprint.schemaVersion || 'legacy',

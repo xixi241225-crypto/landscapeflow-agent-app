@@ -15,6 +15,7 @@
     "validate:demo15": "node scripts/validate-demo15-real-input.mjs",
     "validate:demo151": "node scripts/validate-demo151-semantic-boundaries.mjs",
     "validate:demo2": "node scripts/validate-demo2-visual-gate4.mjs",
+    "validate:demo3": "node scripts/validate-demo3-deliverable-gate5.mjs",
     "preview": "vite preview",
     "predeploy": "npm run build",
     "deploy": "gh-pages -d dist"

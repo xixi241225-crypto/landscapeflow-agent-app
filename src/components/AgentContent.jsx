@@ -5,6 +5,7 @@ import ComparisonTable from './ComparisonTable';
 import ImageModal from './ImageModal';
 import VisualAssetFrame from './VisualAssetFrame';
 import ProjectDefinitionWizard from './ProjectDefinitionWizard';
+import PresentationDeliverable from './PresentationDeliverable';
 import { RoadshowAgentTrack, RoadshowBlueprintDraft, RoadshowStageRail } from './RoadshowFlow';
 import { AGENTS, CONTENT_STATUS } from '../blueprint/blueprintModel';
 import {
@@ -25,7 +26,7 @@ const stepGoals = [
   '动态专业比选并等待设计师作最终选择',
   '严格基于设计师选择落实空间与专业策略',
   '组织视觉任务书并展示演示案例视觉成果',
-  '从 Blueprint 生成报告、12 页 PPT 结构并完成质量复核',
+  '登记 14 页方案汇报成果并完成交付质量复核',
 ];
 
 const CONCEPT_VISUAL_FALLBACKS = {
@@ -177,7 +178,7 @@ export default function AgentContent({
     ['项目资料', '输入项目基本信息并整理核心资料'],
     ['项目设计蓝本草案', '确认设计总监智能体对目标、约束与策略的理解'],
     ['Agent 协作', '六个专业 Agent 围绕同一份项目设计蓝本连续执行'],
-    ['完整成果', '查看完整方案与可编辑汇报 PPT'],
+    ['完整成果', '查看并确认 14 页方案汇报成果'],
   ];
   const presentationTitle = presentationTitles[presentationStage] || presentationTitles[0];
 
@@ -273,6 +274,24 @@ export default function AgentContent({
                       designStatementBusySections={designStatementBusySections}
                     />
                   </div>
+                ) : activeCheckpoint?.id === 'checkpoint-5' ? (
+                  <div className="space-y-4">
+                    <PresentationDeliverable blueprint={blueprint} />
+                    <CheckpointPanel
+                      blueprint={blueprint}
+                      checkpoint={activeCheckpoint}
+                      onConfirm={onConfirmCheckpoint}
+                      onAssumptionDecision={onAssumptionDecision}
+                      onSaveFacts={onSaveFacts}
+                      onRegenerate={onRegenerateConcepts}
+                      onReviewDesignStatementSection={onReviewDesignStatementSection}
+                      onRegenerateDesignStatementSection={onRegenerateDesignStatementSection}
+                      onApproveRemainingDesignStatementSections={onApproveRemainingDesignStatementSections}
+                      designStatementBusySections={designStatementBusySections}
+                    />
+                  </div>
+                ) : blueprint.checkpoints?.find((checkpoint) => checkpoint.id === 'checkpoint-5')?.status === '已确认' ? (
+                  <PresentationDeliverable blueprint={blueprint} />
                 ) : blueprint.checkpoints?.find((checkpoint) => checkpoint.id === 'checkpoint-4')?.status === '已确认'
                   && blueprint.agentRuns?.[6]?.status === 'pending' ? (
                     <VisualResults blueprint={blueprint} onOpenImage={setModalImage} />
@@ -302,7 +321,7 @@ export default function AgentContent({
           {!presentationMode && viewedStep === 2 && <Comparison blueprint={blueprint} />}
           {!presentationMode && viewedStep === 3 && <SpatialPlan blueprint={blueprint} onOpenImage={setModalImage} onModifyUpstream={() => onNavigate(0)} onUpdateDecision={onUpdateDecision} onRun={() => onRunAgent(4)} />}
           {!presentationMode && viewedStep === 4 && <VisualResults blueprint={blueprint} onOpenImage={setModalImage} />}
-          {!presentationMode && viewedStep === 5 && <Outputs blueprint={blueprint} workflowStep={outputWorkflowStep} onAdvance={onAdvanceOutput} onExportJSON={onExportJSON} onExportMarkdown={onExportMarkdown} onNotice={onNotice} />}
+          {!presentationMode && viewedStep === 5 && <PresentationDeliverable blueprint={blueprint} />}
 
           {!presentationMode && viewedStep !== 1 && run.status === 'pending' && !isIdle && <EmptyState text={`Agent ${agent.id} 尚未执行。请完成前置确认后从底部控制栏继续。`} />}
 
@@ -570,7 +589,7 @@ function Outputs({ blueprint, workflowStep, onAdvance, onExportJSON, onExportMar
   const hasInvalid = blueprint.invalidatedOutputs.length > 0;
   const pptInvalid = blueprint.agentRuns?.[6]?.status === 'stale';
   const artifactIcons = { json: 'BL', markdown: 'RP', visual: 'VI', ppt: 'PT' };
-  const steps = ['完整方案文案', '设计师确认文案', 'PPT 结构与逐页文案', '完整 PPT 预览'];
+  const steps = ['完整方案文案', '设计师确认文案', '汇报结构与逐页文案', '完整汇报预览'];
   return <div className="space-y-5">
     <div className="grid grid-cols-2 gap-2 xl:grid-cols-4">{steps.map((label, index) => <div key={label} className={`rounded-xl border p-3 ${workflowStep >= index + 1 ? 'border-violet-200 bg-violet-50' : 'border-gray-200 bg-white'}`}><p className="text-xs font-bold text-[var(--lf-brand-600)]">0{index + 1}</p><p className="mt-1 text-sm font-semibold text-[var(--lf-text)]">{label}</p></div>)}</div>
     {hasInvalid && <div className="rounded-xl border border-rose-200 bg-rose-50 p-4"><p className="text-sm font-semibold text-rose-800">导出前提示：存在 {blueprint.invalidatedOutputs.length} 项需要重新生成的成果</p><p className="text-xs text-rose-700 mt-1">旧成果仍可查看对比，但不属于当前方案；请重新运行受影响 Agent 后再完成最终确认。</p></div>}
@@ -579,12 +598,12 @@ function Outputs({ blueprint, workflowStep, onAdvance, onExportJSON, onExportMar
       <div className="grid gap-3 md:grid-cols-2">{blueprint.schemeNarrative?.sections?.map((section) => <div key={section.title} className="rounded-xl border border-violet-100 bg-[var(--lf-brand-50)] p-3"><p className="text-sm font-bold text-[var(--lf-brand-900)]">{section.title}</p><p className="mt-1 text-xs leading-5 text-[var(--lf-muted)]">{section.value}</p></div>)}</div>
       {workflowStep === 1 && <div className="mt-4 flex justify-end"><button onClick={onAdvance} className="btn-primary px-6 py-3 text-sm">进入文案确认</button></div>}
     </Card>
-    {workflowStep >= 2 && <Card title="步骤 2｜设计师确认方案文案" accent="var(--lf-gold)"><div className="grid gap-3 md:grid-cols-2"><label className="text-xs text-[var(--lf-muted)]">叙事重点<textarea className="form-input mt-1 min-h-[72px]" defaultValue={blueprint.coreNarrative?.title || selectedConcept?.name || '待设计师补充'} /></label><label className="text-xs text-[var(--lf-muted)]">汇报口径与甲方表达<textarea className="form-input mt-1 min-h-[72px]" defaultValue={narrativeFocus} /></label><label className="text-xs text-[var(--lf-muted)]">页面篇幅<input className="form-input mt-1" defaultValue={`${pptOutline.length} 页，控制在 8–10 分钟汇报`} /></label><label className="text-xs text-[var(--lf-muted)]">强调内容<input className="form-input mt-1" defaultValue={emphasis} /></label></div>{workflowStep === 2 && <div className="mt-4 flex justify-end"><button onClick={onAdvance} className="btn-primary px-6 py-3 text-sm">确认文案并生成 PPT 结构</button></div>}</Card>}
-    {workflowStep >= 3 && <Card title={`步骤 3｜PPT 结构与逐页文案 · ${pptOutline.length} 页`}><div className="space-y-2">{pptOutline.map((page) => <details key={page.id || page.page} className="rounded-xl border border-violet-100 bg-white p-3"><summary className="cursor-pointer text-sm font-bold text-[var(--lf-brand-900)]">{String(page.page).padStart(2, '0')}｜{page.title}</summary><div className="mt-3 grid gap-2 md:grid-cols-2"><p className="text-xs leading-5 text-[var(--lf-muted)]"><b>核心结论／上屏文案：</b>{page.upScreenCopy || page.content}</p><p className="text-xs leading-5 text-[var(--lf-muted)]"><b>建议视觉：</b>{page.suggestedVisual}</p><p className="text-xs leading-5 text-[var(--lf-muted)]"><b>数据来源：</b>{page.sourceFields?.join(' · ')}</p><p className="text-xs leading-5 text-[var(--lf-muted)]"><b>演讲提示：</b>{page.speechNotes}</p></div></details>)}</div>{workflowStep === 3 && <div className="mt-4 flex justify-end"><button onClick={onAdvance} className="btn-primary px-6 py-3 text-sm">生成并预览完整 PPT</button></div>}</Card>}
-    {workflowStep >= 4 && <Card title={`步骤 4｜完整 PPT 预览 · ${pptOutline.length} 页`} accent="var(--lf-brand-600)">
+    {workflowStep >= 2 && <Card title="步骤 2｜设计师确认方案文案" accent="var(--lf-gold)"><div className="grid gap-3 md:grid-cols-2"><label className="text-xs text-[var(--lf-muted)]">叙事重点<textarea className="form-input mt-1 min-h-[72px]" defaultValue={blueprint.coreNarrative?.title || selectedConcept?.name || '待设计师补充'} /></label><label className="text-xs text-[var(--lf-muted)]">汇报口径与甲方表达<textarea className="form-input mt-1 min-h-[72px]" defaultValue={narrativeFocus} /></label><label className="text-xs text-[var(--lf-muted)]">页面篇幅<input className="form-input mt-1" defaultValue={`${pptOutline.length} 页，控制在 8–10 分钟汇报`} /></label><label className="text-xs text-[var(--lf-muted)]">强调内容<input className="form-input mt-1" defaultValue={emphasis} /></label></div>{workflowStep === 2 && <div className="mt-4 flex justify-end"><button onClick={onAdvance} className="btn-primary px-6 py-3 text-sm">确认文案并生成汇报结构</button></div>}</Card>}
+    {workflowStep >= 3 && <Card title={`步骤 3｜汇报结构与逐页文案 · ${pptOutline.length} 页`}><div className="space-y-2">{pptOutline.map((page) => <details key={page.id || page.page} className="rounded-xl border border-violet-100 bg-white p-3"><summary className="cursor-pointer text-sm font-bold text-[var(--lf-brand-900)]">{String(page.page).padStart(2, '0')}｜{page.title}</summary><div className="mt-3 grid gap-2 md:grid-cols-2"><p className="text-xs leading-5 text-[var(--lf-muted)]"><b>核心结论／上屏文案：</b>{page.upScreenCopy || page.content}</p><p className="text-xs leading-5 text-[var(--lf-muted)]"><b>建议视觉：</b>{page.suggestedVisual}</p><p className="text-xs leading-5 text-[var(--lf-muted)]"><b>数据来源：</b>{page.sourceFields?.join(' · ')}</p><p className="text-xs leading-5 text-[var(--lf-muted)]"><b>演讲提示：</b>{page.speechNotes}</p></div></details>)}</div>{workflowStep === 3 && <div className="mt-4 flex justify-end"><button onClick={onAdvance} className="btn-primary px-6 py-3 text-sm">生成并预览完整汇报</button></div>}</Card>}
+    {workflowStep >= 4 && <Card title={`步骤 4｜完整汇报预览 · ${pptOutline.length} 页`} accent="var(--lf-brand-600)">
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">{pptOutline.map((page) => <div key={page.id || page.page} className="ppt-card aspect-video min-h-0 overflow-hidden rounded-xl p-3 flex flex-col"><div className="flex items-center justify-between"><div className="flex min-w-0 items-center gap-2"><span className="text-xl font-serif font-bold text-[var(--lf-brand-600)]">{String(page.page).padStart(2, '0')}</span><p className="truncate text-sm font-serif font-bold text-[var(--lf-brand-950)]">{page.title}</p></div><Badge tone={pptInvalid ? 'red' : 'purple'}>{pptInvalid ? '已失效' : 'PPT'}</Badge></div><div className="mt-2 min-h-0 flex-1"><PptSlideVisual page={page} blueprint={blueprint} invalid={pptInvalid} /></div><p className="mt-2 line-clamp-1 text-[10px] text-slate-600">{page.content}</p><p className="mt-1 truncate border-t border-violet-100 pt-1 text-[9px] text-[var(--lf-muted)]">数据源：{page.sourceFields?.join(' · ') || 'Blueprint'}</p></div>)}</div>
     </Card>}
-    {workflowStep >= 4 && <div><div className="flex items-end justify-between mb-3"><div><p className="text-lg font-bold text-[var(--lf-brand-950)]">最终交付清单</p><p className="text-xs text-[var(--lf-muted)] mt-1">蓝本、完整文案、视觉成果、PPT、决策与版本记录统一来自当前版本。</p></div><Badge tone="blue">Blueprint v{blueprint.currentVersion}</Badge></div><div className="grid grid-cols-2 gap-3 xl:grid-cols-4">{blueprint.outputArtifacts.map((item) => <div key={item.id || item.type} className="surface-card min-h-[154px] p-4 flex flex-col"><div className="flex items-center justify-between"><span className="w-10 h-10 rounded-xl bg-[var(--lf-brand-100)] text-[var(--lf-brand-700)] flex items-center justify-center text-xs font-bold">{artifactIcons[item.action] || 'LF'}</span><Badge tone={item.action === 'visual' ? 'amber' : 'blue'}>{item.state}</Badge></div><p className="text-sm font-semibold text-[var(--lf-text)] mt-3">{item.type}</p>{item.action === 'json' && <button data-testid="export-json" onClick={onExportJSON} className="btn-secondary w-full mt-auto py-2 text-xs">导出设计蓝本 JSON</button>}{item.action === 'markdown' && <button data-testid="export-md" onClick={onExportMarkdown} className="btn-gold w-full mt-auto py-2 text-xs">导出方案报告 Markdown</button>}{item.action === 'visual' && <button onClick={() => onNotice('视觉成果集已在 Agent 5“视觉表达”中展示。')} className="btn-secondary w-full mt-auto py-2 text-xs">查看成果说明</button>}{item.action === 'ppt' && <button data-testid="prepare-ppt" onClick={() => onNotice('PPT内容与页面结构已准备完成，可在最终成果阶段生成可编辑文件。')} className="btn-primary w-full mt-auto py-2 text-xs">生成可编辑 PPT</button>}</div>)}</div></div>}
+    {workflowStep >= 4 && <div><div className="flex items-end justify-between mb-3"><div><p className="text-lg font-bold text-[var(--lf-brand-950)]">最终交付清单</p><p className="text-xs text-[var(--lf-muted)] mt-1">蓝本、完整文案、视觉成果、汇报成果、决策与版本记录统一来自当前版本。</p></div><Badge tone="blue">Blueprint v{blueprint.currentVersion}</Badge></div><div className="grid grid-cols-2 gap-3 xl:grid-cols-4">{blueprint.outputArtifacts.map((item) => <div key={item.id || item.type} className="surface-card min-h-[154px] p-4 flex flex-col"><div className="flex items-center justify-between"><span className="w-10 h-10 rounded-xl bg-[var(--lf-brand-100)] text-[var(--lf-brand-700)] flex items-center justify-center text-xs font-bold">{artifactIcons[item.action] || 'LF'}</span><Badge tone={item.action === 'visual' ? 'amber' : 'blue'}>{item.state}</Badge></div><p className="text-sm font-semibold text-[var(--lf-text)] mt-3">{item.type}</p>{item.action === 'json' && <button data-testid="export-json" onClick={onExportJSON} className="btn-secondary w-full mt-auto py-2 text-xs">导出设计蓝本 JSON</button>}{item.action === 'markdown' && <button data-testid="export-md" onClick={onExportMarkdown} className="btn-gold w-full mt-auto py-2 text-xs">导出方案报告 Markdown</button>}{item.action === 'visual' && <button onClick={() => onNotice('视觉成果集已在 Agent 5“视觉表达”中展示。')} className="btn-secondary w-full mt-auto py-2 text-xs">查看成果说明</button>}{item.action === 'presentation' && <a href={item.downloadRef} download={item.fileName} className="btn-primary mt-auto w-full py-2 text-center text-xs">下载成果包</a>}</div>)}</div></div>}
     {workflowStep >= 4 && <Card title="质量复核"><div className="space-y-2">{blueprint.qualityReview.map((item, index) => <div key={`${item.check}-${index}`} className="flex items-start justify-between gap-3 border-b border-[var(--lf-border)] pb-2"><div><p className="text-sm font-medium text-[var(--lf-text)]">{item.check}</p><p className="text-xs text-[var(--lf-muted)] mt-1">{item.result}</p></div><Badge tone={item.level === 'pass' ? 'green' : 'amber'}>{item.level === 'pass' ? '通过' : '待深化'}</Badge></div>)}</div></Card>}
   </div>;
 }

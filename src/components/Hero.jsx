@@ -7,10 +7,10 @@ const AGENTS = [
   { id: '03', name: '方案比选', detail: '专业比选，辅助设计师最终决策' },
   { id: '04', name: '空间推演', detail: '深化空间结构与专业策略' },
   { id: '05', name: '视觉表达', detail: '组织分析成果、视觉候选与选择依据' },
-  { id: '06', name: '成果输出', detail: '形成文案、图集与 12 页 PPT' },
+  { id: '06', name: '成果输出', detail: '登记并校验 14 页方案汇报成果' },
 ];
 
-const CHECKPOINTS = ['项目理解确认', '方案方向决策', '设计说明书分项确认', '视觉方案挑选', '成果交付复核'];
+const CHECKPOINTS = ['项目理解确认', '方案方向决策', '设计说明书分项确认', '视觉方案挑选', '汇报成果确认'];
 
 export default function Hero() {
   const navigate = useNavigate();
@@ -99,7 +99,7 @@ export default function Hero() {
           {[
             ['从项目开始', '先整理资料和任务边界，再进入方案推演。'],
             ['让判断可追溯', '每次 Agent 写入、设计师确认与失效影响都有版本记录。'],
-            ['让成果可延续', '蓝本、方案、视觉与 PPT 始终来自同一项目依据。'],
+            ['让成果可延续', '蓝本、方案、视觉与最终汇报成果始终来自同一项目依据。'],
           ].map(([title, text]) => (
             <div key={title} className="surface-card p-6">
               <h3 className="text-lg font-bold text-[var(--lf-brand-950)]">{title}</h3>

@@ -11,7 +11,7 @@ const milestoneTitles = {
   v4: ['方案选择完成', '形成多维比选与设计师概念决策'],
   v5: ['空间推演完成', '形成空间结构与专业策略'],
   v6: ['视觉表达完成', '形成视觉任务书与演示成果'],
-  v7: ['成果输出完成', '形成方案报告与汇报 PPT 结构'],
+  v7: ['成果输出完成', '登记并校验最终方案汇报成果'],
 };
 
 export function createBlueprintVersion(blueprint, history = [], reason = '', metadata = {}) {
