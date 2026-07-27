@@ -6,8 +6,8 @@ import BottomControlBar from './BottomControlBar';
 import BlueprintPanel from './BlueprintPanel';
 import BlueprintDrawer from './BlueprintDrawer';
 import HistoryPanel from './HistoryPanel';
-import { DEMO_CASE, DEMO_FILES } from '../data/demoCase';
-import { createBlueprint } from '../blueprint/blueprintModel';
+import { BUDGET_OPTIONS, DEMO_CASE, DEMO_FILES } from '../data/demoCase';
+import { AGENTS, createBlueprint } from '../blueprint/blueprintModel';
 import { deriveRoadshowStateFromBlueprint } from '../blueprint/blueprintSelectors';
 import { confirmProjectDefinitionBlueprint, runProjectDefinitionAgent } from '../agents/projectDefinitionAgent';
 import { runConceptGenerationAgent } from '../agents/conceptGenerationAgent';
@@ -46,6 +46,51 @@ const AGENT_ANALYSIS_STEPS = {
   5: ['拆解视觉任务', '匹配重点空间场景', '组织演示案例视觉成果'],
   6: ['读取已确认方案成果', '登记 14 页汇报成果', '执行成果完整性校验'],
 };
+
+function CompactAgentProgress({
+  blueprint,
+  presentationMode,
+  presentationAgentStates,
+  viewedStep,
+  onNavigate,
+}) {
+  const statuses = AGENTS.map((agent, index) => {
+    if (presentationMode) {
+      const status = presentationAgentStates[index];
+      if (status === '已完成') return 'done';
+      if (status === '执行中') return 'working';
+      return 'pending';
+    }
+    const status = blueprint.agentRuns?.[agent.id]?.status;
+    if (status === 'done') return 'done';
+    if (status === 'working') return 'working';
+    if (status === 'stale') return 'stale';
+    return 'pending';
+  });
+
+  return (
+    <nav className="workbench-agent-progress" aria-label="六个 Agent 进度">
+      {AGENTS.map((agent, index) => {
+        const status = statuses[index];
+        const current = viewedStep === index;
+        const canReview = status === 'done' && !current;
+        return (
+          <button
+            type="button"
+            key={agent.id}
+            disabled={!canReview}
+            onClick={() => canReview && onNavigate(index)}
+            className={`workbench-agent-step ${status} ${current ? 'active' : ''}`}
+            title={canReview ? `回看 Agent ${agent.id}｜${agent.name}` : `Agent ${agent.id}｜${agent.name}`}
+          >
+            <span>{status === 'done' ? '✓' : String(agent.id).padStart(2, '0')}</span>
+            <p>{agent.name}</p>
+          </button>
+        );
+      })}
+    </nav>
+  );
+}
 
 function newProjectState(presentationMode = false) {
   const projectId = `project-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
@@ -197,17 +242,21 @@ export default function Workbench() {
     else setBlueprint(next);
   }, [commitBlueprint]);
 
-  const handleFillDemoBasic = useCallback(() => {
-    const { siteFiles: _siteFiles, ...demoBasicInfo } = DEMO_CASE;
-    applyProjectInputPatch(demoBasicInfo, '填入演示案例基本信息');
-    setNotice('演示案例基本信息已填入，仍可继续修改。');
-  }, [applyProjectInputPatch]);
-
   const mergeDemoFiles = useCallback(() => {
     const existing = blueprintRef.current.projectBasicInfo.siteFiles || [];
     const names = new Set(existing.map((file) => file.name));
     return [...existing, ...DEMO_FILES.filter((file) => !names.has(file.name))];
   }, []);
+
+  const handleFillDemoBasic = useCallback(() => {
+    const { siteFiles: _siteFiles, ...demoBasicInfo } = DEMO_CASE;
+    applyProjectInputPatch({
+      ...demoBasicInfo,
+      budgetCondition: BUDGET_OPTIONS[0],
+      siteFiles: mergeDemoFiles(),
+    }, '填入演示案例基本信息与项目资料');
+    setNotice(`演示案例基本信息与 ${DEMO_FILES.length} 份项目资料已填入，仍可继续修改。`);
+  }, [applyProjectInputPatch, mergeDemoFiles]);
 
   const handleFillDemoFiles = useCallback(() => {
     applyProjectInputPatch({ siteFiles: mergeDemoFiles() }, '填入演示案例项目资料');
@@ -215,7 +264,7 @@ export default function Workbench() {
   }, [applyProjectInputPatch, mergeDemoFiles]);
 
   const handleFillDemoAll = useCallback(() => {
-    applyProjectInputPatch({ ...DEMO_CASE, siteFiles: mergeDemoFiles() }, '补齐演示案例资料');
+    applyProjectInputPatch({ ...DEMO_CASE, budgetCondition: BUDGET_OPTIONS[0], siteFiles: mergeDemoFiles() }, '补齐演示案例资料');
     setNotice('演示案例基本信息与项目资料已补齐，仍需手动确认提交。');
   }, [applyProjectInputPatch, mergeDemoFiles]);
 
@@ -509,13 +558,11 @@ export default function Workbench() {
     projectInputTokenRef.current += 1;
     presentationTokenRef.current += 1;
     const fresh = newProjectState(true);
-    const demo = { ...DEMO_CASE, siteFiles: DEMO_FILES };
-    const preparedBlueprint = { ...fresh.blueprint, projectBasicInfo: { ...fresh.blueprint.projectBasicInfo, ...demo } };
-    setProjectId(fresh.projectId); setFormData(demo); setBlueprint(preparedBlueprint); blueprintRef.current = preparedBlueprint;
-    setVersions(createBlueprintVersion(preparedBlueprint, [], '准备欢乐谷演示项目')); setViewedStep(0); setCurrentStep(-1); setRunState('idle'); setRunMode('roadshow');
+    setProjectId(fresh.projectId); setFormData(fresh.formData); setBlueprint(fresh.blueprint); blueprintRef.current = fresh.blueprint;
+    setVersions(fresh.versions); setViewedStep(0); setCurrentStep(-1); setRunState('idle'); setRunMode('roadshow');
     setOutputWorkflowStep(0); setConceptRequirement(''); setProjectInputStep(0); setProjectInputLoading(false); setProjectInputLoadingStep(0);
     setPresentationMode(true); setPresentationStage(0); setPresentationAgentStates(Array(6).fill('等待')); setPresentationComplete(false); setPresentationBusy(false); setRoadshowUi({ agent4View: 'spatial', visualPromptReady: false }); setDesignStatementBusySections([]);
-    setNotice('欢乐谷演示项目资料已准备好，请核对后开始整理。');
+    setNotice('已进入空白项目，请填写项目信息或一键填入演示案例。');
   }, []);
 
   const handleRestartDemo = useCallback(() => {
@@ -817,21 +864,31 @@ export default function Workbench() {
     projectId, formData, blueprint, versions, viewedStep, currentStep, runState, runMode, outputWorkflowStep, conceptRequirement, projectInputStep,
     presentationMode, presentationStage, presentationAgentStates, presentationComplete, roadshowUi,
   };
+  const currentStageLabel = presentationMode
+    ? ['项目资料', '设计蓝本', 'Agent 协作', '完整成果'][presentationStage]
+    : blueprint.agentRuns[viewedStep + 1]?.agentName || '项目资料';
 
   return (
     <div className="workspace-readable app-shell h-screen flex flex-col">
-      <header className="h-16 shrink-0 flex items-center justify-between px-5 bg-white border-b border-[var(--lf-border)] z-20">
-        <button onClick={() => navigate('/')} className="flex items-center gap-3">
+      <header className="workbench-header">
+        <button onClick={() => navigate('/')} className="workbench-brand flex items-center gap-3">
           <div className="brand-mark w-9 h-9 rounded-xl">L</div>
           <div className="text-left"><p className="brand-gradient-text text-sm font-bold">LandscapeFlow AI</p><p className="text-xs text-[var(--lf-muted)]">景观方案设计总监智能体</p></div>
         </button>
-        <div className="min-w-0 flex-1 px-8 text-center">
-          <p className="truncate text-sm font-semibold text-[var(--lf-brand-950)]">{blueprint.projectBasicInfo.projectName || '未命名景观项目'}</p>
-          <p className="truncate text-xs text-[var(--lf-muted)]">当前阶段：{presentationMode ? ['项目资料', '设计蓝本', 'Agent 协作', '完整成果'][presentationStage] : blueprint.agentRuns[viewedStep + 1]?.agentName}</p>
+        <div className="workbench-project-context">
+          <p className="truncate">
+            <span>{blueprint.projectBasicInfo.projectName || '未命名景观项目'}</span>
+            <span>当前阶段：{currentStageLabel}</span>
+          </p>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="rounded-full bg-cyan-50 px-3 py-1.5 text-xs font-semibold text-cyan-700">{presentationMode ? '项目蓝本持续更新' : `Blueprint ${blueprint.milestoneVersion || 'v0'} · r${blueprint.revision ?? blueprint.currentVersion}`}</span>
-        </div>
+        <button type="button" className="workbench-user-entry" aria-label="当前用户：设计总监 李博">
+          <span className="workbench-user-avatar">李</span>
+          <span className="workbench-user-copy">
+            <strong>设计总监 李博</strong>
+            <small>已登录</small>
+          </span>
+          <span className="workbench-user-chevron" aria-hidden="true">⌄</span>
+        </button>
       </header>
       {notice && <div className="fixed top-16 left-1/2 -translate-x-1/2 z-[70] rounded-xl bg-gray-900 text-white text-xs px-4 py-2.5 shadow-xl max-w-xl text-center">{notice}</div>}
       <div className="workbench-grid flex-1 min-h-0 overflow-hidden">
@@ -844,8 +901,18 @@ export default function Workbench() {
             presentationMode={presentationMode}
           />
         </aside>
-        <main className={`relative min-w-0 overflow-hidden bg-[#FBFBFE] ${showProjectInputWizard ? '' : 'pb-[76px]'}`}>
-          <AgentContent
+        <main className={`relative flex min-w-0 flex-col overflow-hidden bg-[#FBFBFE] ${showProjectInputWizard ? '' : 'pb-[76px]'}`}>
+          <div className="workbench-agent-rail">
+            <CompactAgentProgress
+              blueprint={blueprint}
+              presentationMode={presentationMode}
+              presentationAgentStates={presentationAgentStates}
+              viewedStep={viewedStep}
+              onNavigate={setViewedStep}
+            />
+          </div>
+          <div className="min-h-0 flex-1">
+            <AgentContent
             blueprint={blueprint}
             formData={formData}
             viewedStep={viewedStep}
@@ -892,7 +959,8 @@ export default function Workbench() {
             onStartVisualGeneration={handleStartVisualGeneration}
             onEnterOutput={handleEnterOutput}
             onConfirmPresentationContent={handleConfirmPresentationContent}
-          />
+            />
+          </div>
           {!showProjectInputWizard && <BottomControlBar
             blueprint={blueprint}
             runState={runState}

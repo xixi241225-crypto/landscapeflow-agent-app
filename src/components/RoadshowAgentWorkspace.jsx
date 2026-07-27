@@ -10,15 +10,6 @@ import {
   selectVisualCandidates,
 } from '../blueprint/blueprintSelectors';
 
-const AGENT_STEPS = [
-  '前期分析',
-  '概念生成',
-  '方案比选',
-  '空间推演',
-  '视觉表达',
-  '成果输出',
-];
-
 const CONCEPT_LABELS = {
   A: '方案 1',
   B: '方案 2',
@@ -88,31 +79,6 @@ function ConceptDiagram({ code }) {
       <path d="M20 164 C105 46 156 221 237 105 S361 45 458 90" stroke="#49795c" strokeWidth="12" fill="none" strokeLinecap="round" />
       <path d="M32 178 C117 60 168 231 249 115 S373 55 470 100" stroke="#f6efe1" strokeWidth="5" fill="none" strokeLinecap="round" />
     </svg>
-  );
-}
-
-function AgentStepper({ blueprint, viewedStep, onNavigate }) {
-  return (
-    <nav className="roadshow-agent-stepper" aria-label="六个专业 Agent 进度">
-      {AGENT_STEPS.map((label, index) => {
-        const run = blueprint.agentRuns?.[index + 1];
-        const complete = run?.status === 'done';
-        const current = viewedStep === index;
-        const canReview = complete && index < viewedStep;
-        return (
-          <button
-            type="button"
-            key={label}
-            disabled={!canReview && !current}
-            onClick={() => canReview && onNavigate(index)}
-            className={`roadshow-agent-step ${complete ? 'done' : ''} ${current ? 'active' : ''}`}
-          >
-            <span>{complete ? '✓' : index + 1}</span>
-            <p>{label}</p>
-          </button>
-        );
-      })}
-    </nav>
   );
 }
 
@@ -262,7 +228,6 @@ function FullDesignStatement({ blueprint, onContinue }) {
   return (
     <div className="roadshow-ux-page" data-testid="design-statement-full">
       <div className="roadshow-ux-hero"><p>APPROVED DESIGN STATEMENT</p><h2>设计说明</h2><span>当前方案的正式设计说明成果</span></div>
-      <div className="roadshow-sticky-action"><p>11 个分项已通过并合并为连续设计说明。</p><button type="button" onClick={onContinue} className="btn-primary px-7 py-3 text-base">确认设计说明并继续</button></div>
       <article className="surface-card p-7">
         <div className="columns-1 gap-8 xl:columns-2">
           {(statement?.sections || []).map((section, index) => (
@@ -274,6 +239,7 @@ function FullDesignStatement({ blueprint, onContinue }) {
           ))}
         </div>
       </article>
+      <div className="roadshow-sticky-action"><p>11 个分项已通过并合并为连续设计说明。</p><button type="button" onClick={onContinue} className="btn-primary px-7 py-3 text-base">确认设计说明并继续</button></div>
     </div>
   );
 }
@@ -369,7 +335,6 @@ export default function RoadshowAgentWorkspace({
   outputWorkflowStep,
   presentationBusy,
   checkpointProps,
-  onNavigate,
   onOpenBlueprint,
   onRequirement,
   onRegenerateConcepts,
@@ -425,7 +390,6 @@ export default function RoadshowAgentWorkspace({
 
   return (
     <div data-testid="roadshow-single-agent-workspace">
-      <AgentStepper blueprint={blueprint} viewedStep={viewedStep} onNavigate={onNavigate} />
       <motion.div key={`${viewedStep}-${roadshowUi.agent4View}-${roadshowUi.visualPromptReady}-${outputWorkflowStep}`} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.24 }}>
         {content}
       </motion.div>

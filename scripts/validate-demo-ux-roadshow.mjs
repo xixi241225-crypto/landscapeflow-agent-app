@@ -21,13 +21,16 @@ import { selectAnalysisAssets, selectSelectedVisuals } from '../src/blueprint/bl
 const source = (path) => readFileSync(new URL(path, import.meta.url), 'utf8');
 const workspaceSource = source('../src/components/RoadshowAgentWorkspace.jsx');
 const workbenchSource = source('../src/components/Workbench.jsx');
+const agentContentSource = source('../src/components/AgentContent.jsx');
 const wizardSource = source('../src/components/ProjectDefinitionWizard.jsx');
 const checkpointSource = source('../src/components/CheckpointPanel.jsx');
 const heroSource = source('../src/components/Hero.jsx');
+const roadshowFlowSource = source('../src/components/RoadshowFlow.jsx');
 const resultsSource = source('../src/components/roadshow/RoadshowMode.jsx');
 const bindingSource = source('../src/data/demoAssetBindings.js');
+const stylesSource = source('../src/index.css');
 
-// A–C: input UI uses designer-facing names, contains no downstream visual list and is prefilled.
+// A–C: input UI uses designer-facing names, starts blank and only fills demo content on explicit action.
 assert.equal(DEMO_FILES[0].displayName, '设计任务书');
 assert.equal(DEMO_FILES[0].displayType, '已上传');
 assert.match(wizardSource, /file\.displayName \|\| file\.name/);
@@ -38,11 +41,18 @@ assert.ok(DEMO_CASE.city);
 assert.ok(DEMO_CASE.designGoals);
 assert.ok(DEMO_CASE.stylePreference);
 assert.ok(DEMO_CASE.clientFocus);
-assert.match(workbenchSource, /const demo = \{ \.\.\.DEMO_CASE, siteFiles: DEMO_FILES \}/);
+const startPresentationSource = workbenchSource.match(/const handleStartPresentation = useCallback\(\(\) => \{([\s\S]*?)\n  \}, \[\]\);/)?.[1] || '';
+assert.match(startPresentationSource, /const fresh = newProjectState\(true\)/);
+assert.doesNotMatch(startPresentationSource, /DEMO_CASE|DEMO_FILES/);
+assert.match(workbenchSource, /siteFiles: mergeDemoFiles\(\)/);
 
 // D–F, H–O: the active roadshow UI is one Agent page at a time and exposes the specified sequence.
 assert.match(workspaceSource, /roadshow-single-agent-workspace/);
-assert.match(workspaceSource, /roadshow-agent-stepper/);
+assert.doesNotMatch(workspaceSource, /roadshow-agent-stepper|function AgentStepper/);
+assert.doesNotMatch(stylesSource, /\.roadshow-agent-stepper|\.roadshow-agent-step\b/);
+assert.match(workbenchSource, /workbench-agent-progress/);
+assert.match(workbenchSource, /disabled=\{!canReview\}/);
+assert.match(roadshowFlowSource, /details\.coreQuestions\?\.length/);
 assert.match(workspaceSource, /AGENT 02 · CONCEPT GENERATION/);
 assert.match(workspaceSource, /本阶段只负责产生差异化方向，不评分、不推荐/);
 assert.match(workspaceSource, /进入方案比选/);
@@ -60,6 +70,12 @@ assert.match(workspaceSource, /roadshow-agent6-outline/);
 assert.match(workspaceSource, /PRESENTATION_OUTLINE/);
 assert.equal((workspaceSource.match(/\['(?:0[1-9]|1[0-4])',/g) || []).length, 14);
 assert.doesNotMatch(workspaceSource, /风格 A|风格 B|模板市场|路演版|专业版/);
+assert.equal((workspaceSource.match(/roadshow-sticky-action/g) || []).length, 6);
+const actionStyle = stylesSource.match(/\.roadshow-sticky-action\s*\{([\s\S]*?)\}/)?.[1] || '';
+assert.match(actionStyle, /position:\s*static/);
+assert.match(actionStyle, /margin-top:\s*20px/);
+assert.doesNotMatch(actionStyle, /position:\s*sticky|position:\s*fixed|backdrop-filter|bottom:/);
+assert.match(agentContentSource, /presentationMode \? 'pb-5' : 'pb-28'/);
 
 // G: concept regeneration keeps Agent 1, replaces Agent 2 and marks downstream stale.
 const demoInput = { ...DEMO_CASE, siteFiles: DEMO_FILES };
@@ -113,8 +129,8 @@ assert.equal(blueprint.checkpoints.find((item) => item.id === 'checkpoint-5').st
 assert.match(resultsSource, /results-design-trace-entry/);
 assert.match(resultsSource, /查看设计执行轨迹/);
 assert.match(resultsSource, /经人工复核后，可进一步沉淀为后续项目可复用的设计经验/);
-assert.match(heroSource, /LandscapeFlow AI 是怎么工作的？/);
-assert.match(heroSource, /2 次决策 \+ 3 次复核/);
+assert.match(heroSource, /h-screen overflow-hidden/);
+assert.doesNotMatch(heroSource, /LandscapeFlow AI 是怎么工作的？/);
 assert.doesNotMatch(workspaceSource, /traceId|Cached Demo Asset Provider|generationProvider|generationMode|sourceBlueprintFields|isFactSource|schemaVersion/);
 const reloaded = migrateBlueprintToV2(JSON.parse(JSON.stringify(blueprint)));
 assert.equal(reloaded.checkpoints.find((item) => item.id === 'checkpoint-5').status, '已确认');
@@ -147,7 +163,7 @@ const otherVisualPatch = await mockAgentProvider.runAgent(5, other, { delayMs: 0
 assert.equal(otherVisualPatch.analysisAssets.length, 0);
 assert.ok(otherVisualPatch.visualAssets.every((item) => !/huanlegu|欢乐谷|demo-images/i.test(JSON.stringify(item))));
 
-console.log('✓ A–F 项目资料减法、设计任务书命名、默认预填与单 Agent 页面校验通过');
+console.log('✓ A–F 项目资料减法、显式演示填入、单一 Agent 进度条与页面校验通过');
 console.log('✓ G 概念重新生成保留 Agent 1、记录设计师请求并只使 Agent 2/3 及下游受影响');
 console.log('✓ H–P Agent 4/5/6 分阶段体验、Gate 4 可空理由与 Gate 5 最终门禁校验通过');
 console.log('✓ Q–T Results Trace 入口、技术字段减法、reload persistence 与跨项目隔离校验通过');

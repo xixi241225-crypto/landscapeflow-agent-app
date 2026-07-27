@@ -7,7 +7,7 @@ import VisualAssetFrame from './VisualAssetFrame';
 import ProjectDefinitionWizard from './ProjectDefinitionWizard';
 import PresentationDeliverable from './PresentationDeliverable';
 import RoadshowAgentWorkspace from './RoadshowAgentWorkspace';
-import { RoadshowBlueprintDraft, RoadshowStageRail } from './RoadshowFlow';
+import { RoadshowBlueprintDraft } from './RoadshowFlow';
 import { AGENTS, CONTENT_STATUS } from '../blueprint/blueprintModel';
 import {
   selectConceptCandidate,
@@ -183,36 +183,9 @@ export default function AgentContent({
   const showProjectWizard = presentationMode
     ? presentationStage === 0
     : viewedStep === 0 && isIdle && run.status === 'pending' && !run.blueprintVersionWritten;
-  const presentationTitles = [
-    ['项目资料', '输入项目基本信息并整理核心资料'],
-    ['项目设计蓝本草案', '确认设计总监智能体对目标、约束与策略的理解'],
-    ['Agent 协作', '六个专业 Agent 围绕同一份项目设计蓝本连续执行'],
-    ['完整成果', '查看并确认 14 页方案汇报成果'],
-  ];
-  const presentationTitle = presentationTitles[presentationStage] || presentationTitles[0];
-
   return (
     <div className="h-full flex flex-col">
-      {presentationMode && <RoadshowStageRail stage={presentationStage} />}
-      <div className="mx-5 mt-4 rounded-2xl border border-[var(--lf-border)] bg-white px-4 py-3 flex items-center gap-3 shadow-sm shrink-0">
-        <div className="brand-mark w-9 h-9 rounded-xl text-xs">{presentationMode ? `0${presentationStage + 1}` : String(agent.id).padStart(2, '0')}</div>
-        <div className="flex-1">
-          <h2 className="text-base font-semibold text-[var(--lf-brand-950)]">{presentationMode ? presentationTitle[0] : `${String(agent.id).padStart(2, '0')} ${agent.name}`}</h2>
-          <p className="text-xs text-[var(--lf-muted)] mt-0.5">{presentationMode ? presentationTitle[1] : viewedStep === 0 ? '梳理基本信息、项目资料与设计边界' : stepGoals[viewedStep]}</p>
-        </div>
-        {presentationMode ? (
-          <Badge tone={presentationStage === 2 && presentationAgentStates.some((status) => status === '执行中') ? 'blue' : presentationStage > 0 ? 'green' : 'gray'}>
-            {presentationStage === 2 && presentationAgentStates.some((status) => status === '执行中') ? '执行中' : presentationStage > 0 ? '已就绪' : '资料准备'}
-          </Badge>
-        ) : (
-          <>
-            <Badge tone={run.status === 'done' ? 'green' : run.status === 'stale' ? 'red' : run.status === 'working' ? 'blue' : 'gray'}>{run.status === 'done' ? '已完成' : run.status === 'stale' ? '需要重新生成' : run.status === 'working' ? '执行中' : '待执行'}</Badge>
-            {run.blueprintVersionRead && <span className="text-xs text-[var(--lf-muted)]">读取 {run.blueprintVersionRead} → 写入 {run.blueprintVersionWritten}</span>}
-          </>
-        )}
-      </div>
-
-      <div className={`flex-1 overflow-y-auto px-5 py-4 ${showProjectWizard ? 'pb-5' : 'pb-28'}`}>
+      <div className={`flex-1 overflow-y-auto px-5 py-4 ${showProjectWizard ? 'pb-5' : presentationMode ? 'pb-5' : 'pb-28'}`}>
         <div className="max-w-6xl mx-auto">
           {!presentationMode && agentProgress?.agentId === agent.id && <div className="rounded-xl border border-cyan-200 bg-cyan-50 p-4 mb-4"><div className="flex items-center justify-between"><p className="text-sm font-semibold text-cyan-900">{agent.name} 正在分析</p><span className="text-xs text-cyan-700">{Math.round(((agentProgress.step + 1) / agentProgress.actions.length) * 100)}%</span></div><div className="h-2 rounded-full bg-white mt-3 overflow-hidden"><motion.div className="h-full bg-cyan-500" animate={{ width: `${((agentProgress.step + 1) / agentProgress.actions.length) * 100}%` }} /></div><div className="grid grid-cols-3 gap-2 mt-3">{agentProgress.actions.map((action, index) => <div key={action} className={`text-xs ${index <= agentProgress.step ? 'text-cyan-800' : 'text-slate-400'}`}>{index <= agentProgress.step ? '●' : '○'} {action}</div>)}</div></div>}
 
@@ -255,7 +228,6 @@ export default function AgentContent({
                   onApproveRemainingDesignStatementSections,
                   designStatementBusySections,
                 }}
-                onNavigate={onNavigate}
                 onOpenBlueprint={onOpenBlueprint}
                 onRequirement={onConceptRequirement}
                 onRegenerateConcepts={onRegenerateConcepts}

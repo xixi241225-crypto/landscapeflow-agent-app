@@ -1,12 +1,6 @@
 import { useRef } from 'react';
 import { BUDGET_OPTIONS, DESIGN_STAGES, PROJECT_TYPES } from '../data/demoCase';
 
-const WIZARD_STEPS = [
-  { id: 0, number: '01', title: '基本信息' },
-  { id: 1, number: '02', title: '资料上传' },
-  { id: 2, number: '03', title: '整理确认' },
-];
-
 const SUGGESTED_TYPES = ['项目任务书', '场地基础资料', '设计要求与约束', '参考案例与风格偏好'];
 
 function inferCategory(file) {
@@ -43,23 +37,6 @@ function mergeProjectFiles(existingFiles, files) {
   return [...existing, ...additions];
 }
 
-function WizardHeader({ step }) {
-  return (
-    <div className="project-wizard-steps" aria-label="项目资料整理步骤">
-      {WIZARD_STEPS.map((item) => {
-        const active = item.id === step;
-        const complete = item.id < step;
-        return (
-          <div key={item.id} className={`project-wizard-step ${active ? 'active' : ''} ${complete ? 'complete' : ''}`}>
-            <span>{complete ? '✓' : item.number}</span>
-            <p>{item.title}</p>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
 function PageTitle({ title, subtitle, onFillDemo }) {
   return (
     <div className="flex items-start justify-between gap-5">
@@ -88,7 +65,7 @@ function BasicInfoStep({ formData, onFormUpdate, onFillDemo, onNext, onNotice })
 
   return (
     <div className="project-wizard-page">
-      <PageTitle title="项目基本信息" subtitle="欢乐谷演示项目的已知输入已准备好，设计师只需核对关键边界。" onFillDemo={onFillDemo} />
+      <PageTitle title="项目基本信息" subtitle="请填写项目的基础信息与关键设计边界，也可一键填入演示案例。" onFillDemo={onFillDemo} />
       <div className="mt-7 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <label className="form-label">项目名称
           <input data-testid="field-projectName" value={formData.projectName || ''} onChange={(event) => onFormUpdate('projectName', event.target.value)} className="form-input mt-1.5" placeholder="例如：社区公园更新设计" />
@@ -117,50 +94,27 @@ function BasicInfoStep({ formData, onFormUpdate, onFillDemo, onNext, onNotice })
             {DESIGN_STAGES.map((item) => <option key={item} value={item}>{item}</option>)}
           </select>
         </label>
-        {formData.demoProjectInput ? (
-          <div className="form-label">预算条件
-            <div data-testid="field-budgetCondition-pending" className="mt-1.5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800">
-              待后续资料确认，当前不作为设计硬约束
-            </div>
-          </div>
-        ) : (
-          <label className="form-label">预算条件
-            <select data-testid="field-budgetCondition" value={formData.budgetCondition || ''} onChange={(event) => onFormUpdate('budgetCondition', event.target.value)} className="form-select mt-1.5">
-              <option value="">请选择预算条件</option>
-              {BUDGET_OPTIONS.map((item) => <option key={item} value={item}>{item}</option>)}
-            </select>
-          </label>
-        )}
+        <label className="form-label">预算条件
+          <select data-testid="field-budgetCondition" value={formData.budgetCondition || ''} onChange={(event) => onFormUpdate('budgetCondition', event.target.value)} className="form-select mt-1.5">
+            <option value="">请选择预算条件</option>
+            {BUDGET_OPTIONS.map((item) => <option key={item} value={item}>{item}</option>)}
+          </select>
+        </label>
       </div>
-
-      <details className="mt-5 rounded-2xl border border-violet-100 bg-white p-4" open>
-        <summary className="cursor-pointer text-sm font-bold text-[var(--lf-brand-900)]">已预置的设计要求与偏好</summary>
-        <div className="mt-4 grid gap-4 md:grid-cols-3">
-          <label className="form-label">设计偏好
-            <textarea data-testid="field-stylePreference" value={formData.stylePreference || ''} onChange={(event) => onFormUpdate('stylePreference', event.target.value)} className="form-input mt-1.5 min-h-[92px] resize-none" placeholder="待补充" />
-          </label>
-          <label className="form-label">重点关注
-            <textarea data-testid="field-clientFocus" value={formData.clientFocus || ''} onChange={(event) => onFormUpdate('clientFocus', event.target.value)} className="form-input mt-1.5 min-h-[92px] resize-none" placeholder="待补充" />
-          </label>
-          <label className="form-label">汇报对象
-            <textarea data-testid="field-presentationAudience" value={formData.presentationAudience || ''} onChange={(event) => onFormUpdate('presentationAudience', event.target.value)} className="form-input mt-1.5 min-h-[92px] resize-none" placeholder="待补充" />
-          </label>
-        </div>
-      </details>
 
       <div className="mt-5 grid gap-4 md:grid-cols-2">
         <label className="form-label">设计目标
-          <textarea data-testid="field-designGoals" value={formData.designGoals || ''} onChange={(event) => onFormUpdate('designGoals', event.target.value)} className="form-input mt-1.5 min-h-[108px] resize-none" placeholder="描述项目需要解决的核心目标" />
+          <textarea data-testid="field-designGoals" value={formData.designGoals || ''} onChange={(event) => onFormUpdate('designGoals', event.target.value)} className="form-input mt-1.5 min-h-[132px] resize-none" placeholder="描述项目需要解决的核心目标" />
         </label>
         {formData.demoProjectInput ? (
           <div className="form-label">核心约束
-            <div data-testid="field-constraints-pending" className="mt-1.5 min-h-[108px] rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-800">
+            <div data-testid="field-constraints-pending" className="mt-1.5 min-h-[132px] rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-800">
               正式红线、测绘、现状乔木、地下管线、市政排水接口、投资上限与运维主体均待后续资料确认。
             </div>
           </div>
         ) : (
           <label className="form-label">核心约束
-            <textarea data-testid="field-constraints" value={formData.constraints || ''} onChange={(event) => onFormUpdate('constraints', event.target.value)} className="form-input mt-1.5 min-h-[108px] resize-none" placeholder="描述造价、维护、场地与规范条件" />
+            <textarea data-testid="field-constraints" value={formData.constraints || ''} onChange={(event) => onFormUpdate('constraints', event.target.value)} className="form-input mt-1.5 min-h-[132px] resize-none" placeholder="描述造价、维护、场地与规范条件" />
           </label>
         )}
       </div>
@@ -393,7 +347,6 @@ export default function ProjectDefinitionWizard({
 }) {
   return (
     <div className="project-wizard">
-      <WizardHeader step={step} />
       {step === 0 && <BasicInfoStep formData={formData} onFormUpdate={onFormUpdate} onFillDemo={onFillDemoBasic} onNext={() => onSetStep(1)} onNotice={onNotice} />}
       {step === 1 && <UploadStep formData={formData} organizing={organizing} organizingStep={organizingStep} onFormUpdate={onFormUpdate} onFillDemo={onFillDemoFiles} onPrevious={() => onSetStep(0)} onNext={onReviewMaterials} />}
       {step === 2 && <ReviewStep formData={formData} onFormUpdate={onFormUpdate} onFillDemoFiles={onFillDemoFiles} onPrevious={() => onSetStep(1)} onConfirm={onConfirmAndGenerate} />}

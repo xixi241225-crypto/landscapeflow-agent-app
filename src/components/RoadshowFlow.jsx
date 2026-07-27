@@ -46,7 +46,9 @@ export function RoadshowBlueprintDraft({ blueprint, onOpenBlueprint }) {
   const goals = selectProjectGoals(blueprint);
   const constraints = selectCoreConstraints(blueprint);
   const preferences = selectDesignPreferences(blueprint);
-  const questions = blueprint.coreDesignQuestions || [];
+  const questions = details.coreQuestions?.length
+    ? details.coreQuestions
+    : blueprint.coreDesignQuestions || [];
   const openItems = details.openItems || [];
   return (
     <div className="roadshow-draft-page">
