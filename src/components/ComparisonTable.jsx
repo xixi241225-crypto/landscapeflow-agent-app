@@ -1,6 +1,11 @@
 import { motion } from 'framer-motion';
 
-export default function ComparisonTable({ comparison }) {
+export default function ComparisonTable({
+  comparison,
+  highlightSchemeId = '',
+  showRecommendation = true,
+  totalLabel = '加权总分',
+}) {
   if (!comparison?.schemes?.length) return null;
 
   const { dimensions, schemes, note, method } = comparison;
@@ -20,11 +25,14 @@ export default function ComparisonTable({ comparison }) {
           <thead>
             <tr style={{ borderBottom: '1px solid var(--lf-border)', background: 'var(--lf-brand-50)' }}>
               <th className="text-left py-2.5 px-3 font-medium" style={{ color: '#6B7280' }}>评分维度</th>
-              {schemes.map((s) => (
-                <th key={s.id} className="text-center py-2.5 px-3 font-medium" style={{ color: '#6B7280' }}>
-                  方案 {s.id}
+              {schemes.map((s, index) => {
+                const highlighted = [s.id, s.code].includes(highlightSchemeId);
+                return (
+                <th key={s.id} className="text-center py-2.5 px-3 font-medium" style={{ color: highlighted ? '#047857' : '#6B7280', background: highlighted ? '#ECFDF5' : undefined }}>
+                  方案 {index + 1}
                 </th>
-              ))}
+                );
+              })}
             </tr>
           </thead>
           <tbody>
@@ -41,23 +49,26 @@ export default function ComparisonTable({ comparison }) {
                   {dim.label}
                   <span className="text-xs ml-1" style={{ color: '#9CA3AF' }}>({Math.round(dim.weight * 100)}%)</span>
                 </td>
-                {schemes.map((s) => (
-                  <td key={s.id} className="text-center py-2.5 px-3">
-                    <span className="font-semibold" style={{ color: idColor[s.id] || '#374151' }}>
+                {schemes.map((s) => {
+                  const highlighted = [s.id, s.code].includes(highlightSchemeId);
+                  return (
+                  <td key={s.id} className="text-center py-2.5 px-3" style={{ background: highlighted ? '#ECFDF5' : undefined }}>
+                    <span className="font-semibold" style={{ color: highlighted ? '#047857' : idColor[s.code || s.id] || '#374151' }}>
                       {typeof s.scores?.[dim.key] === 'object' ? (s.scores?.[dim.key]?.raw ?? '-') : (s.scores?.[dim.key] ?? '-')}
                     </span>
                   </td>
-                ))}
+                  );
+                })}
               </motion.tr>
             ))}
             {/* Total Row */}
             <tr style={{ background: '#F9FAFB', borderTop: '2px solid #E5E7EB' }}>
-              <td className="py-3 px-3 font-semibold" style={{ color: 'var(--lf-brand-700)' }}>加权总分</td>
+              <td className="py-3 px-3 font-semibold" style={{ color: 'var(--lf-brand-700)' }}>{totalLabel}</td>
               {schemes.map((s) => (
-                <td key={s.id} className="text-center py-3 px-3">
+                <td key={s.id} className="text-center py-3 px-3" style={{ background: [s.id, s.code].includes(highlightSchemeId) ? '#D1FAE5' : undefined }}>
                   <span
                     className="text-lg font-bold"
-                    style={{ color: s.id === recommended?.id ? 'var(--lf-brand-600)' : '#374151' }}
+                    style={{ color: [s.id, s.code].includes(highlightSchemeId) ? '#047857' : s.id === recommended?.id ? 'var(--lf-brand-600)' : '#374151' }}
                   >
                     {s.total}
                   </span>
@@ -72,7 +83,7 @@ export default function ComparisonTable({ comparison }) {
       </div>
 
       {/* Recommendation */}
-      {recommended && (
+      {showRecommendation && recommended && (
         <motion.div
           className="rounded-2xl p-4"
           initial={{ opacity: 0, y: 10 }}

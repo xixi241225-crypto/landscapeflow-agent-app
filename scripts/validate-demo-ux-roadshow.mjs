@@ -44,7 +44,12 @@ assert.ok(DEMO_CASE.clientFocus);
 const startPresentationSource = workbenchSource.match(/const handleStartPresentation = useCallback\(\(\) => \{([\s\S]*?)\n  \}, \[\]\);/)?.[1] || '';
 assert.match(startPresentationSource, /const fresh = newProjectState\(true\)/);
 assert.doesNotMatch(startPresentationSource, /DEMO_CASE|DEMO_FILES/);
-assert.match(workbenchSource, /siteFiles: mergeDemoFiles\(\)/);
+const restartDemoSource = workbenchSource.match(/const handleRestartDemo = useCallback\(\(\) => \{([\s\S]*?)\n  \}, \[\]\);/)?.[1] || '';
+assert.match(restartDemoSource, /const fresh = newProjectState\(true\)/);
+assert.doesNotMatch(restartDemoSource, /DEMO_CASE|DEMO_FILES/);
+assert.match(workbenchSource, /当前已有项目资料，填入演示案例将替换当前草稿，是否继续？/);
+assert.match(workbenchSource, /siteFiles:\s*DEMO_FILES/);
+assert.doesNotMatch(wizardSource, /载入演示补充资料/);
 
 // D–F, H–O: the active roadshow UI is one Agent page at a time and exposes the specified sequence.
 assert.match(workspaceSource, /roadshow-single-agent-workspace/);
@@ -58,7 +63,10 @@ assert.match(workspaceSource, /本阶段只负责产生差异化方向，不评�
 assert.match(workspaceSource, /进入方案比选/);
 assert.match(workspaceSource, /AGENT 03 · SCHEME COMPARISON/);
 assert.match(workspaceSource, /方案 2｜社区共享环/);
-assert.match(checkpointSource, /三个方案都不满意，重新生成/);
+assert.match(workspaceSource, /agent3-professional-scores/);
+assert.match(workspaceSource, /<ComparisonTable/);
+assert.match(workspaceSource, /totalLabel="综合评分"/);
+assert.match(checkpointSource, /重新生成概念方案/);
 assert.match(workspaceSource, /data-testid=\{`agent4-\$\{asset\.id\.toLowerCase\(\)\}`\}/);
 ['A01', 'A02', 'A05'].forEach((id) => assert.match(bindingSource, new RegExp(`id: '${id}'`)));
 assert.match(workspaceSource, /design-statement-full/);
@@ -70,11 +78,15 @@ assert.match(workspaceSource, /roadshow-agent6-outline/);
 assert.match(workspaceSource, /PRESENTATION_OUTLINE/);
 assert.equal((workspaceSource.match(/\['(?:0[1-9]|1[0-4])',/g) || []).length, 14);
 assert.doesNotMatch(workspaceSource, /风格 A|风格 B|模板市场|路演版|专业版/);
-assert.equal((workspaceSource.match(/roadshow-sticky-action/g) || []).length, 6);
-const actionStyle = stylesSource.match(/\.roadshow-sticky-action\s*\{([\s\S]*?)\}/)?.[1] || '';
+assert.equal((workspaceSource.match(/roadshow-action-area/g) || []).length, 6);
+assert.doesNotMatch(workspaceSource, /roadshow-sticky-action/);
+const actionStyle = stylesSource.match(/\.roadshow-action-area\s*\{([\s\S]*?)\}/)?.[1] || '';
 assert.match(actionStyle, /position:\s*static/);
 assert.match(actionStyle, /margin-top:\s*20px/);
-assert.doesNotMatch(actionStyle, /position:\s*sticky|position:\s*fixed|backdrop-filter|bottom:/);
+assert.match(actionStyle, /justify-content:\s*center/);
+assert.doesNotMatch(actionStyle, /(?:^|\n)\s*(?:position:\s*(?:sticky|fixed)|justify-content:\s*space-between|backdrop-filter|bottom:)/);
+assert.match(stylesSource, /\.roadshow-checkpoint-actions[\s\S]*justify-content:\s*center/);
+assert.match(roadshowFlowSource, /gate1-centered-actions/);
 assert.match(agentContentSource, /presentationMode \? 'pb-5' : 'pb-28'/);
 
 // G: concept regeneration keeps Agent 1, replaces Agent 2 and marks downstream stale.
@@ -84,6 +96,11 @@ blueprint = runProjectDefinitionAgent(demoInput, blueprint).blueprint;
 blueprint = confirmProjectDefinitionBlueprint(blueprint).blueprint;
 blueprint = runConceptGenerationAgent(blueprint, { mode: 'demo' }).blueprint;
 blueprint = applyAgentPatch(blueprint, 3, await mockAgentProvider.runAgent(3, blueprint, { delayMs: 0 }), 'Demo UX Agent 3');
+assert.deepEqual(
+  blueprint.comparison.dimensions.map((dimension) => dimension.label),
+  ['功能满足度', '多年龄融合度', '空间尺度适配', '植物空间潜力', '建设成本', '运维难度'],
+);
+assert.equal(blueprint.comparison.schemes.find((scheme) => scheme.code === 'B').total, 8.63);
 blueprint = updateDesignerDecision(blueprint, { selectedConceptId: 'B' }, 'Demo UX Gate 2');
 blueprint = confirmCheckpoint(blueprint, 'checkpoint-2', { selectedConceptId: 'B' }, 'Demo UX');
 blueprint = applyAgentPatch(blueprint, 4, await mockAgentProvider.runAgent(4, blueprint, { delayMs: 0 }), 'Demo UX Agent 4');

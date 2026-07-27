@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef } from 'react';
 import PresentationDeckViewer from './PresentationDeckViewer';
 
 const CONTENT_ITEMS = [
@@ -20,8 +20,8 @@ function designerFacingQualityResult(check = '', result = '') {
   return result;
 }
 
-export default function PresentationDeliverable({ blueprint }) {
-  const [previewOpen, setPreviewOpen] = useState(false);
+export default function PresentationDeliverable({ blueprint, onOpenResults }) {
+  const deckViewerRef = useRef(null);
   const artifact = blueprint.deliverableArtifacts?.presentation;
   if (!artifact) {
     return <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center text-sm text-slate-500">等待 Agent 6 登记最终汇报成果。</div>;
@@ -33,10 +33,10 @@ export default function PresentationDeliverable({ blueprint }) {
         <div className="grid gap-6 p-6 lg:grid-cols-[1fr_320px]">
           <div>
             <p className="text-xs font-bold tracking-[0.2em] text-emerald-300">AGENT 6 · FINAL PRESENTATION</p>
-            <h2 className="mt-3 font-serif text-3xl font-bold">方案汇报已准备</h2>
+            <h2 className="mt-3 font-serif text-3xl font-bold">方案汇报已生成</h2>
             <p className="mt-2 text-base text-violet-100">{artifact.pageCount} 页景观概念方案汇报成果，已完成完整性校验并归入当前项目成果。</p>
             <div className="mt-6 flex flex-wrap gap-3">
-              <button type="button" onClick={() => setPreviewOpen(true)} className="rounded-xl bg-white px-5 py-3 text-sm font-bold text-[var(--lf-brand-950)]" data-testid="preview-presentation">查看方案汇报</button>
+              <button type="button" onClick={() => deckViewerRef.current?.enterFullscreen()} className="rounded-xl bg-white px-5 py-3 text-sm font-bold text-[var(--lf-brand-950)]" data-testid="fullscreen-presentation">全屏查看</button>
               <a href={artifact.downloadRef} download={artifact.download?.fileName} className="rounded-xl border border-white/30 px-5 py-3 text-sm font-bold text-white hover:bg-white/10" data-testid="download-presentation">下载完整成果包</a>
             </div>
           </div>
@@ -47,6 +47,8 @@ export default function PresentationDeliverable({ blueprint }) {
           </div>
         </div>
       </section>
+
+      <PresentationDeckViewer ref={deckViewerRef} open inline artifact={artifact} />
 
       {confirmed && <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800" data-testid="gate5-confirmed-banner">Gate 5 已确认｜最终汇报成果已进入交付状态</div>}
 
@@ -69,7 +71,14 @@ export default function PresentationDeliverable({ blueprint }) {
           </div>
         </details>
       </div>
-      <PresentationDeckViewer open={previewOpen} artifact={artifact} onClose={() => setPreviewOpen(false)} />
+      {confirmed && onOpenResults && (
+        <div className="roadshow-action-area" data-testid="agent6-results-action">
+          <p>最终汇报成果已确认，可以进入完整成果中心。</p>
+          <div className="roadshow-action-buttons">
+            <button type="button" onClick={onOpenResults} className="btn-primary px-7 py-3 text-base">查看完整成果</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

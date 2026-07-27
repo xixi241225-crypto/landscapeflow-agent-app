@@ -170,6 +170,9 @@ export default function AgentContent({
   onStartVisualGeneration,
   onEnterOutput,
   onConfirmPresentationContent,
+  onModifyPresentation,
+  onConfirmPresentation,
+  onOpenResults,
 }) {
   const [modalImage, setModalImage] = useState(null);
   const agent = AGENTS[viewedStep];
@@ -209,7 +212,15 @@ export default function AgentContent({
                   onNotice={onNotice}
                 />
               )}
-              {presentationStage === 1 && <RoadshowBlueprintDraft blueprint={blueprint} onOpenBlueprint={onOpenBlueprint} />}
+              {presentationStage === 1 && (
+                <RoadshowBlueprintDraft
+                  blueprint={blueprint}
+                  busy={presentationBusy}
+                  onOpenBlueprint={onOpenBlueprint}
+                  onModify={onModifyPresentation}
+                  onConfirm={onConfirmPresentation}
+                />
+              )}
               {presentationStage === 2 && <RoadshowAgentWorkspace
                 blueprint={blueprint}
                 viewedStep={viewedStep}
@@ -238,6 +249,7 @@ export default function AgentContent({
                 onStartVisualGeneration={onStartVisualGeneration}
                 onEnterOutput={onEnterOutput}
                 onConfirmPresentationContent={onConfirmPresentationContent}
+                onOpenResults={onOpenResults}
                 onOpenImage={setModalImage}
               />}
             </>

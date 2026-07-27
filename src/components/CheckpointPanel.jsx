@@ -67,6 +67,10 @@ export default function CheckpointPanel({
     && !['regenerating', 'needsRevision', 'stale'].includes(designStatement.status)
   );
   const canConfirmGate5 = GATE5_CHECKS.every(([key]) => presentationReview.checks[key]);
+  const selectedConcept = conceptCandidates.find((concept) => concept.id === decisionDraft.selectedConceptId);
+  const selectedConceptNumber = selectedConcept
+    ? ['A', 'B', 'C'].indexOf(selectedConcept.code || selectedConcept.id) + 1
+    : 0;
 
   const handleConfirm = () => {
     setError('');
@@ -127,9 +131,6 @@ export default function CheckpointPanel({
           <button onClick={() => setDecisionDraft((prev) => ({ ...prev, selectedConceptId: blueprint.agentRecommendation?.conceptId, acceptedRecommendation: true }))} className="btn-gold px-4 py-2 text-xs">采用推荐方案｜{blueprint.agentRecommendation?.conceptName}</button>
           <p className="rounded-xl border border-violet-100 bg-white p-3 text-xs text-[var(--lf-muted)]">当前草稿：{decisionDraft.selectedConceptId ? `方案 ${['A', 'B', 'C'].indexOf(decisionDraft.selectedConceptId) + 1}` : '未选择'}。点击确认后才会写入 Blueprint。</p>
           <p className="text-[10px] text-gray-500">空间推演将严格读取设计师最终选择，不会默认采用 Agent 推荐。</p>
-          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-amber-200 pt-4">
-            <button onClick={onRegenerate} className="rounded-xl border border-rose-200 bg-white px-4 py-3 text-sm font-semibold text-rose-700">三个方案都不满意，重新生成</button>
-          </div>
         </div>
       )}
 
@@ -180,8 +181,23 @@ export default function CheckpointPanel({
       )}
 
       {error && <p className="text-xs text-red-600 mt-3">{error}</p>}
-      <div className="flex justify-end mt-4">
-        <button disabled={(checkpoint.id === 'checkpoint-3' && !canConfirmGate3) || (checkpoint.id === 'checkpoint-5' && !canConfirmGate5)} onClick={handleConfirm} className="btn-primary px-6 py-3 text-sm disabled:cursor-not-allowed disabled:opacity-40">{checkpoint.id === 'checkpoint-1' ? '确认项目理解并继续' : checkpoint.id === 'checkpoint-2' ? `确认${decisionDraft.selectedConceptId ? `方案 ${['A', 'B', 'C'].indexOf(decisionDraft.selectedConceptId) + 1}` : '设计方向'}` : checkpoint.id === 'checkpoint-3' ? '确认设计说明书' : checkpoint.id === 'checkpoint-4' ? '确认视觉方案' : '确认最终成果'}</button>
+      <div className="roadshow-checkpoint-actions">
+        {checkpoint.id === 'checkpoint-2' && (
+          <button onClick={onRegenerate} className="rounded-xl border border-rose-200 bg-white px-4 py-3 text-sm font-semibold text-rose-700">重新生成概念方案</button>
+        )}
+        <button disabled={(checkpoint.id === 'checkpoint-3' && !canConfirmGate3) || (checkpoint.id === 'checkpoint-5' && !canConfirmGate5)} onClick={handleConfirm} className="btn-primary px-6 py-3 text-sm disabled:cursor-not-allowed disabled:opacity-40">
+          {checkpoint.id === 'checkpoint-1'
+            ? '确认项目理解并继续'
+            : checkpoint.id === 'checkpoint-2'
+              ? selectedConcept
+                ? `确认方案 ${selectedConceptNumber}｜${selectedConcept.name}`
+                : '确认设计方向'
+              : checkpoint.id === 'checkpoint-3'
+                ? '确认设计说明书'
+                : checkpoint.id === 'checkpoint-4'
+                  ? '确认视觉方案'
+                  : '确认最终成果'}
+        </button>
       </div>
     </div>
   );

@@ -783,21 +783,14 @@
 }
 
 .project-wizard-actions {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  display: flex;
+  flex-wrap: wrap;
   margin-top: auto;
   align-items: center;
+  justify-content: center;
   gap: 16px;
   border-top: 1px solid var(--lf-border);
   padding-top: 14px;
-}
-
-.project-wizard-actions > :first-child {
-  justify-self: start;
-}
-
-.project-wizard-actions > :last-child {
-  justify-self: center;
 }
 
 .project-upload-dropzone {
@@ -1717,6 +1710,10 @@
 
 .roadshow-ux-page {
   display: grid;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  grid-template-columns: minmax(0, 1fr);
   gap: 16px;
   padding-bottom: 12px;
 }
@@ -1751,23 +1748,72 @@
   line-height: 1.65;
 }
 
-.roadshow-sticky-action {
+.roadshow-action-area {
   position: static;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: space-between;
-  gap: 18px;
+  justify-content: center;
+  gap: 12px;
   margin-top: 20px;
+  margin-bottom: 8px;
   border: 1px solid #dddaf2;
   border-radius: 16px;
   background: #fff;
-  padding: 11px 13px 11px 17px;
+  padding: 16px 18px;
   box-shadow: 0 3px 12px rgba(31, 28, 88, 0.04);
+  text-align: center;
 }
 
-.roadshow-sticky-action p {
+.roadshow-action-area p {
   color: var(--lf-muted);
   font-size: 12px;
+}
+
+.roadshow-action-buttons,
+.roadshow-checkpoint-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+}
+
+.roadshow-checkpoint-actions {
+  margin-top: 18px;
+  border-top: 1px solid rgba(217, 175, 85, 0.28);
+  padding-top: 18px;
+}
+
+.presentation-deck-inline {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 18px;
+  background: #0f172a;
+  box-shadow: 0 18px 36px rgba(15, 23, 42, 0.16);
+  color: white;
+}
+
+.presentation-deck-inline-stage {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 14px;
+}
+
+.presentation-deck-inline-image {
+  display: block;
+  width: 100%;
+  max-height: 680px;
+  border-radius: 10px;
+  object-fit: contain;
+  box-shadow: 0 18px 38px rgba(0, 0, 0, 0.28);
 }
 
 .roadshow-results-bottom {

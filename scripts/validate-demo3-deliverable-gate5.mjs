@@ -211,7 +211,10 @@ const activeUi = [
   '../src/components/CheckpointPanel.jsx',
   '../src/components/roadshow/RoadshowMode.jsx',
 ].map((path) => readFileSync(new URL(path, import.meta.url), 'utf8')).join('\n');
-assert.match(activeUi, /查看方案汇报/);
+assert.match(activeUi, /presentation-deck-inline/);
+assert.match(activeUi, /<PresentationDeckViewer ref=\{deckViewerRef\} open inline artifact=\{artifact\}/);
+assert.match(activeUi, /全屏查看/);
+assert.doesNotMatch(activeUi, />查看方案汇报</);
 assert.match(activeUi, /下载完整成果包/);
 assert.match(activeUi, /确认最终成果/);
 assert.doesNotMatch(activeUi, /下载可编辑 PPT|生成可编辑 PPT|PPTX 待后续接入/);

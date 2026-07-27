@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import CheckpointPanel from './CheckpointPanel';
+import ComparisonTable from './ComparisonTable';
 import PresentationDeliverable from './PresentationDeliverable';
 import VisualAssetFrame from './VisualAssetFrame';
 import { getDemoAssetBinding } from '../data/demoAssetBindings';
@@ -138,9 +139,11 @@ function ConceptGeneration({ blueprint, requirement, onRequirement, onRegenerate
         <textarea value={requirement} onChange={(event) => onRequirement(event.target.value)} className="form-input mt-3 min-h-[70px]" placeholder="可补充新的概念生成要求。" />
         <button type="button" onClick={onRegenerate} className="btn-secondary mt-3 px-4 py-2 text-xs">按新要求重新生成</button>
       </details>
-      <div className="roadshow-sticky-action">
+      <div className="roadshow-action-area">
         <p>三个方向将交给 Agent 3 进行专业比选。</p>
-        <button type="button" onClick={onEnterComparison} className="btn-primary px-7 py-3 text-base">进入方案比选</button>
+        <div className="roadshow-action-buttons">
+          <button type="button" onClick={onEnterComparison} className="btn-primary px-7 py-3 text-base">进入方案比选</button>
+        </div>
       </div>
     </div>
   );
@@ -173,11 +176,23 @@ function Comparison({ blueprint, checkpoint, checkpointProps }) {
           );
         })}
       </div>
+      <section className="rounded-2xl border border-[var(--lf-border)] bg-white p-5" data-testid="agent3-professional-scores">
+        <p className="text-xs font-bold tracking-[0.14em] text-[var(--lf-brand-600)]">PROFESSIONAL COMPARISON</p>
+        <h3 className="mt-2 text-xl font-bold text-[var(--lf-brand-950)]">六项专业评分</h3>
+        <div className="mt-4">
+          <ComparisonTable
+            comparison={blueprint.comparison}
+            highlightSchemeId={recommendedId}
+            showRecommendation={false}
+            totalLabel="综合评分"
+          />
+        </div>
+      </section>
       <section className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5">
         <p className="text-xs font-bold tracking-[0.14em] text-emerald-700">推荐方案</p>
         <h3 className="mt-2 text-xl font-bold text-emerald-950">方案 2｜社区共享环</h3>
         <p className="mt-2 text-sm leading-6 text-emerald-800">在有限场地中兼顾共享融合、空间尺度和多年龄使用关系。</p>
-        <details className="mt-3"><summary className="cursor-pointer text-xs font-semibold text-emerald-800">查看详细评分</summary><p className="mt-2 text-xs leading-6 text-emerald-800">详细六维评分保留在 Blueprint 的 Agent 3 比选记录中，用于专业复核与 Trace，不作为主界面的首要信息。</p></details>
+        <p className="mt-3 text-xs leading-6 text-emerald-800">Agent 推荐仅提供专业判断参考，最终方向仍由设计师在下方确认。</p>
       </section>
       <CheckpointPanel blueprint={blueprint} checkpoint={checkpoint} {...checkpointProps} />
     </div>
@@ -206,9 +221,11 @@ function SpatialReview({ blueprint, onOpenImage, onGenerateStatement }) {
           </article>
         ))}
       </div>
-      <div className="roadshow-sticky-action">
+      <div className="roadshow-action-area">
         <p>空间推演完成后，将基于同一 Blueprint 生成正式设计说明。</p>
-        <button type="button" onClick={onGenerateStatement} className="btn-primary px-7 py-3 text-base">生成设计说明</button>
+        <div className="roadshow-action-buttons">
+          <button type="button" onClick={onGenerateStatement} className="btn-primary px-7 py-3 text-base">生成设计说明</button>
+        </div>
       </div>
     </div>
   );
@@ -239,7 +256,7 @@ function FullDesignStatement({ blueprint, onContinue }) {
           ))}
         </div>
       </article>
-      <div className="roadshow-sticky-action"><p>11 个分项已通过并合并为连续设计说明。</p><button type="button" onClick={onContinue} className="btn-primary px-7 py-3 text-base">确认设计说明并继续</button></div>
+      <div className="roadshow-action-area"><p>11 个分项已通过并合并为连续设计说明。</p><div className="roadshow-action-buttons"><button type="button" onClick={onContinue} className="btn-primary px-7 py-3 text-base">确认设计说明并继续</button></div></div>
     </div>
   );
 }
@@ -266,9 +283,11 @@ function VisualTasks({ blueprint, promptReady, onGeneratePrompts, onStartGenerat
       </div>
       {!promptReady && <div className="flex gap-2 rounded-2xl border border-dashed border-violet-200 bg-white p-4"><input value={newScene} onChange={(event) => setNewScene(event.target.value)} className="form-input" placeholder="增加一个效果图场景" /><button type="button" onClick={addScene} className="btn-secondary shrink-0 px-4 py-2 text-sm">＋ 增加效果图</button></div>}
       {promptReady && <details className="rounded-2xl border border-violet-100 bg-white p-4"><summary className="cursor-pointer text-sm font-bold text-[var(--lf-brand-800)]">查看完整提示词</summary><div className="mt-3 space-y-3">{scenes.map((scene) => <p key={scene.id} className="rounded-xl bg-violet-50 p-3 text-xs leading-6 text-slate-700"><b>{scene.name}：</b>{buildPrompt(scene.name, blueprint)}</p>)}</div></details>}
-      <div className="roadshow-sticky-action">
+      <div className="roadshow-action-area">
         <p>{promptReady ? '视觉任务已经设计师确认后才会进入生成。' : '系统将基于 Blueprint 与已通过设计说明组织每个场景的提示词。'}</p>
-        <button type="button" onClick={promptReady ? onStartGeneration : onGeneratePrompts} className="btn-primary px-7 py-3 text-base">{promptReady ? '确认并开始生成' : '生成视觉提示词'}</button>
+        <div className="roadshow-action-buttons">
+          <button type="button" onClick={promptReady ? onStartGeneration : onGeneratePrompts} className="btn-primary px-7 py-3 text-base">{promptReady ? '确认并开始生成' : '生成视觉提示词'}</button>
+        </div>
       </div>
     </div>
   );
@@ -295,9 +314,11 @@ function VisualResults({ blueprint, checkpoint, checkpointProps, onOpenImage, on
         </div>
       </section>
       {selected && (
-        <div className="roadshow-sticky-action">
+        <div className="roadshow-action-area">
           <p>儿童视觉方向与其余六个 supporting visuals 已归入当前方案。</p>
-          <button type="button" onClick={onEnterOutput} className="btn-primary px-7 py-3 text-base">进入成果输出</button>
+          <div className="roadshow-action-buttons">
+            <button type="button" onClick={onEnterOutput} className="btn-primary px-7 py-3 text-base">进入成果输出</button>
+          </div>
         </div>
       )}
     </div>
@@ -317,7 +338,7 @@ function PresentationOutline({ blueprint, onConfirmContent }) {
           </details>
         ))}
       </div>
-      <div className="roadshow-sticky-action"><p>固定采用“设计院专业方案汇报型”，不增加风格选择。</p><button type="button" onClick={onConfirmContent} className="btn-primary px-7 py-3 text-base">确认汇报内容</button></div>
+      <div className="roadshow-action-area"><p>固定采用“设计院专业方案汇报型”，不增加风格选择。</p><div className="roadshow-action-buttons"><button type="button" onClick={onConfirmContent} className="btn-primary px-7 py-3 text-base">确认汇报内容</button></div></div>
     </div>
   );
 }
@@ -345,6 +366,7 @@ export default function RoadshowAgentWorkspace({
   onStartVisualGeneration,
   onEnterOutput,
   onConfirmPresentationContent,
+  onOpenResults,
   onOpenImage,
 }) {
   const checkpoint = activeCheckpoint;
@@ -362,7 +384,7 @@ export default function RoadshowAgentWorkspace({
       return <VisualTasks blueprint={blueprint} promptReady={roadshowUi.visualPromptReady} onGeneratePrompts={onGenerateVisualPrompts} onStartGeneration={onStartVisualGeneration} />;
     }
     if (presentationBusy || outputWorkflowStep === 1) return <GeneratingPresentation />;
-    if (blueprint.agentRuns?.[6]?.status === 'done') return <div className="roadshow-ux-page"><PresentationDeliverable blueprint={blueprint} /><CheckpointPanel blueprint={blueprint} checkpoint={checkpoint} {...checkpointProps} /></div>;
+    if (blueprint.agentRuns?.[6]?.status === 'done') return <div className="roadshow-ux-page"><PresentationDeliverable blueprint={blueprint} onOpenResults={onOpenResults} /><CheckpointPanel blueprint={blueprint} checkpoint={checkpoint} {...checkpointProps} /></div>;
     return <PresentationOutline blueprint={blueprint} onConfirmContent={onConfirmPresentationContent} />;
   }, [
     activeCheckpoint,
@@ -378,6 +400,7 @@ export default function RoadshowAgentWorkspace({
     onGenerateVisualPrompts,
     onOpenBlueprint,
     onOpenImage,
+    onOpenResults,
     onRegenerateConcepts,
     onRequirement,
     onStartVisualGeneration,

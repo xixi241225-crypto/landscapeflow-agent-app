@@ -40,7 +40,13 @@ function BlueprintList({ number, title, items, tone }) {
   );
 }
 
-export function RoadshowBlueprintDraft({ blueprint, onOpenBlueprint }) {
+export function RoadshowBlueprintDraft({
+  blueprint,
+  busy = false,
+  onOpenBlueprint,
+  onModify,
+  onConfirm,
+}) {
   const basic = blueprint.projectBasicInfo || {};
   const details = selectProjectDefinitionDetails(blueprint);
   const goals = selectProjectGoals(blueprint);
@@ -111,6 +117,16 @@ export function RoadshowBlueprintDraft({ blueprint, onOpenBlueprint }) {
       </details>
 
       <p className="roadshow-confirm-hint">确认后，六个专业 Agent 将围绕同一份项目设计蓝本连续工作。</p>
+      {onConfirm && (
+        <div className="roadshow-action-area" data-testid="gate1-centered-actions">
+          <div className="roadshow-action-buttons">
+            <button type="button" onClick={onModify} className="btn-secondary px-5 py-3 text-sm">修改或补充资料</button>
+            <button type="button" onClick={onConfirm} disabled={busy} className="btn-primary px-7 py-3 text-base disabled:cursor-wait disabled:opacity-70">
+              {busy ? '正在进入概念生成…' : '确认项目理解并继续'}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -120,7 +120,6 @@ function BasicInfoStep({ formData, onFormUpdate, onFillDemo, onNext, onNotice })
       </div>
 
       <div className="project-wizard-actions">
-        <button type="button" disabled className="btn-secondary invisible px-6 py-3">上一步</button>
         <button data-testid="basic-next" type="button" onClick={handleNext} className="btn-primary px-8 py-3 text-base">开始整理项目资料</button>
       </div>
     </div>
@@ -205,7 +204,6 @@ function UploadStep({
 function ReviewStep({
   formData,
   onFormUpdate,
-  onFillDemoFiles,
   onPrevious,
   onConfirm,
 }) {
@@ -307,7 +305,6 @@ function ReviewStep({
         {!hasCritical && (
           <div className="mt-4 flex flex-wrap gap-3">
             <button type="button" onClick={() => supplementInputRef.current?.click()} className="btn-secondary px-4 py-2.5 text-sm">上传补充资料</button>
-            <button type="button" onClick={onFillDemoFiles} className="btn-gold px-4 py-2.5 text-sm">载入演示补充资料</button>
             <input
               ref={supplementInputRef}
               type="file"
@@ -348,8 +345,8 @@ export default function ProjectDefinitionWizard({
   return (
     <div className="project-wizard">
       {step === 0 && <BasicInfoStep formData={formData} onFormUpdate={onFormUpdate} onFillDemo={onFillDemoBasic} onNext={() => onSetStep(1)} onNotice={onNotice} />}
-      {step === 1 && <UploadStep formData={formData} organizing={organizing} organizingStep={organizingStep} onFormUpdate={onFormUpdate} onFillDemo={onFillDemoFiles} onPrevious={() => onSetStep(0)} onNext={onReviewMaterials} />}
-      {step === 2 && <ReviewStep formData={formData} onFormUpdate={onFormUpdate} onFillDemoFiles={onFillDemoFiles} onPrevious={() => onSetStep(1)} onConfirm={onConfirmAndGenerate} />}
+      {step === 1 && <UploadStep formData={formData} organizing={organizing} organizingStep={organizingStep} onFormUpdate={onFormUpdate} onFillDemo={onFillDemoAll} onPrevious={() => onSetStep(0)} onNext={onReviewMaterials} />}
+      {step === 2 && <ReviewStep formData={formData} onFormUpdate={onFormUpdate} onPrevious={() => onSetStep(1)} onConfirm={onConfirmAndGenerate} />}
     </div>
   );
 }

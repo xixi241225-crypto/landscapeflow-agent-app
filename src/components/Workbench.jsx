@@ -242,31 +242,36 @@ export default function Workbench() {
     else setBlueprint(next);
   }, [commitBlueprint]);
 
-  const mergeDemoFiles = useCallback(() => {
-    const existing = blueprintRef.current.projectBasicInfo.siteFiles || [];
-    const names = new Set(existing.map((file) => file.name));
-    return [...existing, ...DEMO_FILES.filter((file) => !names.has(file.name))];
-  }, []);
+  const fillDemoDraft = useCallback((reason) => {
+    const hasExistingDraft = Object.entries(formData).some(([, value]) => (
+      Array.isArray(value)
+        ? value.length > 0
+        : value && typeof value === 'object'
+          ? Object.keys(value).length > 0
+          : String(value || '').trim()
+    ));
+    if (hasExistingDraft && !window.confirm('当前已有项目资料，填入演示案例将替换当前草稿，是否继续？')) return false;
+    applyProjectInputPatch({
+      ...emptyForm,
+      ...DEMO_CASE,
+      budgetCondition: BUDGET_OPTIONS[0],
+      siteFiles: DEMO_FILES,
+    }, reason);
+    setNotice(`演示案例基本信息与 ${DEMO_FILES.length} 份项目资料已填入，仍可继续修改。`);
+    return true;
+  }, [applyProjectInputPatch, formData]);
 
   const handleFillDemoBasic = useCallback(() => {
-    const { siteFiles: _siteFiles, ...demoBasicInfo } = DEMO_CASE;
-    applyProjectInputPatch({
-      ...demoBasicInfo,
-      budgetCondition: BUDGET_OPTIONS[0],
-      siteFiles: mergeDemoFiles(),
-    }, '填入演示案例基本信息与项目资料');
-    setNotice(`演示案例基本信息与 ${DEMO_FILES.length} 份项目资料已填入，仍可继续修改。`);
-  }, [applyProjectInputPatch, mergeDemoFiles]);
+    fillDemoDraft('填入演示案例基本信息与项目资料');
+  }, [fillDemoDraft]);
 
   const handleFillDemoFiles = useCallback(() => {
-    applyProjectInputPatch({ siteFiles: mergeDemoFiles() }, '填入演示案例项目资料');
-    setNotice('演示案例资料已加入，未重复添加同名文件。');
-  }, [applyProjectInputPatch, mergeDemoFiles]);
+    fillDemoDraft('填入演示案例基本信息与项目资料');
+  }, [fillDemoDraft]);
 
   const handleFillDemoAll = useCallback(() => {
-    applyProjectInputPatch({ ...DEMO_CASE, budgetCondition: BUDGET_OPTIONS[0], siteFiles: mergeDemoFiles() }, '补齐演示案例资料');
-    setNotice('演示案例基本信息与项目资料已补齐，仍需手动确认提交。');
-  }, [applyProjectInputPatch, mergeDemoFiles]);
+    fillDemoDraft('填入演示案例基本信息与项目资料');
+  }, [fillDemoDraft]);
 
   const handleReviewProjectMaterials = useCallback(async () => {
     if (projectInputLoading) return;
@@ -567,14 +572,12 @@ export default function Workbench() {
 
   const handleRestartDemo = useCallback(() => {
     controllerRef.current?.abort();
-    const fresh = newProjectState();
-    const demo = { ...DEMO_CASE, siteFiles: DEMO_FILES };
-    const next = { ...fresh.blueprint, projectBasicInfo: { ...fresh.blueprint.projectBasicInfo, ...demo } };
-    setProjectId(fresh.projectId); setFormData(demo); setBlueprint(next); blueprintRef.current = next;
-    setVersions(createBlueprintVersion(next, [], '重新开始路演演示')); setViewedStep(0); setCurrentStep(-1); setRunState('idle'); setRunMode('roadshow');
-    setOutputWorkflowStep(0); setConceptRequirement(''); setProjectInputStep(0);
+    const fresh = newProjectState(true);
+    setProjectId(fresh.projectId); setFormData(fresh.formData); setBlueprint(fresh.blueprint); blueprintRef.current = fresh.blueprint;
+    setVersions(fresh.versions); setViewedStep(0); setCurrentStep(-1); setRunState('idle'); setRunMode('roadshow');
+    setOutputWorkflowStep(0); setConceptRequirement(''); setProjectInputStep(0); setProjectInputLoading(false); setProjectInputLoadingStep(0);
     setPresentationMode(true); setPresentationStage(0); setPresentationAgentStates(Array(6).fill('等待')); setPresentationComplete(false); setPresentationBusy(false); setRoadshowUi({ agent4View: 'spatial', visualPromptReady: false }); setDesignStatementBusySections([]);
-    setNotice('路演案例与模拟资料已载入，请点击“开始整理项目资料”。');
+    setNotice('已重新开始空白方案，请填写项目信息或一键填入演示案例。');
   }, []);
 
   const handleReviewDesignStatementSection = useCallback((sectionKey, review) => {
@@ -901,7 +904,7 @@ export default function Workbench() {
             presentationMode={presentationMode}
           />
         </aside>
-        <main className={`relative flex min-w-0 flex-col overflow-hidden bg-[#FBFBFE] ${showProjectInputWizard ? '' : 'pb-[76px]'}`}>
+        <main className={`relative flex min-w-0 flex-col overflow-hidden bg-[#FBFBFE] ${presentationMode || showProjectInputWizard ? '' : 'pb-[76px]'}`}>
           <div className="workbench-agent-rail">
             <CompactAgentProgress
               blueprint={blueprint}
@@ -959,9 +962,12 @@ export default function Workbench() {
             onStartVisualGeneration={handleStartVisualGeneration}
             onEnterOutput={handleEnterOutput}
             onConfirmPresentationContent={handleConfirmPresentationContent}
+            onModifyPresentation={handleModifyPresentationInputs}
+            onConfirmPresentation={runPresentationUntilCheckpoint}
+            onOpenResults={handleOpenPresentationResults}
             />
           </div>
-          {!showProjectInputWizard && <BottomControlBar
+          {!presentationMode && !showProjectInputWizard && <BottomControlBar
             blueprint={blueprint}
             runState={runState}
             runMode={runMode}
