@@ -14,9 +14,6 @@ export default function Hero() {
               <span className="block text-xs text-slate-500">景观方案设计总监智能体</span>
             </span>
           </button>
-          <span className="hidden rounded-full border border-violet-100 bg-violet-50/70 px-3 py-1.5 text-xs font-medium text-[var(--lf-muted)] md:inline-flex">
-            腾讯云黑客松 · AI智能体争霸赛
-          </span>
         </div>
       </header>
 
